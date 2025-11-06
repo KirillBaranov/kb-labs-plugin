@@ -1,8 +1,8 @@
 {
-  "name": "@kb-labs/product-template",
+  "name": "@kb-labs/plugin",
   "version": "0.1.0",
   "private": true,
-  "description": "KB Labs product template — zero-config starter powered by @kb-labs/devkit.",
+  "description": "Plugin system infrastructure for KB Labs ecosystem",
   "type": "module",
   "author": {
     "name": "Kirill Baranov",
@@ -11,17 +11,17 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/kirill-baranov/kb-labs-product-template.git"
+    "url": "https://github.com/kirill-baranov/kb-labs-plugin.git"
   },
   "bugs": {
-    "url": "https://github.com/kirill-baranov/kb-labs-product-template/issues"
+    "url": "https://github.com/kirill-baranov/kb-labs-plugin/issues"
   },
-  "homepage": "https://github.com/kirill-baranov/kb-labs-product-template#readme",
+  "homepage": "https://github.com/kirill-baranov/kb-labs-plugin#readme",
   "workspaces": [
-    "apps/*",
     "packages/*"
   ],
   "scripts": {
+    "// ——— devkit": "────────────────────────────────────────",
     "devkit:sync": "node scripts/devkit-sync.mjs",
     "devkit:sync:ci": "node scripts/devkit-sync.mjs --ci-only",
     "devkit:check": "node scripts/devkit-sync.mjs --check",
@@ -29,24 +29,23 @@
     "devkit:help": "node scripts/devkit-sync.mjs --help",
     "postinstall": "pnpm -s devkit:sync || true",
     "// ——— core": "────────────────────────────────────────",
+    "clean": "rimraf dist",
     "build": "pnpm -r run build",
     "build:clean": "pnpm -r run clean && pnpm -r run build",
     "dev": "pnpm -r --parallel run dev",
     "// ——— quality": "────────────────────────────────────────",
-    "lint": "pnpm -r exec eslint .",
-    "lint:fix": "pnpm -r exec eslint . --fix",
-    "test": "pnpm -r --if-present run test",
-    "test:coverage": "pnpm -r --if-present run test --coverage",
-    "test:watch": "pnpm -r --parallel --if-present run test:watch",
-    "type-check": "pnpm -r run type-check",
-    "format": "prettier -w .",
-    "format:check": "prettier -c .",
+    "lint": "pnpm -r run lint",
+    "lint:fix": "pnpm -r run lint:fix",
+    "format": "prettier --write .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "type-check": "tsc -b tsconfig.tools.json",
     "// ——— ci/qa": "────────────────────────────────────────",
-    "check": "pnpm lint && pnpm type-check && pnpm test",
+    "check": "pnpm lint && pnpm type-check && pnpm test -- --run",
     "ci": "pnpm clean && pnpm build && pnpm check",
     "// ——— cleanup": "────────────────────────────────────────",
-    "clean": "pnpm -r run clean",
-    "clean:all": "rimraf node_modules packages/*/node_modules apps/*/node_modules dist"
+    "clean:all": "rimraf node_modules packages/*/node_modules dist"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,json,md,yml,yaml}": [
@@ -58,22 +57,21 @@
   },
   "devDependencies": {
     "@kb-labs/devkit": "link:../kb-labs-devkit",
-    "@typescript-eslint/eslint-plugin": "^8",
-    "@typescript-eslint/parser": "^8",
-    "@vitest/coverage-v8": "^3",
-    "@vue/eslint-config-typescript": "^14.6.0",
-    "eslint": "^9",
-    "eslint-plugin-vue": "^10.5.0",
-    "prettier": "^3",
-    "rimraf": "^6",
-    "tsup": "^8",
-    "typescript": "^5",
-    "vitest": "^3.2.4",
-    "@byjohann/toon": "*"
+    "@types/node": "^24.3.3",
+    "@types/picomatch": "^4",
+    "@vitest/coverage-v8": "^3.2.4",
+    "rimraf": "^6.0.1",
+    "tsup": "^8.5.0",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10",
+    "vitest": "^3.2.4"
   },
   "engines": {
-    "node": ">=18.18.0",
+    "node": ">=20.0.0",
     "pnpm": ">=9.0.0"
   },
-  "packageManager": "pnpm@9.11.0"
+  "packageManager": "pnpm@9.11.0",
+  "dependencies": {
+    "fastify": "^5.6.1"
+  }
 }
