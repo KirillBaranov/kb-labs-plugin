@@ -1,78 +1,78 @@
 # Artifact System
 
-Система артефактов позволяет плагинам обмениваться структурированными данными через файлы с версионированием, lifecycle статусами, TTL и permissions.
+The artifact system lets plugins exchange structured data through versioned files with lifecycle statuses, TTLs, and permissions.
 
-## Основные концепции
+## Core Concepts
 
-### URI схема
+### URI Scheme
 
-Артефакты адресуются через URI схему `artifact://plugin-id/path/to/artifact`:
+Artifacts are addressed via the URI scheme `artifact://plugin-id/path/to/artifact`:
 
 ```typescript
-// Примеры URI
+// URI examples
 const uri1 = 'artifact://mind/pack/output.md';
-const uri2 = 'artifact://self/query/results.json'; // 'self' = текущий плагин
+const uri2 = 'artifact://self/query/results.json'; // 'self' = current plugin
 ```
 
-### Версионирование
+### Versioning
 
-Артефакты могут иметь версии для контроля совместимости:
+Artifacts can declare versions to manage compatibility:
 
 ```typescript
 interface ArtifactMeta {
-  version?: string;        // Версия формата данных (например, "1.0.0")
-  schemaVersion?: string;  // Версия схемы данных
+  version?: string;        // Data format version (e.g. "1.0.0")
+  schemaVersion?: string;  // Schema version
 }
 ```
 
-Агенты могут проверять версии перед чтением:
+Agents can check versions before reading:
 
 ```typescript
 const meta = await ctx.extensions.artifacts?.getMeta({ uri: 'artifact://mind/pack/output.md' });
 if (meta?.version && meta.version < '1.0.0') {
-  // Несовместимая версия
+  // Incompatible version
 }
 ```
 
-### Lifecycle статусы
+### Lifecycle Statuses
 
-Артефакты проходят через следующие статусы:
+Artifacts move through the following statuses:
 
-- `pending` - начат процесс записи
-- `ready` - готов к чтению
-- `failed` - ошибка записи
-- `expired` - истек TTL
+- `pending` - write process started
+- `ready` - ready for consumption
+- `failed` - write error
+- `expired` - TTL elapsed
 
-### TTL и очистка
+### TTL and Cleanup
 
-Артефакты могут иметь TTL (time-to-live) для автоматической очистки:
+Artifacts can specify a TTL (time to live) for automatic cleanup:
 
 ```typescript
-// В манифесте
+// In the manifest
 artifacts: [{
   id: 'pack-output',
   pathTemplate: '.kb/mind/pack/{runId}.md',
-  ttl: 3600, // 1 час в секундах
+  ttl: 3600, // 1 hour in seconds
 }]
 
-// Или при записи
+// Or when writing
 await ctx.extensions.artifacts?.write({
   uri: 'artifact://mind/pack/output.md',
   data: markdown,
-  ttl: 7200, // Переопределить TTL из манифеста
+  ttl: 7200, // Override manifest TTL
 });
 ```
 
 ### Capabilities
 
-Артефакты могут поддерживать расширенные возможности:
+Artifacts can advertise capabilities:
 
-- `stream` - поддержка стриминга
-- `watch` - поддержка наблюдения за изменениями
-- `multipart` - поддержка multipart загрузки
+- `stream` - streaming supported
+- `watch` - change watching supported
+- `multipart` - multipart uploads supported
 
 ```typescript
-// В манифесте
+// In the manifest
 artifacts: [{
   id: 'stream-output',
   pathTemplate: '.kb/stream/data.bin',
@@ -80,49 +80,49 @@ artifacts: [{
 }]
 ```
 
-## Использование
+## Usage
 
-### Чтение артефактов
+### Reading Artifacts
 
 ```typescript
-// Чтение артефакта
+// Read an artifact
 const data = await ctx.extensions.artifacts?.read({
   uri: 'artifact://mind/pack/output.md',
   accept: ['text/markdown', 'application/json'],
 });
 
-// Получение метаданных без чтения файла
+// Fetch metadata without loading the file
 const meta = await ctx.extensions.artifacts?.getMeta({
   uri: 'artifact://mind/pack/output.md',
 });
 
-// Ожидание готовности артефакта
+// Wait for the artifact to become ready
 const meta = await ctx.extensions.artifacts?.waitForArtifact({
   uri: 'artifact://mind/pack/output.md',
-}, 30000); // timeout 30 секунд
+}, 30000); // 30-second timeout
 ```
 
-### Запись артефактов
+### Writing Artifacts
 
 ```typescript
-// Запись артефакта
+// Write an artifact
 const result = await ctx.extensions.artifacts?.write({
   uri: 'artifact://mind/pack/output.md',
   data: markdown,
   contentType: 'text/markdown',
-  ttl: 3600, // 1 час
-  mode: 'upsert', // или 'failIfExists'
+  ttl: 3600, // 1 hour
+  mode: 'upsert', // or 'failIfExists'
 });
 ```
 
 ### Discovery
 
 ```typescript
-// Поиск артефактов по паттерну
+// List artifacts by pattern
 const artifacts = await ctx.extensions.artifacts?.list({
   uri: 'artifact://mind/pack/**', // glob pattern
-  status: ['ready'], // фильтр по статусу
-  minVersion: '1.0.0', // минимальная версия
+  status: ['ready'], // status filter
+  minVersion: '1.0.0', // minimum version
 });
 
 for (const artifact of artifacts) {
@@ -132,22 +132,22 @@ for (const artifact of artifacts) {
 
 ## Permissions
 
-Плагины должны объявить permissions в манифесте для доступа к артефактам:
+Plugins must declare permissions in their manifest to access artifacts:
 
 ```typescript
-// Манифест плагина
+// Plugin manifest
 permissions: {
   artifacts: {
     read: [
       {
-        from: 'mind', // или 'self' для собственных артефактов
+        from: 'mind', // or 'self' for owned artifacts
         paths: ['pack/**', 'query/**'],
         allowedTypes: ['text/markdown', 'application/json'],
       },
     ],
     write: [
       {
-        to: 'self', // только свои артефакты
+        to: 'self', // only write to own artifacts
         paths: ['output/**'],
       },
     ],
@@ -155,38 +155,38 @@ permissions: {
 }
 ```
 
-## Примеры цепочек агентов
+## Agent Chain Examples
 
-### Пример 1: Простая цепочка
+### Example 1: Simple Chain
 
 ```typescript
-// Агент A пишет результат
+// Agent A writes the result
 await ctx.extensions.artifacts?.write({
   uri: 'artifact://agent-a/result.json',
   data: { result: 'processed' },
   ttl: 3600,
 });
 
-// Агент B читает результат
+// Agent B reads the result
 const data = await ctx.extensions.artifacts?.read({
   uri: 'artifact://agent-a/result.json',
 });
 ```
 
-### Пример 2: Ожидание готовности
+### Example 2: Waiting for Readiness
 
 ```typescript
-// Агент A начинает писать (status: pending)
+// Agent A starts writing (status: pending)
 await ctx.extensions.artifacts?.write({
   uri: 'artifact://agent-a/result.json',
   data: heavyProcessing(),
 });
 
-// Агент B ждет готовности
+// Agent B waits for readiness
 try {
   const meta = await ctx.extensions.artifacts?.waitForArtifact({
     uri: 'artifact://agent-a/result.json',
-  }, 60000); // ждать до 60 секунд
+  }, 60000); // wait up to 60 seconds
   
   if (meta.status === 'ready') {
     const data = await ctx.extensions.artifacts?.read({
@@ -194,47 +194,47 @@ try {
     });
   }
 } catch (error) {
-  // Timeout или ошибка
+  // Timeout or other error
 }
 ```
 
-### Пример 3: Discovery и фильтрация
+### Example 3: Discovery and Filtering
 
 ```typescript
-// Найти все готовые артефакты версии 1.0.0+
+// Find all ready artifacts with version >= 1.0.0
 const artifacts = await ctx.extensions.artifacts?.list({
   uri: 'artifact://agent-a/**',
   status: ['ready'],
   minVersion: '1.0.0',
 });
 
-// Обработать каждый
+// Process each one
 for (const artifact of artifacts) {
   if (artifact.meta.expiresAt && artifact.meta.expiresAt < Date.now()) {
-    // Артефакт истек, пропустить
+    // Artifact expired, skip it
     continue;
   }
   
   const data = await ctx.extensions.artifacts?.read({
     uri: artifact.uri,
   });
-  // Обработать данные
+  // Handle data
 }
 ```
 
-## Типы
+## Types
 
 ```typescript
-// URI схема
+// URI scheme
 type ArtifactURI = `artifact://${string}/${string}`;
 
-// Статусы
+// Statuses
 type ArtifactStatus = 'pending' | 'ready' | 'failed' | 'expired';
 
 // Capabilities
 type ArtifactCapability = 'stream' | 'watch' | 'multipart';
 
-// Запросы
+// Requests
 interface ArtifactReadRequest {
   uri: string;
   accept?: string[];
@@ -249,12 +249,12 @@ interface ArtifactWriteRequest {
 }
 
 interface ArtifactListRequest {
-  uri: string; // с glob pattern
+  uri: string; // with glob pattern
   status?: ArtifactStatus[];
   minVersion?: string;
 }
 
-// Метаданные
+// Metadata
 interface ArtifactMeta {
   owner: string;
   size: number;
@@ -274,43 +274,44 @@ interface ArtifactMeta {
 
 ## Best Practices
 
-1. **Всегда проверяйте статус** перед чтением критичных артефактов:
+1. **Always check the status** before reading critical artifacts:
    ```typescript
    const meta = await ctx.extensions.artifacts?.getMeta({ uri });
    if (meta?.status !== 'ready') {
-     // Ожидать или обработать ошибку
+     // Wait or handle the error
    }
    ```
 
-2. **Используйте TTL** для временных данных:
+2. **Use TTL** for temporary data:
    ```typescript
    await ctx.extensions.artifacts?.write({
      uri,
      data,
-     ttl: 3600, // 1 час
+     ttl: 3600, // 1 hour
    });
    ```
 
-3. **Проверяйте версии** для совместимости:
+3. **Validate versions** for compatibility:
    ```typescript
    const meta = await ctx.extensions.artifacts?.getMeta({ uri });
    if (meta?.version && meta.version < '1.0.0') {
-     // Обработать несовместимость
+     // Handle incompatibility
    }
    ```
 
-4. **Используйте waitForArtifact** для async цепочек:
+4. **Use waitForArtifact** for async chains:
    ```typescript
    const meta = await ctx.extensions.artifacts?.waitForArtifact({ uri }, timeout);
    ```
 
-5. **Фильтруйте по статусу** при discovery:
+5. **Filter by status** during discovery:
    ```typescript
    const artifacts = await ctx.extensions.artifacts?.list({
      uri: 'artifact://plugin/**',
      status: ['ready'],
    });
    ```
+
 
 
 
