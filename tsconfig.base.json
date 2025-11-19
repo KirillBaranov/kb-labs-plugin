@@ -1,37 +1,9 @@
 {
-  "extends": "@kb-labs/devkit/tsconfig/base.json",
+  "extends": [
+    "@kb-labs/devkit/tsconfig/base.json",
+    "./tsconfig.paths.json"
+  ],
   "compilerOptions": {
-    "baseUrl": ".",
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "paths": {
-      "@kb-labs/plugin-manifest": [
-        "packages/manifest/src"
-      ],
-      "@kb-labs/plugin-runtime": [
-        "packages/runtime/src"
-      ],
-      "@kb-labs/plugin-adapter-cli": [
-        "packages/adapters/cli/src"
-      ],
-      "@kb-labs/plugin-adapter-rest": [
-        "packages/adapters/rest/src"
-      ],
-      "@kb-labs/plugin-adapter-studio": [
-        "packages/adapters/studio/src"
-      ],
-      "@kb-labs/sandbox": [
-        "../../kb-labs-core/packages/sandbox/src"
-      ],
-      "@kb-labs/plugin-devtools": [
-        "packages/devtools/src"
-      ],
-      "@kb-labs/cli-core": [
-        "../../kb-labs-cli/packages/core/src"
-      ],
-      "@kb-labs/api-contracts": [
-        "../../kb-labs-api-contracts/packages/api-contracts/src"
-      ]
-    }
+    "baseUrl": "."
   }
 }
