@@ -8,9 +8,13 @@ import type { ExecutionContext } from '../types.js';
 import type { PluginRegistry } from '../registry.js';
 import type { InvokeBroker } from '../invoke/broker.js';
 import type { ArtifactBroker } from '../artifacts/broker.js';
+import type { ShellBroker } from '../shell/broker.js';
+import type { PresenterFacade } from './plugin-context.js';
 import type { ChainLimits, InvokeContext } from '../invoke/types.js';
 import { InvokeBroker as InvokeBrokerImpl } from '../invoke/broker.js';
 import { ArtifactBroker as ArtifactBrokerImpl } from '../artifacts/broker.js';
+import { ShellBroker as ShellBrokerImpl } from '../shell/broker.js';
+import { CapabilityFlag } from './capabilities.js';
 
 /**
  * Create artifact broker
@@ -52,4 +56,30 @@ export function createInvokeBroker(
     chainState
   );
 }
+
+/**
+ * Create shell broker (only if shell permissions are declared and capability is granted)
+ */
+export function createShellBroker(
+  manifest: ManifestV2,
+  ctx: ExecutionContext,
+  presenter?: PresenterFacade,
+  grantedCapabilities?: string[]
+): ShellBroker | undefined {
+  const shellPerms = manifest.permissions?.shell;
+  if (!shellPerms) {
+    return undefined;
+  }
+  
+  // Check capability (deny-by-default)
+  if (grantedCapabilities) {
+    const hasShellCapability = grantedCapabilities.includes(CapabilityFlag.ShellExec);
+    if (!hasShellCapability) {
+      return undefined;
+    }
+  }
+  
+  return new ShellBrokerImpl(manifest, ctx, presenter);
+}
+
 

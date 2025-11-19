@@ -1,0 +1,55 @@
+{
+  "name": "@kb-labs/plugin-contracts",
+  "version": "0.1.0",
+  "description": "Type definitions and contracts for KB Labs plugin runtime APIs (Shell, Artifacts, Invoke, etc.)",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./shell": {
+      "import": "./dist/shell.js",
+      "types": "./dist/shell.d.ts"
+    },
+    "./artifacts": {
+      "import": "./dist/artifacts.js",
+      "types": "./dist/artifacts.d.ts"
+    },
+    "./invoke": {
+      "import": "./dist/invoke.js",
+      "types": "./dist/invoke.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "clean": "rimraf dist",
+    "build": "pnpm clean && tsup --config tsup.config.ts",
+    "dev": "tsup --config tsup.config.ts --watch",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint . --ignore-pattern 'dist/**'",
+    "lint:fix": "eslint . --fix --ignore-pattern 'dist/**'",
+    "test": "vitest run -c ../../vitest.config.ts",
+    "test:watch": "vitest -c ../../vitest.config.ts"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@kb-labs/devkit": "workspace:*",
+    "@types/node": "^24.3.3",
+    "@typescript-eslint/eslint-plugin": "^8",
+    "@typescript-eslint/parser": "^8",
+    "eslint": "^9",
+    "rimraf": "^6.0.1",
+    "tsup": "^8.5.0",
+    "typescript": "^5.6.3",
+    "vitest": "^3.2.4"
+  }
+}
+

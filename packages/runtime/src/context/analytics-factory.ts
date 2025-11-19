@@ -4,36 +4,43 @@
  */
 
 import type { ExecutionContext } from '../types.js';
-import { emit } from '@kb-labs/analytics-sdk-node';
-import type { AnalyticsEventV1, EmitResult } from '@kb-labs/analytics-sdk-node';
+import type { TelemetryEvent, TelemetryEmitResult } from '@kb-labs/core-types';
+import { getTelemetryEmitter } from '../analytics.js';
 
 /**
- * Create analytics emitter for injection into context
- * This allows plugins to track custom events scoped to this execution
+ * Create analytics emitter for injection into context.
+ * Plugins receive a fire-and-forget helper that never throws.
  */
 export function createAnalyticsEmitter(
-  ctx: ExecutionContext
-): (event: Partial<AnalyticsEventV1>) => Promise<EmitResult> {
-  return async (event: Partial<AnalyticsEventV1>): Promise<EmitResult> => {
-    try {
-      // Use analytics SDK emit with execution context
-      return await emit({
-        ...event,
-        runId: ctx.requestId,
-        actor: event.actor || {
+  ctx: ExecutionContext,
+): (event: Partial<TelemetryEvent>) => Promise<TelemetryEmitResult> {
+  const emitter = getTelemetryEmitter();
+  
+  return async (event: Partial<TelemetryEvent>): Promise<TelemetryEmitResult> => {
+    const payload: Partial<TelemetryEvent> = {
+      ...event,
+      runId: event.runId ?? ctx.requestId,
+      actor:
+        event.actor ??
+        {
           type: 'agent',
           id: ctx.pluginId,
           name: ctx.pluginId,
         },
-        ctx: {
-          ...event.ctx,
-          workspace: ctx.workdir,
-          command: ctx.routeOrCommand,
-        },
-      });
+      ctx: {
+        ...(event.ctx ?? {}),
+        workspace: ctx.workdir,
+        command: ctx.routeOrCommand,
+      },
+    };
+
+    try {
+      return await emitter.emit(payload);
     } catch (error) {
-      // Never throw - analytics failures should not break execution
-      return { queued: false, reason: error instanceof Error ? error.message : String(error) };
+      return {
+        queued: false,
+        reason: error instanceof Error ? error.message : String(error),
+      };
     }
   };
 }

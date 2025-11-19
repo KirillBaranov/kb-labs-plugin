@@ -6,6 +6,7 @@
 import type { ExecutionContext } from '../types.js';
 import type { ChainLimits, InvokeContext } from '../invoke/types.js';
 import { createId } from '../utils.js';
+import { mergeTraceHeaders } from '../invoke/header-utils.js';
 import { CURRENT_CONTEXT_VERSION } from '@kb-labs/sandbox';
 import type { ResourceTracker } from '@kb-labs/sandbox';
 
@@ -62,7 +63,8 @@ export function buildExecutionContext(
   analyticsEmitter: (event: any) => Promise<any>,
   resources: ResourceTracker,
   invokeBroker: any,
-  artifactBroker: any
+  artifactBroker: any,
+  shellBroker?: any
 ): ExecutionContext {
   // Ensure pluginRoot is preserved in updatedCtx (required)
   if (!ctx.pluginRoot) {
@@ -85,7 +87,7 @@ export function buildExecutionContext(
     resources,
     // Explicitly preserve pluginRoot (required)
     pluginRoot: ctx.pluginRoot,
-    // Preserve adapter context and metadata
+    // Preserve adapter context and metadata - MUST be explicitly set after spread
     adapterContext: ctx.adapterContext,
     adapterMeta: ctx.adapterMeta,
     // Add brokers to extensions
@@ -93,7 +95,18 @@ export function buildExecutionContext(
       ...ctx.extensions,
       artifacts: artifactBroker,
       invoke: invokeBroker,
+      shell: shellBroker,
+      events: ctx.extensions?.events,
     },
+    headers: ctx.headers
+      ? {
+          inbound: { ...ctx.headers.inbound },
+          sensitive: ctx.headers.sensitive ? [...ctx.headers.sensitive] : undefined,
+          rateLimitKeys: ctx.headers.rateLimitKeys
+            ? { ...ctx.headers.rateLimitKeys }
+            : undefined,
+        }
+      : undefined,
     // Preserve hooks
     hooks: ctx.hooks,
     // Preserve signal
