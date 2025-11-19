@@ -1,6 +1,7 @@
 {
   "name": "@kb-labs/plugin-devtools",
   "version": "0.1.0",
+  "description": "Development tools for KB Labs plugins, including debugging and inspection utilities",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

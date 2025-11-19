@@ -1,6 +1,7 @@
 {
   "name": "@kb-labs/plugin-manifest",
   "version": "0.1.0",
+  "description": "Type definitions and validation schemas for KB Labs plugin manifests (ManifestV2)",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -27,7 +28,7 @@
     "test:watch": "vitest -c ../../vitest.config.ts"
   },
   "dependencies": {
-    "@kb-labs/api-contracts": "link:../../../kb-labs-api-contracts/packages/api-contracts",
+    "@kb-labs/api-contracts": "link:../../../kb-labs-rest-api/packages/api-contracts",
     "zod": "^4.1.5"
   },
   "devDependencies": {

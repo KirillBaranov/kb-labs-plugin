@@ -1,11 +1,16 @@
 {
   "name": "@kb-labs/plugin-runtime",
   "version": "0.1.0",
+  "description": "Runtime environment for KB Labs plugins, handling execution, permissions, and sandboxing",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./src/events/index.js": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     }
@@ -27,16 +32,19 @@
     "test:watch": "vitest -c ../../vitest.config.ts"
   },
   "dependencies": {
-    "@kb-labs/analytics-sdk-node": "link:../../../kb-labs-analytics/packages/analytics-sdk-node",
-    "@kb-labs/api-contracts": "link:../../../kb-labs-api-contracts/packages/api-contracts",
+    "@kb-labs/setup-operations": "workspace:*",
+    "@kb-labs/core-types": "workspace:*",
+    "@kb-labs/api-contracts": "workspace:*",
     "@kb-labs/plugin-manifest": "workspace:*",
-    "@kb-labs/sandbox": "link:../../../kb-labs-core/packages/sandbox",
+    "@kb-labs/plugin-contracts": "workspace:*",
+    "@kb-labs/sandbox": "workspace:*",
+    "execa": "^8.0.0",
     "minimatch": "^10.0.1",
     "semver": "^7.6.3",
     "zod": "^4.1.5"
   },
   "devDependencies": {
-    "@kb-labs/devkit": "link:../../../kb-labs-devkit",
+    "@kb-labs/devkit": "workspace:*",
     "@types/minimatch": "^6.0.0",
     "@types/node": "^24.3.3",
     "@types/semver": "^7.7.1",
