@@ -15,6 +15,11 @@ import type {
   CliCommandDecl,
   ErrorSpec,
   RestRouteDecl,
+  HeaderMatch,
+  HeaderRule,
+  HeaderPolicy,
+  HeadersConfig,
+  SecurityHeaders,
   StudioWidgetDecl,
   StudioMenuDecl,
   StudioLayoutDecl,
@@ -104,7 +109,14 @@ export const permissionSpecSchema: z.ZodType<PermissionSpec> = z.object({
         denyHosts: z.array(z.string()).optional(),
         allowCidrs: z.array(z.string()).optional(),
         timeoutMs: z.number().int().positive().optional(),
-      }),
+      }).refine(
+        (value) =>
+          !value.allowHosts || value.allowHosts.length > 0,
+        {
+          message: 'allowHosts must include at least one host entry',
+          path: ['allowHosts'],
+        },
+      ),
     ])
     .optional(),
   env: z
@@ -122,7 +134,64 @@ export const permissionSpecSchema: z.ZodType<PermissionSpec> = z.object({
   capabilities: z.array(z.string()).optional(),
   invoke: invokePermissionSchema.optional(),
   artifacts: artifactAccessSchema.optional(),
+  shell: z
+    .object({
+      allow: z.array(z.union([z.string(), z.object({
+        command: z.string(),
+        args: z.array(z.string()).optional(),
+      })])),
+      deny: z.array(z.union([z.string(), z.object({
+        command: z.string(),
+        args: z.array(z.string()).optional(),
+      })])).optional(),
+      requireConfirmation: z.array(z.union([z.string(), z.object({
+        command: z.string(),
+        args: z.array(z.string()).optional(),
+      })])).optional(),
+      timeoutMs: z.number().int().positive().optional(),
+      maxConcurrent: z.number().int().positive().optional(),
+    })
+    .optional(),
 });
+
+/**
+ * Plugin setup specification schema
+ */
+export const setupSpecSchema = z
+  .object({
+    handler: z.string().min(1),
+    describe: z.string().min(1),
+    permissions: permissionSpecSchema,
+  })
+  .superRefine((value, ctx) => {
+    const fs = value.permissions?.fs;
+    if (!fs) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          'setup.permissions.fs must be specified to declare filesystem scope',
+        path: ['permissions', 'fs'],
+      });
+      return;
+    }
+
+    if (fs.mode === 'none') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'setup.permissions.fs.mode cannot be "none"',
+        path: ['permissions', 'fs', 'mode'],
+      });
+    }
+
+    if (!fs.allow || fs.allow.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          'setup.permissions.fs.allow must declare at least one allowed path pattern',
+        path: ['permissions', 'fs', 'allow'],
+      });
+    }
+  });
 
 /**
  * Artifact declaration schema
@@ -151,6 +220,7 @@ export const cliFlagDeclSchema: z.ZodType<CliFlagDecl> = z.object({
  * CLI command declaration schema
  */
 export const cliCommandDeclSchema: z.ZodType<CliCommandDecl> = z.object({
+  manifestVersion: z.literal('1.0').default('1.0'),
   id: z.string().min(1),
   group: z.string().optional(),
   describe: z.string().min(1),
@@ -181,6 +251,170 @@ export const restRouteDeclSchema: z.ZodType<RestRouteDecl> = z.object({
   handler: z.string().min(1),
   security: z.array(z.enum(['none', 'user', 'token', 'oauth'])).optional(),
   permissions: permissionSpecSchema.optional(),
+});
+
+/**
+ * Header match & rule schemas
+ */
+const headerNameRegex = /^[A-Za-z0-9!#$%&'*+.^_`|~-]+$/;
+
+export const headerMatchSchema: z.ZodType<HeaderMatch> = z.union([
+  z.object({
+    kind: z.literal('exact'),
+    name: z
+      .string()
+      .min(1)
+      .max(256)
+      .refine((name) => headerNameRegex.test(name), {
+        message: 'Header name must follow RFC 7230 token format',
+      }),
+  }),
+  z.object({
+    kind: z.literal('prefix'),
+    prefix: z
+      .string()
+      .min(1)
+      .max(128)
+      .refine((prefix) => headerNameRegex.test(prefix.replace(/\*$/, ''))),
+  }),
+  z.object({
+    kind: z.literal('regex'),
+    pattern: z
+      .string()
+      .min(1)
+      .max(128)
+      .refine((pattern) => !pattern.includes('(?<'), {
+        message: 'Look-behind assertions are not supported in header regex',
+      }),
+    flags: z
+      .string()
+      .regex(/^[imuy]*$/)
+      .optional(),
+  }),
+]);
+
+export const headerValidatorSchema: z.ZodType<NonNullable<HeaderRule['validators']>[number]> =
+  z.union([
+    z.object({
+      kind: z.literal('regex'),
+      pattern: z
+        .string()
+        .min(1)
+        .max(256)
+        .refine((pattern) => !pattern.includes('(?<'), {
+          message: 'Look-behind assertions are not supported in validators',
+        }),
+      flags: z
+        .string()
+        .regex(/^[imuy]*$/)
+        .optional(),
+    }),
+    z.object({
+      kind: z.literal('enum'),
+      values: z.array(z.string()).min(1),
+    }),
+    z.object({
+      kind: z.literal('length'),
+      min: z.number().int().nonnegative().max(1024).optional(),
+      max: z.number().int().positive().max(8192).optional(),
+    }).refine(
+      (val) =>
+        val.min === undefined ||
+        val.max === undefined ||
+        val.min <= val.max,
+      {
+        message: 'length.min must be <= length.max',
+      }
+    ),
+  ]);
+
+export const headerRuleSchema: z.ZodType<HeaderRule> = z
+  .object({
+    match: headerMatchSchema,
+    direction: z.enum(['in', 'out', 'both']).optional(),
+    action: z.enum(['forward', 'strip', 'map']),
+    mapTo: z.string().min(1).max(256).optional(),
+    sensitive: z.boolean().optional(),
+    validators: z.array(headerValidatorSchema).max(8).optional(),
+    required: z.boolean().optional(),
+    redactInErrors: z.boolean().optional(),
+    exposeToStudio: z.boolean().optional(),
+    cacheVary: z.boolean().optional(),
+    rateLimitKey: z.boolean().optional(),
+    transform: z.string().min(1).optional(),
+  })
+  .refine(
+    (rule) => {
+      if (rule.action === 'map') {
+        return typeof rule.mapTo === 'string' && rule.mapTo.length > 0;
+      }
+      return rule.mapTo === undefined;
+    },
+    {
+      message: 'mapTo must be provided when action is "map"',
+      path: ['mapTo'],
+    }
+  );
+
+export const headerPolicySchema: z.ZodType<HeaderPolicy> = z.object({
+  schema: z.literal('kb.headers/1').optional(),
+  defaults: z.enum(['deny', 'allowSafe']).optional(),
+  inbound: z.array(headerRuleSchema).max(64).optional(),
+  outbound: z.array(headerRuleSchema).max(64).optional(),
+  allowList: z.array(z.string().min(1)).optional(),
+  denyList: z.array(z.string().min(1)).optional(),
+  maxHeaders: z.number().int().positive().max(128).optional(),
+  maxHeaderBytes: z.number().int().positive().max(65536).optional(),
+  maxValueBytes: z.number().int().positive().max(32768).optional(),
+});
+
+export const securityHeadersSchema: z.ZodType<SecurityHeaders> = z.object({
+  cors: z
+    .object({
+      allowOrigins: z.union([z.array(z.string().min(1)), z.literal('*')]).optional(),
+      allowHeaders: z.array(z.string().min(1)).optional(),
+      exposeHeaders: z.array(z.string().min(1)).optional(),
+    })
+    .optional(),
+  hsts: z
+    .object({
+      enabled: z.boolean(),
+      maxAge: z.number().int().positive(),
+      includeSubDomains: z.boolean().optional(),
+    })
+    .optional(),
+  cookies: z
+    .object({
+      sameSite: z.enum(['Lax', 'Strict', 'None']).optional(),
+      secure: z.boolean().optional(),
+      httpOnly: z.boolean().optional(),
+    })
+    .optional(),
+  csp: z.string().optional(),
+  referrerPolicy: z.string().optional(),
+});
+
+const routeIdSchema: z.ZodType<NonNullable<HeadersConfig['routes']>[number]['routeId']> = z
+  .string()
+  .regex(/^(GET|POST|PUT|PATCH|DELETE) .+$/, {
+    message: 'routeId must be in format "METHOD /path"',
+  }) as z.ZodType<NonNullable<HeadersConfig['routes']>[number]['routeId']>
+
+const headerRouteSchema: z.ZodType<NonNullable<HeadersConfig['routes']>[number]> = z
+  .object({
+    routeId: routeIdSchema,
+    policy: headerPolicySchema,
+  }) as z.ZodType<NonNullable<HeadersConfig['routes']>[number]>
+
+export const headersConfigSchema: z.ZodType<HeadersConfig> = z.object({
+  version: z.literal(1).optional(),
+  profile: z.string().optional(),
+  defaults: headerPolicySchema.optional(),
+  routes: z
+    .array(headerRouteSchema)
+    .max(128)
+    .optional(),
+  security: securityHeadersSchema.optional(),
 });
 
 /**
@@ -301,11 +535,13 @@ export const manifestV2Schema: z.ZodType<ManifestV2> = z.object({
   capabilities: z.array(z.string()).optional(),
   permissions: permissionSpecSchema.optional(),
   artifacts: z.array(artifactDeclSchema).optional(),
+  setup: setupSpecSchema.optional(),
   cli: z
     .object({
       commands: z.array(cliCommandDeclSchema).min(1),
     })
     .optional(),
+  headers: headersConfigSchema.optional(),
   rest: z
     .object({
       basePath: z

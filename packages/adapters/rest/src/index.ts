@@ -29,3 +29,11 @@ export {
   generateOpenAPI,
   type OpenAPISpec,
 } from './openapi.js';
+
+// Header policy utilities
+export {
+  resolveHeaderPolicy,
+  compileHeaderPolicy,
+  type ResolvedHeaderPolicy,
+  type CompiledHeaderPolicy,
+} from './header-policy.js';

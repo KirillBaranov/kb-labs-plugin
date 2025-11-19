@@ -21,3 +21,6 @@ export { printErrorEnvelope, mapErrorToExitCode } from './errors.js';
 
 // Debug
 export { printDebugInfo } from './debug.js';
+
+// Logging
+export { initCliLogging, createCliLogger } from './logging.js';

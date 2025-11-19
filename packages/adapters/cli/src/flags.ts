@@ -4,7 +4,8 @@
  */
 
 import type { CliFlagDecl } from '@kb-labs/plugin-manifest';
-import type { FlagBuilder } from '@kb-labs/cli-core';
+
+export type FlagBuilder = (definition: Record<string, unknown>) => void;
 
 /**
  * Convert manifest flag declaration to CLI flag

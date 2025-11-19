@@ -1,47 +1,36 @@
 /**
  * @module @kb-labs/plugin-runtime/invoke/types
  * Types for cross-plugin invocation
+ * 
+ * @deprecated Import from @kb-labs/plugin-contracts instead
+ * This file is kept for backward compatibility and re-exports from contracts
  */
 
 import type { ErrorEnvelope } from '../types.js';
+import type {
+  MountSpec as MountSpecContract,
+  InvokeRequest as InvokeRequestContract,
+  InvokeResult as InvokeResultContract,
+  ChainLimits as ChainLimitsContract,
+  InvokeContext as InvokeContextContract,
+} from '@kb-labs/plugin-contracts';
 
 /**
  * Session mount specification
+ * @deprecated Import from @kb-labs/plugin-contracts instead
  */
-export interface MountSpec {
-  type: 'memory' | 'volume';
-  name: string;
-  mode: 'ro' | 'rw';
-  data?: unknown;
-  sizeMb?: number;
-}
+export interface MountSpec extends MountSpecContract {}
 
 /**
  * Invoke request
+ * @deprecated Import from @kb-labs/plugin-contracts instead
  */
-export interface InvokeRequest {
-  /** Canonical target: @pluginId@<semver>|latest:METHOD /path */
-  target: string;
-  /** Input data for the target handler */
-  input?: unknown;
-  /** Session context for trace propagation and mounts */
-  session?: {
-    traceId?: string;
-    parentSpanId?: string;
-    mounts?: MountSpec[];
-  };
-  /** Optional quota overrides (stricter-wins policy) */
-  quotasOverride?: Partial<{
-    timeoutMs: number;
-    memoryMb: number;
-    cpuMs: number;
-  }>;
-  /** Optional idempotency key for retry-safe operations */
-  idempotencyKey?: string;
-}
+export interface InvokeRequest extends InvokeRequestContract {}
 
 /**
  * Invoke result
+ * @deprecated Import from @kb-labs/plugin-contracts instead
+ * Extended to include ErrorEnvelope (runtime-specific)
  */
 export type InvokeResult<T = unknown> =
   | {
@@ -54,32 +43,18 @@ export type InvokeResult<T = unknown> =
     }
   | {
       ok: false;
-      error: ErrorEnvelope;
+      error: ErrorEnvelope; // Runtime-specific extension
     };
 
 /**
  * Chain limits for protection against infinite loops and resource exhaustion
+ * @deprecated Import from @kb-labs/plugin-contracts instead
  */
-export interface ChainLimits {
-  /** Maximum chain depth (default: 8) */
-  maxDepth: number;
-  /** Maximum concurrent invokes from one plugin (default: 16) */
-  maxFanOut: number;
-  /** Maximum total chain time in milliseconds */
-  maxChainTime: number;
-}
+export interface ChainLimits extends ChainLimitsContract {}
 
 /**
  * Invoke context tracking chain state
+ * @deprecated Import from @kb-labs/plugin-contracts instead
  */
-export interface InvokeContext {
-  /** Current chain depth (0 at root) */
-  depth: number;
-  /** Current fan-out count */
-  fanOut: number;
-  /** List of visited plugin IDs (for cycle detection) */
-  visited: string[];
-  /** Remaining timeout budget in milliseconds */
-  remainingMs: number;
-}
+export interface InvokeContext extends InvokeContextContract {}
 

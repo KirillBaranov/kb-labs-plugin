@@ -6,6 +6,7 @@
 import { fork, type ChildProcess } from 'node:child_process';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { existsSync } from 'node:fs';
 import type { SandboxRunner } from './runner.js';
 import type {
   ExecutionContext,
@@ -18,6 +19,7 @@ import type { PermissionSpec } from '@kb-labs/plugin-manifest';
 import { pickEnv } from '../io/env.js';
 import { ErrorCode } from '@kb-labs/api-contracts';
 import { toErrorEnvelope } from '../errors.js';
+import type { EventEnvelope, EventScope } from '../events/index.js';
 
 /**
  * Ring buffer for log collection
@@ -106,6 +108,160 @@ function setupLogPipes(
   return ringBuffer;
 }
 
+type EventBridge = {
+  dispose(): void;
+};
+
+function setupEventBridge(
+  child: ChildProcess,
+  eventsExt: ExecutionContext['extensions'] extends infer E
+    ? E extends { events?: infer V }
+      ? V
+      : undefined
+    : undefined
+): EventBridge {
+  if (!eventsExt || (typeof eventsExt !== 'object')) {
+    return { dispose: () => {} };
+  }
+
+  const localBus: any = (eventsExt as any).local;
+  const pluginBus: any = (eventsExt as any).plugin;
+
+  const resolveBus = (scope: EventScope): any => {
+    if (scope === 'plugin') {
+      if (!pluginBus) {
+        throw new Error('Plugin scope EventBus not available');
+      }
+      return pluginBus;
+    }
+    if (!localBus) {
+      throw new Error('Local EventBus not available');
+    }
+    return localBus;
+  };
+
+  const subscriptions = new Map<string, () => void>();
+
+  const sendResponse = (type: string, payload: Record<string, unknown>) => {
+    try {
+      child.send({ type, payload });
+    } catch (error) {
+      console.error('[runtime.events] Failed to send IPC response', type, error);
+    }
+  };
+
+  const messageHandler = async (msg: any) => {
+    if (!msg || typeof msg !== 'object') {
+      return;
+    }
+
+    if (msg.type === 'EVENT_EMIT') {
+      const { opId, topic, scope = 'local', payload, options } = msg.payload ?? {};
+      if (!opId || typeof topic !== 'string') {
+        return;
+      }
+      try {
+        const bus = resolveBus(scope);
+        const envelope = await bus.emit(topic, payload, options);
+        sendResponse('EVENT_EMIT_RESULT', { opId, ok: true, envelope });
+      } catch (error) {
+        const err = error as any;
+        sendResponse('EVENT_EMIT_RESULT', {
+          opId,
+          ok: false,
+          error: {
+            code: err?.code || 'E_EVENT_EMIT_FAILED',
+            message: err?.message || 'Event emission failed',
+          },
+        });
+      }
+      return;
+    }
+
+    if (msg.type === 'EVENT_SUBSCRIBE') {
+      const { opId, subscriptionId, topic, scope = 'local', once = false } = msg.payload ?? {};
+      if (!subscriptionId || typeof topic !== 'string') {
+        return;
+      }
+
+      try {
+        const bus = resolveBus(scope);
+        const handler = (envelope: EventEnvelope) => {
+          sendResponse('EVENT_DISPATCH', {
+            subscriptionId,
+            envelope,
+          });
+          if (once) {
+            subscriptions.delete(subscriptionId);
+          }
+        };
+        const dispose: () => void = once
+          ? bus.once(topic, handler)
+          : bus.on(topic, handler);
+        subscriptions.set(subscriptionId, dispose);
+        if (opId) {
+          sendResponse('EVENT_SUBSCRIBE_ACK', { opId, ok: true });
+        }
+      } catch (error) {
+        const err = error as any;
+        if (opId) {
+          sendResponse('EVENT_SUBSCRIBE_ACK', {
+            opId,
+            ok: false,
+            error: {
+              code: err?.code || 'E_EVENT_SUBSCRIBE_FAILED',
+              message: err?.message || 'Event subscription failed',
+            },
+          });
+        }
+      }
+      return;
+    }
+
+    if (msg.type === 'EVENT_UNSUBSCRIBE') {
+      const { opId, subscriptionId } = msg.payload ?? {};
+      if (!subscriptionId) {
+        return;
+      }
+
+      const dispose = subscriptions.get(subscriptionId);
+      if (dispose) {
+        try {
+          dispose();
+        } catch {
+          // ignore
+        }
+        subscriptions.delete(subscriptionId);
+      }
+
+      if (opId) {
+        sendResponse('EVENT_UNSUBSCRIBE_ACK', { opId, ok: true });
+      }
+      return;
+    }
+  };
+
+  child.on('message', messageHandler);
+
+  return {
+    dispose: () => {
+      for (const dispose of subscriptions.values()) {
+        try {
+          dispose();
+        } catch {
+          // ignore
+        }
+      }
+      subscriptions.clear();
+      if (typeof child.off === 'function') {
+        child.off('message', messageHandler);
+      } else {
+        child.removeListener('message', messageHandler);
+      }
+    },
+  };
+}
+
 /**
  * Start timeout watch
  * @param child - Child process
@@ -138,14 +294,82 @@ function startTimeoutWatch(
 }
 
 /**
- * Get bootstrap file path
- * In production, this will be the compiled .js file
+ * Find workspace root by looking for kb-labs-core directory (most reliable)
+ * Falls back to pnpm-workspace.yaml if kb-labs-core not found
+ */
+function findWorkspaceRoot(startDir: string): string | null {
+  let currentDir = path.resolve(startDir);
+  for (let i = 0; i < 20; i++) {
+    // Check for kb-labs-core directory first (most reliable indicator of monorepo root)
+    if (existsSync(path.join(currentDir, 'kb-labs-core'))) {
+      return currentDir;
+    }
+    // Check for pnpm-workspace.yaml (monorepo root)
+    if (existsSync(path.join(currentDir, 'pnpm-workspace.yaml'))) {
+      // Verify that kb-labs-core exists at this level (to avoid false positives)
+      if (existsSync(path.join(currentDir, 'kb-labs-core'))) {
+        return currentDir;
+      }
+    }
+    const parentDir = path.dirname(currentDir);
+    if (parentDir === currentDir) break;
+    currentDir = parentDir;
+  }
+  return null;
+}
+
+/**
+ * Get bootstrap file path using simple path resolution
+ * Checks known paths in order of preference
  */
 function getBootstrapPath(): string {
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
-  // Use .js extension (compiled output)
-  return path.join(__dirname, 'child', 'bootstrap.js');
+  const cwd = process.cwd();
+  
+  // Find workspace root
+  const workspaceRoot = findWorkspaceRoot(cwd) || findWorkspaceRoot(__dirname);
+  
+  // 1. Try workspace root (most reliable for monorepo)
+  if (workspaceRoot) {
+    const workspacePath = path.join(workspaceRoot, 'kb-labs-core', 'packages', 'sandbox', 'dist', 'runner', 'bootstrap.js');
+    if (existsSync(workspacePath)) {
+      return workspacePath;
+    }
+  }
+  
+  // 2. Try relative to current file (if we're in plugin-runtime/dist/sandbox, bootstrap is in child/)
+  const relativePath = path.join(__dirname, 'child', 'bootstrap.js');
+  if (existsSync(relativePath)) {
+    return relativePath;
+  }
+  
+  // 3. Try node_modules (for production builds)
+  // Traverse up from current file to find node_modules
+  let currentDir = __dirname;
+  for (let i = 0; i < 10; i++) {
+    const nodeModulesPath = path.join(currentDir, 'node_modules', '@kb-labs', 'sandbox', 'dist', 'runner', 'bootstrap.js');
+    if (existsSync(nodeModulesPath)) {
+      return nodeModulesPath;
+    }
+    
+    const parentDir = path.dirname(currentDir);
+    if (parentDir === currentDir) break;
+    currentDir = parentDir;
+  }
+  
+  // If nothing found, throw clear error
+  const workspacePath = workspaceRoot
+    ? path.join(workspaceRoot, 'kb-labs-core', 'packages', 'sandbox', 'dist', 'runner', 'bootstrap.js')
+    : path.join(cwd, 'kb-labs-core', 'packages', 'sandbox', 'dist', 'runner', 'bootstrap.js');
+  
+  throw new Error(
+    `Bootstrap file not found. Tried:\n` +
+    `  - ${workspacePath}\n` +
+    `  - ${relativePath}\n` +
+    `  - node_modules/@kb-labs/sandbox/dist/runner/bootstrap.js\n` +
+    `Make sure @kb-labs/sandbox is built: run 'pnpm build' in kb-labs-core/packages/sandbox`
+  );
 }
 
 /**
@@ -185,7 +409,8 @@ function createInProcessRunner(): SandboxRunner {
           env,
           args.manifest,
           args.invokeBroker,
-          args.artifactBroker
+          args.artifactBroker,
+          args.shellBroker
         );
 
         // Patch runtime.log to collect logs in dev mode
@@ -311,6 +536,8 @@ export function nodeSubprocRunner(devMode: boolean = false): SandboxRunner {
         cwd: ctx.workdir,
       });
 
+      const eventBridge = setupEventBridge(child, ctx.extensions?.events as any);
+
       // Setup log collection
       const logBuffer = setupLogPipes(child, ctx);
 
@@ -319,16 +546,29 @@ export function nodeSubprocRunner(devMode: boolean = false): SandboxRunner {
       const timeoutHandle = startTimeoutWatch(child, timeoutMs);
 
       // Send execution request
+      const ctxForChild: any = {
+        ...ctx,
+        tmpFiles: [],
+      };
+
+      if (ctx.extensions) {
+        ctxForChild.extensions = { ...ctx.extensions };
+        if ((ctx.extensions as any).events) {
+          ctxForChild.extensions.events = {
+            hasLocal: Boolean((ctx.extensions as any).events.local),
+            hasPlugin: Boolean((ctx.extensions as any).events.plugin),
+            config: (ctx.extensions as any).events.config,
+          };
+        }
+      }
+
       child.send({
         type: 'RUN',
         payload: {
           handlerRef: handler,
           input,
           perms,
-          ctx: {
-            ...ctx,
-            tmpFiles: [], // Will be populated during execution
-          },
+          ctx: ctxForChild,
         },
       });
 
@@ -339,11 +579,62 @@ export function nodeSubprocRunner(devMode: boolean = false): SandboxRunner {
           if (!child.killed) {
             child.kill();
           }
+          eventBridge.dispose();
         };
 
-        child.on('message', (msg: { type: string; payload?: any }) => {
+        // Map for pending confirmation requests
+        const pendingConfirmations = new Map<string, {
+          resolve: (confirmed: boolean) => void;
+          timeout: NodeJS.Timeout;
+        }>();
+
+        child.on('message', async (msg: { type: string; payload?: any }) => {
+          // Handle shell confirmation requests
+          if (msg?.type === 'SHELL_CONFIRM_REQUEST' && msg.payload) {
+            const { opId, message: confirmMessage } = msg.payload;
+            if (!opId) return;
+
+            // Get presenter from context (if available)
+            const presenter = (ctx as any).pluginContext?.presenter;
+            let confirmed = false;
+
+            if (presenter?.confirm) {
+              try {
+                confirmed = await presenter.confirm(confirmMessage, {
+                  timeoutMs: 30000,
+                  default: false,
+                });
+              } catch {
+                confirmed = false;
+              }
+            } else {
+              // Fallback: default deny if no presenter
+              confirmed = false;
+            }
+
+            // Send response
+            try {
+              child.send({
+                type: 'SHELL_CONFIRM_RESPONSE',
+                payload: {
+                  opId,
+                  confirmed,
+                },
+              });
+            } catch {
+              // Child process may have exited
+            }
+            return;
+          }
+
           if (msg?.type === 'OK' && msg.payload) {
             cleanup();
+            // Clean up any pending confirmations
+            for (const { timeout } of pendingConfirmations.values()) {
+              clearTimeout(timeout);
+            }
+            pendingConfirmations.clear();
+
             const { data, metrics } = msg.payload;
             const endTime = Date.now();
             const endCpu = process.cpuUsage(cpuStart);
@@ -410,6 +701,11 @@ export function nodeSubprocRunner(devMode: boolean = false): SandboxRunner {
 
         child.on('error', (error: Error) => {
           cleanup();
+          // Clean up any pending confirmations
+          for (const { timeout } of pendingConfirmations.values()) {
+            clearTimeout(timeout);
+          }
+          pendingConfirmations.clear();
           const endTime = Date.now();
           const endCpu = process.cpuUsage(cpuStart);
           const cpuMs = (endCpu.user + endCpu.system) / 1000;

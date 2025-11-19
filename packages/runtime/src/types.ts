@@ -4,6 +4,16 @@
  */
 
 import type { ManifestV2, PermissionSpec } from '@kb-labs/plugin-manifest';
+import type { PluginContext } from './context/plugin-context.js';
+import type {
+  EventBus,
+  EventBusConfig,
+  EventEnvelope,
+  EventScope,
+} from './events/index.js';
+import type { AnalyticsEmitter } from './analytics/emitter.js';
+import type { OperationTracker } from './operations/operation-tracker.js';
+import type { TelemetryEvent, TelemetryEmitResult } from '@kb-labs/core-types';
 
 /**
  * Handler reference - points to a specific handler function
@@ -30,6 +40,25 @@ export interface RuntimeExtensions {
   artifacts?: import('./artifacts/broker.js').ArtifactBroker;
   /** Invoke broker for cross-plugin invocation */
   invoke?: import('./invoke/broker.js').InvokeBroker;
+  /** Shell broker for command execution */
+  shell?: import('./shell/broker.js').ShellBroker;
+  /** Event bus services */
+  events?: {
+    /** Local scope bus (per execution chain) */
+    local: EventBus;
+    /** Optional plugin-wide bus (shared singleton) */
+    plugin?: EventBus;
+    /** Effective configuration applied to the bus */
+    config: EventBusConfig;
+    /** Accessor for the raw envelope builder (useful for system topics) */
+    createEnvelope?: (topic: string, payload: unknown, scope: EventScope) => EventEnvelope;
+  };
+}
+
+export interface HeaderContext {
+  inbound: Record<string, string>;
+  sensitive?: string[];
+  rateLimitKeys?: Record<string, string>;
 }
 
 /**
@@ -38,6 +67,8 @@ export interface RuntimeExtensions {
 export interface ExecutionContext {
   /** Context schema version (semver) */
   version?: string;
+  /** Host-provided plugin context (presenter, analytics, events, etc.) */
+  pluginContext?: PluginContext;
   
   /** Unique request identifier */
   requestId: string;
@@ -45,6 +76,8 @@ export interface ExecutionContext {
   pluginId: string;
   /** Plugin version */
   pluginVersion: string;
+  /** Optional tenant identifier (multi-tenant workloads) */
+  tenantId?: string;
   /** Route or command identifier */
   routeOrCommand: string;
   /** Working directory (root of execution) */
@@ -84,7 +117,7 @@ export interface ExecutionContext {
   /** Dry-run mode: simulate operations without side effects */
   dryRun?: boolean;
   /** Analytics emitter for custom tracking (scoped to this execution) */
-  analytics?: (event: Partial<import('@kb-labs/analytics-sdk-node').AnalyticsEventV1>) => Promise<import('@kb-labs/analytics-sdk-node').EmitResult>;
+  analytics?: (event: Partial<TelemetryEvent>) => Promise<TelemetryEmitResult>;
   
   /** Adapter-specific context (typed) */
   adapterContext?: import('@kb-labs/sandbox').HandlerContext;
@@ -103,6 +136,10 @@ export interface ExecutionContext {
   
   /** Lifecycle hooks (optional, for observability) */
   hooks?: import('@kb-labs/sandbox').LifecycleHooks;
+  /** Sanitized header context propagated from gateway */
+  headers?: HeaderContext;
+  /** Tracker that collects file/config operations executed imperatively */
+  operationTracker?: OperationTracker;
 }
 
 /**
@@ -155,7 +192,31 @@ export type ExecuteResult =
     };
 
 /**
- * Error envelope (from api-contracts)
+ * Error context information
+ */
+export interface ErrorContext {
+  location: {
+    file?: string;
+    function?: string;
+    line?: number;
+    property?: string;
+  };
+  availableProperties: string[];
+  missingProperties: string[];
+  contextSnapshot: Record<string, unknown>;
+}
+
+/**
+ * Error fix suggestion
+ */
+export interface ErrorFix {
+  description: string;
+  code?: string;
+  autoApplicable: boolean;
+}
+
+/**
+ * Error envelope (from api-contracts, extended with debug information)
  */
 export type ErrorEnvelope = {
   status: 'error';
@@ -164,6 +225,22 @@ export type ErrorEnvelope = {
   message: string;
   details?: Record<string, unknown>;
   trace?: string;
+  /** Root cause analysis (auto-generated) */
+  rootCause?: import('./errors/root-cause.js').RootCauseAnalysis;
+  /** Context information at error time */
+  context?: ErrorContext;
+  /** Related errors from history */
+  relatedErrors?: Array<{
+    timestamp: number;
+    message: string;
+    resolved: boolean;
+  }>;
+  /** Automatic suggestions for fixing */
+  suggestions?: string[];
+  /** Specific fixes with code */
+  fixes?: ErrorFix[];
+  /** Documentation URL */
+  documentation?: string;
   meta: {
     requestId: string;
     pluginId: string;
@@ -197,6 +274,7 @@ export type PermissionSpecSummary = {
 
 import type { InvokeRequest, InvokeResult } from './invoke/types.js';
 import type { ArtifactReadRequest, ArtifactWriteRequest } from './artifacts/broker.js';
+import type { ShellExecOptions, ShellResult, ShellSpawnOptions, ShellSpawnResult } from './shell/types.js';
 
 /**
  * Plugin handler signature - unified contract for all handlers
@@ -230,8 +308,45 @@ export type PluginHandler = (
         read: (request: ArtifactReadRequest) => Promise<Buffer | object>;
         write: (request: ArtifactWriteRequest) => Promise<{ path: string; meta: import('./artifacts/broker.js').ArtifactMeta }>;
       };
+      /** Shell execution */
+      shell: {
+        exec: (command: string, args: string[], options?: ShellExecOptions) => Promise<ShellResult>;
+        spawn: (command: string, args: string[], options?: ShellSpawnOptions) => Promise<ShellSpawnResult>;
+      };
       /** Analytics emitter for custom tracking (scoped to this execution) */
-      analytics?: (event: Partial<import('@kb-labs/analytics-sdk-node').AnalyticsEventV1>) => Promise<import('@kb-labs/analytics-sdk-node').EmitResult>;
+      analytics?: (event: Partial<TelemetryEvent>) => Promise<TelemetryEmitResult>;
+      /** Event bus API */
+      events?: {
+        emit<T = unknown>(topic: string, payload: T, options?: import('./events/index.js').EmitOptions): Promise<import('./events/index.js').EventEnvelope<T> | null>;
+        on<T = unknown>(
+          topic: string,
+          handler: (event: import('./events/index.js').EventEnvelope<T>) => void | Promise<void>,
+          options?: import('./events/index.js').SubscriptionOptions
+        ): () => void;
+        once<T = unknown>(
+          topic: string,
+          handler: (event: import('./events/index.js').EventEnvelope<T>) => void | Promise<void>,
+          options?: import('./events/index.js').SubscriptionOptions
+        ): () => void;
+        off(
+          topic: string,
+          handler?: (event: import('./events/index.js').EventEnvelope) => void | Promise<void>,
+          options?: import('./events/index.js').SubscriptionOptions
+        ): void;
+        waitFor<T = unknown>(
+          topic: string,
+          predicate?: (event: import('./events/index.js').EventEnvelope<T>) => boolean,
+          options?: import('./events/index.js').WaitForOptions<T>
+        ): Promise<import('./events/index.js').EventEnvelope<T>>;
+      };
+      /** Config helper */
+      config: {
+        ensureSection: (
+          pointer: string,
+          value: unknown,
+          options?: import('./config/config-helper.js').EnsureSectionOptions
+        ) => Promise<import('./config/config-helper.js').EnsureSectionResult>;
+      };
     };
   }
 ) => Promise<unknown>;

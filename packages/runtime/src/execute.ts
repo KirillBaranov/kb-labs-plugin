@@ -20,9 +20,10 @@ import {
   Profiler,
   ResourceTracker,
   validateContextVersion,
-  createDebugLogger,
-  createLoggerOptionsFromContext,
+  analyzeInsights,
+  formatInsights,
 } from '@kb-labs/sandbox';
+import { createRuntimeLogger } from './logging.js';
 import { toErrorEnvelope, createErrorContext } from './errors.js';
 import { createId } from './utils.js';
 import { saveSnapshot, rotateSnapshots } from './snapshot.js';
@@ -37,9 +38,13 @@ import {
   buildExecutionContext,
   createArtifactBroker,
   createInvokeBroker,
+  createShellBroker,
   createAnalyticsEmitter,
+  validateExecutionContext,
+  formatValidationResult,
 } from './context/index.js';
 import { writeArtifactsIfAny } from './artifacts/index.js';
+import { OperationTracker } from './operations/operation-tracker.js';
 
 
 /**
@@ -61,9 +66,8 @@ export async function execute(
   const handlerRef = args.handler;
   const startedAt = Date.now();
 
-  // Create logger with unified options (spanId will be set after context is built)
-  const loggerOptions = createLoggerOptionsFromContext(ctx, ctx.spanId, ctx.parentSpanId);
-  const logger = createDebugLogger(ctx.debug || false, 'runtime:execute', loggerOptions);
+  // Create logger with unified metadata (spanId updated after context build)
+  const logger = createRuntimeLogger('execute', ctx);
   
   logger.group('execute');
   logger.debug('Execute function called', {
@@ -88,13 +92,23 @@ export async function execute(
   const invokeBroker = registry
     ? createInvokeBroker(registry, args.manifest, ctx, chainLimits, chainState)
     : undefined;
+  const shellBroker = createShellBroker(
+    args.manifest,
+    ctx,
+    ctx.pluginContext?.presenter,
+    args.perms.capabilities
+  );
 
   // 5. Create analytics emitter
   const analyticsEmitter = createAnalyticsEmitter(ctx);
 
   // 6. Create resource tracker for cleanup
   const resources = new ResourceTracker();
-  
+
+  // Initialize operation tracker for imperative operations
+  const operationTracker = ctx.operationTracker ?? new OperationTracker();
+  ctx.operationTracker = operationTracker;
+
   // 7. Build updated context with trace info and analytics
   const updatedCtx = buildExecutionContext(
     ctx,
@@ -104,11 +118,20 @@ export async function execute(
     analyticsEmitter,
     resources,
     invokeBroker,
-    artifactBroker
+    artifactBroker,
+    shellBroker
   );
   
   // Validate context version
   validateContextVersion(updatedCtx);
+  
+  // Validate context structure (non-blocking, log warnings in debug mode)
+  if (updatedCtx.debug || updatedCtx.debugLevel) {
+    const validation = validateExecutionContext(updatedCtx);
+    if (!validation.valid) {
+      logger.warn('Context validation warnings:\n' + formatValidationResult(validation));
+    }
+  }
 
   // Emit started event
   await emitAnalyticsEvent('plugin.exec.started', {
@@ -120,16 +143,17 @@ export async function execute(
     traceId: updatedCtx.traceId,
     spanId: updatedCtx.spanId,
     parentSpanId: updatedCtx.parentSpanId,
-    depth: chainState.depth,
+    depth: (chainState as any).depth ?? 0,
   });
 
   // Check if profiling is enabled
-  const debugLevel = ctx.debugLevel || (ctx.debug ? 'verbose' : undefined);
+  // Use updatedCtx after it's built to ensure debugLevel is preserved
+  const debugLevel = updatedCtx.debugLevel || (updatedCtx.debug ? 'verbose' : undefined);
   const isProfiling = debugLevel === 'profile';
   let profiler: Profiler | undefined;
 
   if (isProfiling) {
-    profiler = new Profiler(ctx, ctx.pluginId, ctx.routeOrCommand);
+    profiler = new Profiler(updatedCtx, updatedCtx.pluginId, updatedCtx.routeOrCommand);
   }
 
   try {
@@ -168,7 +192,8 @@ export async function execute(
           },
           ctx,
           metrics,
-          args.perms
+          args.perms,
+          undefined // No original error for capability check
         );
 
         await emitAnalyticsEvent('plugin.permission.denied', {
@@ -216,7 +241,8 @@ export async function execute(
         },
         ctx,
         metrics,
-        args.perms
+        args.perms,
+        undefined // No original error for validation
       );
 
       return {
@@ -227,8 +253,9 @@ export async function execute(
     }
 
     // 3. Create sandbox runner
-    const debugLevel = ctx.debugLevel || (ctx.debug ? 'verbose' : undefined);
-    const runnerConfig = createRunnerConfig(args, ctx);
+    // Use updatedCtx to ensure debugLevel is preserved
+    const debugLevel = updatedCtx.debugLevel || (updatedCtx.debug ? 'verbose' : undefined);
+    const runnerConfig = createRunnerConfig(args, updatedCtx);
     
     logger.group('sandbox');
     logger.debug('Creating sandbox runner', {
@@ -258,7 +285,11 @@ export async function execute(
       });
       
       try {
-        res = await runner.run(args.handler, args.input, updatedCtx);
+        res = await runner.run(
+          args.handler,
+          args.input,
+          updatedCtx
+        );
         
         logger.debug('runner.run completed', {
           resExists: !!res,
@@ -386,13 +417,13 @@ export async function execute(
         profiler.startPhase('Output validation');
       }
       
-          const vout = await validateOutput(
-            args.manifest,
-            ctx.routeOrCommand,
-            res.data,
-            args.handler,
-            ctx
-          );
+      const vout = await validateOutput(
+        args.manifest,
+        ctx.routeOrCommand,
+        res.data,
+        args.handler,
+        ctx
+      );
       
       if (profiler) {
         profiler.endPhase('Output validation');
@@ -409,7 +440,8 @@ export async function execute(
           },
           ctx,
           metrics,
-          args.perms
+          args.perms,
+          undefined // No original error for validation
         );
 
         await emitAnalyticsEvent('plugin.exec.failed', {
@@ -485,8 +517,9 @@ export async function execute(
       });
 
       // Stop profiler and add profile data to result
+      let profileData: any;
       if (profiler) {
-        const profileData = profiler.stop();
+        profileData = profiler.stop();
         (res as any).profile = profileData;
       }
 
@@ -495,6 +528,18 @@ export async function execute(
         await invokeBroker.saveTrace().catch(() => {
           // Ignore trace save errors
         });
+      }
+
+      // Generate insights for successful execution
+      if (ctx.debug || ctx.debugLevel) {
+        try {
+          const insights = analyzeInsights(res.metrics, profileData, res.logs);
+          if (insights.length > 0) {
+            logger.info('Execution insights:\n' + formatInsights(insights));
+          }
+        } catch {
+          // Ignore insights errors
+        }
       }
 
       // Save snapshot if explicitly requested (--save-snapshot flag)
@@ -544,7 +589,8 @@ export async function execute(
       },
       ctx,
       metrics,
-      args.perms
+      args.perms,
+      error // Pass original error for root cause analysis
     );
 
     await emitAnalyticsEvent('plugin.exec.failed', {
@@ -587,6 +633,19 @@ export async function execute(
       });
     } catch {
       // Ignore snapshot save errors
+    }
+
+    // Generate insights for error case
+    if (ctx.debug || ctx.debugLevel) {
+      try {
+        // Logs are not available in error case, pass undefined
+        const insights = analyzeInsights(metrics, profiler?.stop(), undefined);
+        if (insights.length > 0) {
+          logger.info('Execution insights:\n' + formatInsights(insights));
+        }
+      } catch {
+        // Ignore insights errors
+      }
     }
 
     return {

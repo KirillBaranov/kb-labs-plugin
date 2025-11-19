@@ -11,15 +11,158 @@ import type {
   ExecutionContext,
   ExecuteResult,
   HandlerRef,
+  PresenterFacade,
+  PresenterMessageOptions,
+  PresenterProgressPayload,
+  ConfirmOptions,
 } from '@kb-labs/plugin-runtime';
-import type { CliContext } from '@kb-labs/cli-core';
+import type { CliContext, Presenter } from '@kb-labs/cli-core/public';
 import { execute as runtimeExecute } from '@kb-labs/plugin-runtime';
-import { createId, PluginRegistry, getSuggestions, formatSuggestions, getSnapshotsDir, formatTimeline, exportProfileChromeFormat } from '@kb-labs/plugin-runtime';
+import {
+  createId,
+  PluginRegistry,
+  getSuggestions,
+  formatSuggestions,
+  getSnapshotsDir,
+  formatTimeline,
+  exportProfileChromeFormat,
+  emitAnalyticsEvent,
+  createPluginContext,
+  createNoopEventBridge,
+  createNoopAnalyticsEmitter,
+  OperationTracker,
+} from '@kb-labs/plugin-runtime';
+import {
+  createEventBus,
+  acquirePluginBus,
+  releasePluginBus,
+  DEFAULT_EVENT_BUS_CONFIG,
+  type EventBus,
+  type EventBusConfig,
+} from '@kb-labs/plugin-runtime';
 import * as path from 'node:path';
 import { promises as fs } from 'node:fs';
 import type { CliHandlerContext, AdapterMetadata } from '@kb-labs/sandbox';
-import { ADAPTER_TYPES, validateAdapterMetadata, createDebugLogger, createLoggerOptionsFromContext } from '@kb-labs/sandbox';
+import { ADAPTER_TYPES, validateAdapterMetadata } from '@kb-labs/sandbox';
+import { getLogger } from '@kb-labs/core-sys/logging';
 import { CURRENT_CONTEXT_VERSION } from '@kb-labs/sandbox';
+import { createOutput } from '@kb-labs/core-sys/output';
+import type { Output } from '@kb-labs/core-sys/output';
+
+interface CliCommandContext extends CliContext {
+  presenter: Presenter;
+}
+
+class CliPresenterFacade implements PresenterFacade {
+  constructor(private readonly presenter: Presenter) {}
+
+  message(text: string, options?: PresenterMessageOptions): void {
+    const level = options?.level ?? 'info';
+    switch (level) {
+      case 'debug':
+        this.presenter.write?.(text) ?? this.presenter.info?.(text);
+        break;
+      case 'warn':
+        this.presenter.warn?.(text) ?? this.presenter.write?.(text);
+        break;
+      case 'error':
+        this.presenter.error?.(text) ?? this.presenter.write?.(text);
+        break;
+      default:
+        this.presenter.info?.(text) ?? this.presenter.write?.(text);
+        break;
+    }
+    if (options?.meta && Object.keys(options.meta).length > 0) {
+      const serialized = safeSerialize(options.meta);
+      if (serialized) {
+        this.presenter.write?.(serialized);
+      }
+    }
+  }
+
+  progress(update: PresenterProgressPayload): void {
+    const status = update.status ? `[${update.status}]` : '';
+    const percent =
+      typeof update.percent === 'number'
+        ? ` ${update.percent.toFixed(
+            Number.isInteger(update.percent) ? 0 : 1,
+          )}%`
+        : '';
+    const message = update.message ? ` - ${update.message}` : '';
+    const line = `${update.stage}${status}${percent}${message}`;
+    this.presenter.info?.(line) ?? this.presenter.write?.(line);
+  }
+
+  json(data: unknown): void {
+    this.presenter.json?.(data);
+  }
+
+  error(error: unknown, meta?: Record<string, unknown>): void {
+    const message = resolveErrorMessage(error);
+    this.presenter.error?.(message) ?? this.presenter.write?.(message);
+    if (meta && Object.keys(meta).length > 0) {
+      const serialized = safeSerialize(meta);
+      if (serialized) {
+        this.presenter.error?.(serialized);
+      }
+    }
+  }
+
+  async confirm(message: string, options?: ConfirmOptions): Promise<boolean> {
+    // Use readline for interactive confirmation
+    const readline = await import('node:readline/promises');
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
+
+    try {
+      // Show message
+      this.presenter.write?.(message);
+
+      const answer = await Promise.race([
+        rl.question(''),
+        new Promise<string>((resolve) => {
+          const timeout = setTimeout(() => {
+            resolve('');
+          }, options?.timeoutMs || 30000);
+          // Clear timeout if resolved early
+          rl.once('line', () => clearTimeout(timeout));
+        }),
+      ]);
+
+      rl.close();
+
+      const normalized = answer.trim().toLowerCase();
+      return normalized === 'y' || normalized === 'yes';
+    } catch {
+      rl.close();
+      return options?.default ?? false;
+    }
+  }
+}
+
+function resolveErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.stack ?? error.message;
+  }
+  if (typeof error === 'string') {
+    return error;
+  }
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
+}
+
+function safeSerialize(payload: Record<string, unknown>): string | null {
+  try {
+    return JSON.stringify(payload, null, 2);
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Parse handlerRef from string format (e.g., './cli/init-handler.js#run')
@@ -55,10 +198,56 @@ function createExecutionContext(
     tmpFiles: [],
   };
   
-  // Also set in any for backward compatibility (remove if not needed)
-  (execCtx as any).pluginRoot = pluginRoot;
-  
   return execCtx;
+}
+
+function resolveEventBusConfig(manifest: ManifestV2): EventBusConfig {
+  const config: EventBusConfig = { ...DEFAULT_EVENT_BUS_CONFIG };
+  const permissions = manifest.permissions as { events?: Record<string, unknown> } | undefined;
+  const eventsPerms = permissions?.events ?? {};
+
+  if (typeof eventsPerms.maxPayloadBytes === 'number') {
+    config.maxPayloadBytes = Math.max(1024, eventsPerms.maxPayloadBytes);
+  }
+  if (typeof eventsPerms.maxListenersPerTopic === 'number') {
+    config.maxListenersPerTopic = Math.max(1, eventsPerms.maxListenersPerTopic);
+  }
+  if (typeof eventsPerms.maxQueueSize === 'number') {
+    config.maxQueueSize = Math.max(1, eventsPerms.maxQueueSize);
+  }
+  if (typeof eventsPerms.eventsPerMinute === 'number') {
+    config.eventsPerMinute = Math.max(1, eventsPerms.eventsPerMinute);
+  } else if (typeof eventsPerms.perMinute === 'number') {
+    config.eventsPerMinute = Math.max(1, eventsPerms.perMinute);
+  } else if (typeof eventsPerms.quotaPerMinute === 'number') {
+    config.eventsPerMinute = Math.max(1, eventsPerms.quotaPerMinute);
+  }
+  if (typeof eventsPerms.concurrentHandlers === 'number') {
+    config.concurrentHandlers = Math.max(1, eventsPerms.concurrentHandlers);
+  } else if (typeof eventsPerms.concurrency === 'number') {
+    config.concurrentHandlers = Math.max(1, eventsPerms.concurrency);
+  }
+  if (typeof eventsPerms.dropPolicy === 'string') {
+    config.dropPolicy = eventsPerms.dropPolicy === 'drop-new' ? 'drop-new' : 'drop-oldest';
+  }
+  if (typeof eventsPerms.duplicateCacheSize === 'number') {
+    config.duplicateCacheSize = Math.max(16, eventsPerms.duplicateCacheSize);
+  }
+  if (typeof eventsPerms.duplicateTtlMs === 'number') {
+    config.duplicateTtlMs = Math.max(1000, eventsPerms.duplicateTtlMs);
+  }
+  if (typeof eventsPerms.defaultWaitTimeoutMs === 'number') {
+    config.defaultWaitTimeoutMs = Math.max(100, eventsPerms.defaultWaitTimeoutMs);
+  }
+  if (typeof eventsPerms.shutdownTimeoutMs === 'number') {
+    config.shutdownTimeoutMs = Math.max(100, eventsPerms.shutdownTimeoutMs);
+  }
+
+  if (Array.isArray(eventsPerms.redactKeys)) {
+    config.redactKeys = eventsPerms.redactKeys;
+  }
+
+  return config;
 }
 
 /**
@@ -67,7 +256,7 @@ function createExecutionContext(
 export async function executeCommand(
   command: CliCommandDecl,
   manifest: ManifestV2,
-  cliContext: CliContext,
+  cliContext: CliCommandContext,
   flags: Record<string, unknown>,
   grantedCapabilities: string[],
   pluginRoot?: string,
@@ -94,19 +283,41 @@ export async function executeCommand(
   // Determine format from flags
   const format = jsonMode ? 'ai' : (flags['debug-format'] === 'ai' ? 'ai' : 'human');
   
-  // Create logger with unified options using context helper
-  const loggerOptions = createLoggerOptionsFromContext({
-    debug: !!debugFlag,
-    debugLevel,
-    debugFormat: format,
-    jsonMode,
-    traceId,
+  // Parse verbosity level
+  const verbosity = flags.quiet ? 'quiet' 
+    : flags.verbose ? 'verbose'
+    : debugLevel === 'inspect' ? 'inspect'
+    : debugFlag ? 'debug'
+    : 'normal';
+  
+  // Create unified Output
+  const output: Output = createOutput({
+    verbosity: verbosity as any,
+    format: format as any,
+    json: jsonMode,
+    category: `plugin:${manifest.id}`,
+    context: {
+      plugin: manifest.id,
+      command: command.id,
+      trace: traceId,
+    },
   });
   
-  const logger = createDebugLogger(!!debugFlag, 'adapter:cli', loggerOptions);
+  // Create logger with unified options using context helper
+  const logger = getLogger('cli:command').child({
+    meta: {
+      layer: 'cli',
+      traceId,
+      reqId: requestId,
+      commandId: command.id,
+      pluginId: manifest.id,
+      debug: !!debugFlag,
+      jsonMode,
+      format,
+    },
+  });
   
   // Group related debug logs
-  logger.group('executeCommand');
   logger.debug('executeCommand called', {
     pluginRoot: pluginRoot || 'undefined',
     commandId: command.id,
@@ -121,6 +332,25 @@ export async function executeCommand(
   const defaultWorkdir = workdir || defaultPluginRoot;
   const defaultOutdir = outdir || path.join(defaultWorkdir, 'out');
   
+  const analyticsEmitter = createNoopAnalyticsEmitter();
+  const operationTracker = new OperationTracker();
+
+  const pluginContext = createPluginContext('cli', {
+    requestId,
+    pluginId: manifest.id,
+    pluginVersion: manifest.version,
+    presenter: new CliPresenterFacade(cliContext.presenter),
+    events: createNoopEventBridge(),
+    analytics: analyticsEmitter,
+    metadata: {
+      cwd: defaultWorkdir,
+      outdir: defaultOutdir,
+      flags,
+      jsonMode,
+    },
+    getTrackedOperations: () => operationTracker.toArray(),
+  });
+
   logger.debug('Request IDs created', { requestId, traceId });
   logger.debug('Execution context', {
     defaultPluginRoot,
@@ -136,6 +366,8 @@ export async function executeCommand(
     defaultWorkdir,
     defaultOutdir
   );
+  execCtx.pluginContext = pluginContext;
+  execCtx.operationTracker = operationTracker;
 
   // Add traceId to context
   execCtx.traceId = traceId;
@@ -155,13 +387,14 @@ export async function executeCommand(
   validateAdapterMetadata(adapterMeta);
   execCtx.adapterMeta = adapterMeta;
   
-  // Create typed adapter context
+  // Create typed adapter context with Output
   const adapterContext: CliHandlerContext = {
     type: 'cli',
-    presenter: cliContext.presenter,
+    output: output, // ✅ Unified Output
+    presenter: cliContext.presenter, // ⚠️ Deprecated, kept for BC
     cwd: defaultWorkdir,
-    flags: flags as Record<string, any>,
-    argv: [], // TODO: pass actual argv if available
+    flags: flags as Record<string, unknown>,
+    argv: (cliContext as { argv?: string[] }).argv ?? [], // Use argv from context if available
     requestId: execCtx.requestId,
     workdir: execCtx.workdir,
     outdir: execCtx.outdir,
@@ -192,48 +425,118 @@ export async function executeCommand(
     debugFlag,
     debugLevel: debugLevel || 'none',
     format,
-    detailLevel: loggerOptions.detailLevel || 'verbose',
     jsonMode,
   });
-  
-  logger.groupEnd();
 
-  // Show inspect mode instructions if enabled
-  if (debugLevel === 'inspect') {
-    cliContext.presenter.info('');
-    cliContext.presenter.info('🔍 Node.js Debugger Mode');
-    cliContext.presenter.info('   The process will pause at the first line of your handler');
-    cliContext.presenter.info('   Connect your debugger to continue execution');
-    cliContext.presenter.info('');
-    cliContext.presenter.info('   Options:');
-    cliContext.presenter.info('   1. Chrome DevTools: Open chrome://inspect');
-    cliContext.presenter.info('   2. VS Code: Attach to process (F5)');
-    cliContext.presenter.info('   3. Command line: node inspect <script>');
-    cliContext.presenter.info('');
+  const eventsConfig = resolveEventBusConfig(manifest);
+  const permissions = manifest.permissions as { events?: { scopes?: string[] } } | undefined;
+  const eventsPermissions = permissions?.events ?? {};
+  const pluginScopeEnabled =
+    Array.isArray(eventsPermissions.scopes) && eventsPermissions.scopes.includes('plugin');
+
+  const busLogger = (level: 'debug' | 'info' | 'warn' | 'error', message: string, meta?: Record<string, unknown>) => {
+    switch (level) {
+      case 'error':
+        logger.error(message, meta);
+        break;
+      case 'warn':
+        logger.warn(message, meta);
+        break;
+      case 'info':
+        logger.info?.(message, meta);
+        break;
+      default:
+        logger.debug(message, meta);
+    }
+  };
+
+  const eventHooks = {
+    analytics: async (event: string, data: Record<string, unknown>) => {
+      await emitAnalyticsEvent(event, {
+        ...data,
+        pluginId: manifest.id,
+        pluginVersion: manifest.version,
+        routeOrCommand: command.id,
+      });
+    },
+    logger: busLogger,
+  };
+
+  const localEventBus = createEventBus({
+    config: eventsConfig,
+    hooks: eventHooks,
+    permissions: manifest.permissions,
+    contextMeta: {
+      pluginId: manifest.id,
+      pluginVersion: manifest.version,
+      traceId,
+      requestId,
+      emitter: `${manifest.id}:${command.id}`,
+    },
+  });
+
+  let pluginEventBus: EventBus | undefined;
+  const pluginBusKey = manifest.id;
+  if (pluginScopeEnabled) {
+    pluginEventBus = acquirePluginBus(pluginBusKey, {
+      config: eventsConfig,
+      hooks: eventHooks,
+      permissions: manifest.permissions,
+      contextMeta: {
+        pluginId: manifest.id,
+        pluginVersion: manifest.version,
+        emitter: manifest.id,
+      },
+    });
   }
+
+  execCtx.extensions = {
+    ...(execCtx.extensions ?? {}),
+    events: {
+      local: localEventBus,
+      plugin: pluginEventBus,
+      config: eventsConfig,
+    },
+  };
+
+  let result: ExecuteResult;
+  try {
+    // Show inspect mode instructions if enabled
+    if (debugLevel === 'inspect') {
+    output.info('');
+    output.info('🔍 Node.js Debugger Mode');
+    output.info('   The process will pause at the first line of your handler');
+    output.info('   Connect your debugger to continue execution');
+    output.info('');
+    output.info('   Options:');
+    output.info('   1. Chrome DevTools: Open chrome://inspect');
+    output.info('   2. VS Code: Attach to process (F5)');
+    output.info('   3. Command line: node inspect <script>');
+    output.info('');
+    }
 
   // Parse dry-run flag
-  if (flags.dryRun || flags['dry-run']) {
-    execCtx.dryRun = true;
-  }
+    if (flags.dryRun || flags['dry-run']) {
+      execCtx.dryRun = true;
+    }
 
   // Parse save-snapshot flag
-  if (flags.saveSnapshot || flags['save-snapshot']) {
-    (execCtx as any).saveSnapshot = true;
-  }
+    if (flags.saveSnapshot || flags['save-snapshot']) {
+      (execCtx as ExecutionContext & { saveSnapshot?: boolean }).saveSnapshot = true;
+    }
 
   // Parse mock flags (for test fixtures)
-  if (flags.mock || flags['mock']) {
-    (execCtx as any).mock = true;
-  }
-  if (flags.recordMocks || flags['record-mocks']) {
-    (execCtx as any).recordMocks = true;
-  }
+    if (flags.mock || flags['mock']) {
+      (execCtx as ExecutionContext & { mock?: boolean }).mock = true;
+    }
+    if (flags.recordMocks || flags['record-mocks']) {
+      (execCtx as ExecutionContext & { recordMocks?: boolean }).recordMocks = true;
+    }
 
   // Setup log callback only for debug mode with formatting
   // Without debug mode, output goes directly through stdout/stderr in subprocess
-  if (execCtx.debug) {
-    execCtx.onLog = (line: string, level: 'info' | 'warn' | 'error' | 'debug') => {
+    if (execCtx && execCtx.debug) {
+      execCtx.onLog = (line: string, level: 'info' | 'warn' | 'error' | 'debug') => {
       const timestamp = new Date().toLocaleTimeString('en-US', {
         hour12: false,
         hour: '2-digit',
@@ -256,32 +559,30 @@ export async function executeCommand(
       const formattedLine = `${colors.reset}[${timestamp}] ${color}[${levelStr}]${colors.reset} ${line}`;
       
       // Output to stdout/stderr based on level
-      if (level === 'error') {
-        process.stderr.write(formattedLine + '\n');
-      } else {
-        process.stdout.write(formattedLine + '\n');
-      }
-    };
-  }
+        if (level === 'error') {
+          process.stderr.write(formattedLine + '\n');
+        } else {
+          process.stdout.write(formattedLine + '\n');
+        }
+      };
+    }
   // Without debug mode, onLog is not needed - output goes directly through stdout/stderr
 
   // Parse handler reference
-  const handlerRef = parseHandlerRef(command.handler);
+    const handlerRef = parseHandlerRef(command.handler);
 
   // Resolve permissions (merge manifest permissions with system policy)
-  const perms = manifest.permissions || {};
+    const perms = manifest.permissions || {};
 
   // Execute via runtime with registry
-  logger.group('runtimeExecute');
-  let result: ExecuteResult;
-  try {
-    logger.debug('About to call runtimeExecute', {
+    try {
+      logger.debug('About to call runtimeExecute', {
       handler: `${handlerRef.file}#${handlerRef.export}`,
       pluginRoot: execCtx.pluginRoot,
       workdir: execCtx.workdir,
     });
     
-    result = await runtimeExecute(
+      result = await runtimeExecute(
       {
         handler: handlerRef,
         input: flags,
@@ -294,78 +595,130 @@ export async function executeCommand(
     
     // Log result details (even without --debug if error)
     // Always log result structure if error (for debugging)
-    if (!result || !result.ok) {
-      logger.error('Handler execution failed', {
+      if (!result || !result.ok) {
+        logger.error('Handler execution failed', {
         resultExists: !!result,
         resultOk: result?.ok,
         error: result?.error ? JSON.stringify(result.error, null, 2) : undefined,
         logLines: result?.logs?.length || 0,
         fullResult: JSON.stringify(result, null, 2),
       });
-    } else {
-      logger.debug('runtimeExecute completed successfully');
+      } else {
+        logger.debug('runtimeExecute completed successfully');
+      }
+    } catch (error: unknown) {
+      // Catch and re-throw with more context
+      // Always log error (even without --debug) if runtimeExecute throws
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error('runtimeExecute threw an error', {
+        error: err.message,
+        stack: err.stack || 'No stack trace',
+      });
+      
+      // Re-throw to be caught by outer error handler
+      throw error;
     }
-    
-    logger.groupEnd();
-  } catch (error: any) {
-    // Catch and re-throw with more context
-    // Always log error (even without --debug) if runtimeExecute throws
-    logger.error('runtimeExecute threw an error', {
-      error: error?.message || 'Unknown error',
-      stack: error?.stack || 'No stack trace',
-    });
-    
-    logger.groupEnd();
-    
-    // Re-throw to be caught by outer error handler
-    throw error;
-  }
 
   if (!result.ok) {
     // Error - send to stderr
     const error = result.error;
     
-    // Build error message
-    let errorMessage = `[${manifest.id}] ${error?.message || error?.code || 'Unknown error'}`;
+    // Build error message with enhanced formatting
+    let errorMessage = `[ERROR] Plugin execution failed\n\n`;
+    errorMessage += `Error Code: ${error?.code || 'UNKNOWN'}\n`;
+    errorMessage += `Message: ${error?.message || 'Unknown error'}\n`;
     
-    // Add error code if available and different from message
-    if (error?.code && error.code !== error.message) {
-      errorMessage += ` (code: ${error.code})`;
+    // Add root cause analysis if available
+    if (error?.rootCause) {
+      const rc = error.rootCause.rootCause;
+      errorMessage += `\nRoot Cause:\n`;
+      errorMessage += `  Type: ${rc.type} (confidence: ${Math.round(rc.confidence * 100)}%)\n`;
+      errorMessage += `  Explanation: ${rc.explanation}\n`;
+      if (rc.location.file) {
+        errorMessage += `  Location: ${rc.location.file}`;
+        if (rc.location.line) errorMessage += `:${rc.location.line}`;
+        if (rc.location.function) errorMessage += ` in ${rc.location.function}()`;
+        if (rc.location.property) errorMessage += ` (property: ${rc.location.property})`;
+        errorMessage += `\n`;
+      }
+    }
+    
+    // Add context information if available
+    if (error?.context) {
+      const ctx = error.context;
+      errorMessage += `\nContext State:\n`;
+      if (ctx.location.file) {
+        errorMessage += `  File: ${ctx.location.file}\n`;
+        if (ctx.location.function) errorMessage += `  Function: ${ctx.location.function}\n`;
+        if (ctx.location.line) errorMessage += `  Line: ${ctx.location.line}\n`;
+        if (ctx.location.property) errorMessage += `  Property: ${ctx.location.property}\n`;
+      }
+      if (ctx.availableProperties.length > 0) {
+        errorMessage += `  Available: ${ctx.availableProperties.join(', ')}\n`;
+      }
+      if (ctx.missingProperties.length > 0) {
+        errorMessage += `  Missing: ${ctx.missingProperties.join(', ')}\n`;
+      }
     }
     
     // Add error details if available
-    if (error?.details) {
-      errorMessage += `\nDetails: ${JSON.stringify(error.details, null, 2)}`;
+    if (error?.details && Object.keys(error.details).length > 0) {
+      errorMessage += `\nDetails:\n${JSON.stringify(error.details, null, 2)}\n`;
+    }
+    
+    // Add fixes if available
+    if (error?.fixes && error.fixes.length > 0) {
+      errorMessage += `\nSuggested Fixes:\n`;
+      for (const fix of error.fixes) {
+        const autoLabel = fix.autoApplicable ? '[AUTO]' : '[MANUAL]';
+        errorMessage += `  ${autoLabel} ${fix.description}\n`;
+        if (fix.code) {
+          errorMessage += `    Code:\n${fix.code.split('\n').map((l) => `    ${l}`).join('\n')}\n`;
+        }
+      }
+    }
+    
+    // Add suggestions (fallback to old system if new ones not available)
+    if (error?.suggestions && error.suggestions.length > 0) {
+      errorMessage += `\nSuggestions:\n`;
+      for (const suggestion of error.suggestions) {
+        errorMessage += `  • ${suggestion}\n`;
+      }
+    } else {
+      const oldSuggestions = getSuggestions(error?.code || 'UNKNOWN');
+      if (oldSuggestions.length > 0) {
+        errorMessage += `\n${formatSuggestions(oldSuggestions)}`;
+      }
+    }
+    
+    // Add documentation link if available
+    if (error?.documentation) {
+      errorMessage += `\nDocumentation: ${error.documentation}\n`;
     }
     
     // Add stack trace if available (even without --debug, show on error)
     if (error?.trace) {
-      errorMessage += `\n\nStack trace:\n${error.trace}`;
-    } else if ((error as any)?.stack) {
+      errorMessage += `\nStack Trace:\n${error.trace}\n`;
+    } else if (error && typeof error === 'object' && 'stack' in error && typeof error.stack === 'string') {
       // Fallback for non-ErrorEnvelope errors
-      errorMessage += `\n\nStack trace:\n${(error as any).stack}`;
+      errorMessage += `\nStack Trace:\n${error.stack}\n`;
     }
     
     // Add logs from sandbox if available (always show last 50 lines on error)
     // Even without --debug, we collect logs for error display
     if (result.logs && result.logs.length > 0) {
       const logLines = result.logs.slice(-50); // Last 50 lines
-      errorMessage += `\n\nSandbox logs (last ${logLines.length} lines):\n${logLines.join('\n')}`;
+      errorMessage += `\nSandbox Logs (last ${logLines.length} lines):\n${logLines.join('\n')}\n`;
     } else {
       // If no logs, at least mention that logs were not collected
-      errorMessage += `\n\n(No sandbox logs available. Run with --debug for more details.)`;
-    }
-    
-    // Add error suggestions
-    const suggestions = getSuggestions(error?.code || 'UNKNOWN');
-    if (suggestions.length > 0) {
-      errorMessage += `\n\n${formatSuggestions(suggestions)}`;
+      errorMessage += `\n(No sandbox logs available. Run with --debug for more details.)\n`;
     }
     
     // Show snapshot path if available
     try {
       const snapshotsDir = getSnapshotsDir(execCtx.workdir);
-      const snapshotFiles = await require('fs').promises.readdir(snapshotsDir).catch(() => []);
+      const { readdir } = await import('fs/promises');
+      const snapshotFiles = await readdir(snapshotsDir).catch(() => []);
       if (snapshotFiles.length > 0) {
         // Get latest snapshot
         const latestSnapshot = snapshotFiles
@@ -382,7 +735,22 @@ export async function executeCommand(
       // Ignore snapshot path errors
     }
     
-    cliContext.presenter.error(errorMessage);
+    // Use Output for error display
+    const errorObj = error instanceof Error ? error : new Error(error?.message || 'Unknown error');
+    output.error(errorObj, {
+      title: 'Plugin execution failed',
+      code: error?.code || 'UNKNOWN',
+      suggestions: error?.suggestions || getSuggestions(error?.code || 'UNKNOWN').map(s => s.text),
+      docs: error?.documentation,
+      context: {
+        rootCause: error?.rootCause,
+        context: error?.context,
+        details: error?.details,
+        fixes: error?.fixes,
+        trace: error?.trace,
+        logs: result.logs?.slice(-50),
+      },
+    });
 
     // Map error code to exit code
     const exitCode = mapErrorCodeToExitCode(error.code);
@@ -392,18 +760,18 @@ export async function executeCommand(
 
   // Success - output result if available
   if (result.data) {
-    const output = result.data as any;
+    const resultData = result.data as Record<string, unknown>;
     
     // Handle case when command returns { exitCode, ...artifactData }
     // Extract exitCode if present, use rest as output
-    let outputData = output;
+    let outputData: Record<string, unknown> | undefined = resultData;
     let commandExitCode: number | undefined;
     
-    if (output && typeof output === 'object' && 'exitCode' in output) {
+    if (resultData && typeof resultData === 'object' && 'exitCode' in resultData) {
       // Command returned object with exitCode (for artifacts)
-      commandExitCode = output.exitCode as number;
+      commandExitCode = resultData.exitCode as number;
       // Remove exitCode from output for display
-      const { exitCode, ...rest } = output;
+      const { exitCode, ...rest } = resultData;
       outputData = Object.keys(rest).length > 0 ? rest : undefined;
     }
     
@@ -412,30 +780,28 @@ export async function executeCommand(
     
     // Check if output has json flag or is explicitly a JSON response
     if (outputData && (outputData.json || flags.json)) {
-      cliContext.presenter.json(outputData);
+      output.json(outputData);
     } else if (outputData && outputData.ok !== false && outputData.message) {
       // Success message
-      if (!flags.quiet) {
-        cliContext.presenter.info(outputData.message);
-      }
+      output.success(outputData.message as string, outputData);
     } else if (outputData && outputData.ok !== false && typeof outputData === 'object') {
       // Complex output - log key info
       if (!flags.quiet) {
         // Try to extract meaningful info
         if (outputData.mindDir) {
-          cliContext.presenter.info(`✓ Mind workspace initialized: ${outputData.mindDir}`);
+          output.success(`Mind workspace initialized: ${outputData.mindDir}`, outputData);
         } else if (outputData.packPath) {
-          cliContext.presenter.info(`✓ Pack created: ${outputData.packPath}`);
+          output.success(`Pack created: ${outputData.packPath}`, outputData);
         } else if (outputData.query) {
-          cliContext.presenter.info(`✓ Query executed: ${outputData.query}`);
+          output.success(`Query executed: ${outputData.query}`, outputData);
         } else {
           // Fallback: just indicate success
-          cliContext.presenter.info('✓ Command completed successfully');
+          output.success('Command completed successfully', outputData);
         }
       }
     } else if (!outputData && !flags.quiet) {
       // No output data but command succeeded - show success message
-      cliContext.presenter.info(`✓ Command ${command.id} completed successfully`);
+      output.success(`Command ${command.id} completed successfully`);
     }
     
     // Return command exit code if set (for artifacts to be processed)
@@ -443,13 +809,13 @@ export async function executeCommand(
     // The exitCode in result.data is used for artifact processing
   } else if (!flags.quiet) {
     // No data but command succeeded - show success message
-    cliContext.presenter.info(`✓ Command ${command.id} completed successfully`);
+    output.success(`Command ${command.id} completed successfully`);
   }
 
   // Show performance profile if available
   if (result.profile && debugLevel === 'profile') {
-    cliContext.presenter.info('');
-    cliContext.presenter.info(formatTimeline(result.profile));
+    output.info('');
+    output.write(formatTimeline(result.profile));
     
     // Option to export to Chrome DevTools format
     if (flags['profile-export']) {
@@ -462,16 +828,22 @@ export async function executeCommand(
         await fs.mkdir(exportDir, { recursive: true });
         const chromeFormat = exportProfileChromeFormat(result.profile);
         await fs.writeFile(exportPath, JSON.stringify(chromeFormat, null, 2));
-        cliContext.presenter.info(`📊 Profile exported to: ${exportPath}`);
-        cliContext.presenter.info(`   Open in Chrome DevTools: chrome://tracing → Load`);
+        output.info(`📊 Profile exported to: ${exportPath}`);
+        output.info(`   Open in Chrome DevTools: chrome://tracing → Load`);
       } catch (error: any) {
-        cliContext.presenter.warn(`Failed to export profile: ${error.message}`);
+        output.warn(`Failed to export profile: ${error.message}`);
       }
     }
   }
 
-  // Success - return 0
-  return 0;
+    // Success - return 0
+    return 0;
+  } finally {
+    await localEventBus.shutdown().catch(() => {});
+    if (pluginEventBus) {
+      await releasePluginBus(pluginBusKey).catch(() => {});
+    }
+  }
 }
 
 /**

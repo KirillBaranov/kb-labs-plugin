@@ -4,7 +4,7 @@
  */
 
 import type { StudioWidgetDecl } from '@kb-labs/plugin-manifest';
-import type { StudioRegistryEntry } from './registry.js';
+import type { StudioRegistryEntry, StudioHeaderHints } from './registry.js';
 
 /**
  * Default component paths for widget kinds
@@ -68,6 +68,7 @@ export function extractDataSource(
   method?: 'GET' | 'POST';
   headers?: Record<string, string>;
   fixtureId?: string;
+  headerHints?: StudioHeaderHints;
 } {
   if (!widget.data) {
     throw new Error(`Widget ${widget.id} has no data configuration`);
@@ -92,6 +93,7 @@ export function extractDataSource(
       routeId: restSource.routeId,
       method: restSource.method,
       headers: restSource.headers,
+      headerHints: widget.data?.headers,
     };
   }
 
@@ -105,6 +107,7 @@ export function extractDataSource(
       source: mockSource,
       pollingMs,
       fixtureId: mockSource.fixtureId,
+      headerHints: widget.data?.headers,
     };
   }
 

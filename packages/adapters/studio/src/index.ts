@@ -12,6 +12,7 @@ export {
   type StudioMenuEntry,
   type StudioLayoutEntry,
   type StudioPluginEntry,
+  type StudioHeaderHints,
 } from './registry.js';
 
 // Widgets

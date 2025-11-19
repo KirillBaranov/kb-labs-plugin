@@ -5,10 +5,19 @@
 
 import type { ManifestV2, ArtifactAccess } from '@kb-labs/plugin-manifest';
 import type { ExecutionContext, ErrorEnvelope } from '../types.js';
+import type {
+  ArtifactStatus as ArtifactStatusContract,
+  ArtifactCapability as ArtifactCapabilityContract,
+  ArtifactMeta as ArtifactMetaContract,
+  ArtifactReadRequest as ArtifactReadRequestContract,
+  ArtifactWriteRequest as ArtifactWriteRequestContract,
+  ArtifactListRequest as ArtifactListRequestContract,
+  ArtifactInfo as ArtifactInfoContract,
+} from '@kb-labs/plugin-contracts';
 import { ErrorCode } from '@kb-labs/api-contracts';
 import { toErrorEnvelope, createErrorContext } from '../errors.js';
 import { emitAnalyticsEvent } from '../analytics.js';
-import { createDebugLogger, createLoggerOptionsFromContext } from '@kb-labs/sandbox';
+import { createRuntimeLogger } from '../logging.js';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as crypto from 'node:crypto';
@@ -16,38 +25,21 @@ import { minimatch } from 'minimatch';
 
 /**
  * Artifact lifecycle status
+ * @deprecated Import from @kb-labs/plugin-contracts instead
  */
-export type ArtifactStatus = 'pending' | 'ready' | 'failed' | 'expired';
+export type ArtifactStatus = ArtifactStatusContract;
 
 /**
  * Artifact capabilities
+ * @deprecated Import from @kb-labs/plugin-contracts instead
  */
-export type ArtifactCapability = 'stream' | 'watch' | 'multipart';
+export type ArtifactCapability = ArtifactCapabilityContract;
 
 /**
  * Artifact metadata
+ * @deprecated Import from @kb-labs/plugin-contracts instead
  */
-export interface ArtifactMeta {
-  owner: string;
-  size: number;
-  sha256: string;
-  contentType: string;
-  encoding?: string;
-  createdAt: number;
-  updatedAt: number;
-  /** Version of the artifact data format (e.g., "1.0.0") */
-  version?: string;
-  /** Version of the schema used for validation */
-  schemaVersion?: string;
-  /** Lifecycle status of the artifact */
-  status: ArtifactStatus;
-  /** Timestamp when artifact expires (milliseconds since epoch) */
-  expiresAt?: number;
-  /** TTL in seconds */
-  ttl?: number;
-  /** Supported capabilities */
-  capabilities?: ArtifactCapability[];
-}
+export interface ArtifactMeta extends ArtifactMetaContract {}
 
 /**
  * Parse artifact URI to plugin ID and path
@@ -145,52 +137,29 @@ export function parseArtifactUri(uri: string): { pluginId: string; path: string 
 
 /**
  * Artifact read request
+ * @deprecated Import from @kb-labs/plugin-contracts instead
  */
-export interface ArtifactReadRequest {
-  /** Artifact URI (artifact://plugin-id/path) */
-  uri: string;
-  /** Optional content type filter */
-  accept?: string[];
-}
+export interface ArtifactReadRequest extends ArtifactReadRequestContract {}
 
 /**
  * Artifact write request
+ * @deprecated Import from @kb-labs/plugin-contracts instead
  */
-export interface ArtifactWriteRequest {
-  /** Artifact URI (artifact://plugin-id/path) */
-  uri: string;
-  /** Data to write */
-  data: unknown;
-  /** Content type */
-  contentType?: string;
-  /** Write mode */
-  mode?: 'upsert' | 'failIfExists';
-  /** TTL in seconds (overrides TTL from manifest) */
-  ttl?: number;
-}
+export interface ArtifactWriteRequest extends ArtifactWriteRequestContract {}
 
 /**
  * Artifact list request
+ * @deprecated Import from @kb-labs/plugin-contracts instead
  */
-export interface ArtifactListRequest {
-  /** Artifact URI with pattern (artifact://plugin-id/pattern) */
-  uri: string;
-  /** Filter by status */
-  status?: ArtifactStatus[];
-  /** Minimum version required */
-  minVersion?: string;
-}
+export interface ArtifactListRequest extends ArtifactListRequestContract {}
 
 /**
  * Artifact information
+ * @deprecated Import from @kb-labs/plugin-contracts instead
  */
-export interface ArtifactInfo {
-  /** Artifact URI */
-  uri: string;
-  /** Logical path */
+export interface ArtifactInfo extends ArtifactInfoContract {
+  /** Logical path (runtime-specific extension, always present in runtime) */
   path: string;
-  /** Artifact metadata */
-  meta: ArtifactMeta;
 }
 
 /**
@@ -208,6 +177,13 @@ export class ArtifactBroker {
     // Default artifact base directory
     this.artifactBaseDir =
       artifactBaseDir || path.join(callerCtx.workdir, '.artifacts');
+  }
+
+  private createLogger(extra: Record<string, unknown> = {}) {
+    return createRuntimeLogger('artifacts', this.callerCtx, {
+      caller: this.callerCtx.pluginId,
+      ...extra,
+    });
   }
 
   /**
@@ -400,6 +376,7 @@ export class ArtifactBroker {
     meta: ArtifactMeta;
   }> {
     const startedAt = Date.now();
+    const logger = this.createLogger({ uri: request.uri, action: 'write' });
 
     try {
       // 1. Parse URI
@@ -408,9 +385,7 @@ export class ArtifactBroker {
       const artifactPath = parseResult.path;
       
       // Debug: log URI parsing
-      const parseLoggerOptions = createLoggerOptionsFromContext(this.callerCtx);
-      const parseLogger = createDebugLogger(this.callerCtx.debug || false, 'artifact:broker', parseLoggerOptions);
-      parseLogger.debug('Parsing artifact URI', {
+      logger.debug('Parsing artifact URI', {
         uri: request.uri,
         pluginId,
         artifactPath,
@@ -419,7 +394,7 @@ export class ArtifactBroker {
 
       // 2. Validate write permissions
       const permissionCheck = this.checkWritePermission(request);
-      parseLogger.debug('Permission check', {
+      logger.debug('Permission check', {
         uri: request.uri,
         allow: permissionCheck.allow,
         reason: permissionCheck.reason,
@@ -467,9 +442,7 @@ export class ArtifactBroker {
       const physicalPath = this.resolvePath(pluginId, artifactPath);
       
       // Debug: log path resolution
-      const pathLoggerOptions = createLoggerOptionsFromContext(this.callerCtx);
-      const pathLogger = createDebugLogger(this.callerCtx.debug || false, 'artifact:broker', pathLoggerOptions);
-      pathLogger.debug('Resolving artifact path', {
+      logger.debug('Resolving artifact path', {
         uri: request.uri,
         pluginId,
         artifactPath,
@@ -561,7 +534,7 @@ export class ArtifactBroker {
       try {
         await fs.rename(tmpPath, physicalPath);
       } catch (renameError) {
-        pathLogger.error('Failed to rename artifact file', {
+        logger.error('Failed to rename artifact file', {
           tmpPath,
           physicalPath,
           error: renameError instanceof Error ? renameError.message : String(renameError),
@@ -579,7 +552,7 @@ export class ArtifactBroker {
         await fs.writeFile(metaTmpPath2, JSON.stringify(meta, null, 2), 'utf8');
         await fs.rename(metaTmpPath2, metaPath);
       } catch (metaError) {
-        pathLogger.error('Failed to write/rename meta file', {
+        logger.error('Failed to write/rename meta file', {
           metaTmpPath2,
           metaPath,
           error: metaError instanceof Error ? metaError.message : String(metaError),
@@ -588,9 +561,7 @@ export class ArtifactBroker {
       }
       
       // Debug: log paths for troubleshooting
-      const writeLoggerOptions = createLoggerOptionsFromContext(this.callerCtx);
-      const writeLogger = createDebugLogger(this.callerCtx.debug || false, 'artifact:broker', writeLoggerOptions);
-      writeLogger.debug('Artifact and meta written', {
+      logger.debug('Artifact and meta written', {
         physicalPath,
         metaPath,
         uri: request.uri,
@@ -615,12 +586,10 @@ export class ArtifactBroker {
       };
     } catch (error) {
       // Log error for debugging
-      const errorLoggerOptions = createLoggerOptionsFromContext(this.callerCtx);
-      const errorLogger = createDebugLogger(this.callerCtx.debug || false, 'artifact:broker', errorLoggerOptions);
       const errorDetails = error && typeof error === 'object' 
         ? JSON.stringify(error, Object.getOwnPropertyNames(error), 2)
         : String(error);
-      errorLogger.error('Error writing artifact', {
+      logger.error('Error writing artifact', {
         uri: request.uri,
         error: error instanceof Error ? error.message : String(error),
         errorStack: error instanceof Error ? error.stack : undefined,
@@ -769,10 +738,11 @@ export class ArtifactBroker {
     const artifactPath = parseResult.path;
     
     // Debug: log permission check
-    const permLoggerOptions = createLoggerOptionsFromContext(this.callerCtx);
-    const permLogger = createDebugLogger(this.callerCtx.debug || false, 'artifact:broker', permLoggerOptions);
-    
-    
+    const permLogger = this.createLogger({
+      uri: request.uri,
+      action: 'write-permission',
+    });
+
     permLogger.debug('Checking write permission', {
       uri: request.uri,
       callerPlugin: this.callerCtx.pluginId,

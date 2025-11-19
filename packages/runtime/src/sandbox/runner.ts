@@ -11,6 +11,7 @@ import type {
 import type { PermissionSpec, ManifestV2 } from '@kb-labs/plugin-manifest';
 import type { InvokeBroker } from '../invoke/broker.js';
 import type { ArtifactBroker } from '../artifacts/broker.js';
+import type { ShellBroker } from '../shell/broker.js';
 
 /**
  * Sandbox runner - executes handlers in isolated environment
@@ -36,6 +37,8 @@ export interface SandboxRunner {
     invokeBroker?: InvokeBroker;
     /** Artifact broker for artifact access */
     artifactBroker?: ArtifactBroker;
+    /** Shell broker for command execution */
+    shellBroker?: ShellBroker;
   }): Promise<ExecuteResult>;
 }
 

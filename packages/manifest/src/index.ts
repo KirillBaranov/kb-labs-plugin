@@ -10,6 +10,8 @@ export type {
   PermissionSpec,
   InvokePermission,
   ArtifactAccess,
+  ShellPermission,
+  ShellCommandPattern,
   SchemaRef,
   DataSource,
   ArtifactDecl,
@@ -17,6 +19,12 @@ export type {
   CliCommandDecl,
   ErrorSpec,
   RestRouteDecl,
+  HeaderMatch,
+  HeaderRule,
+  HeaderPolicy,
+  HeadersConfig,
+  HeaderValidator,
+  SecurityHeaders,
   StudioWidgetDecl,
   StudioMenuDecl,
   StudioLayoutDecl,
@@ -25,6 +33,16 @@ export type {
 
 // Runtime contracts
 export type { PluginContext, Handler } from './runtime.js';
+
+// Studio widget data contracts
+export type {
+  CardData,
+  CardListData,
+  InfoPanelSection,
+  InfoPanelData,
+  KeyValueItem,
+  KeyValueData,
+} from './studio-widgets.js';
 
 // Validation
 export {

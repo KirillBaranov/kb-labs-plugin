@@ -3,7 +3,7 @@
  * Plugin registry for route resolution
  */
 
-import type { ManifestV2 } from '@kb-labs/plugin-manifest';
+import type { ManifestV2, RestRouteDecl } from '@kb-labs/plugin-manifest';
 import type { HandlerRef } from './types.js';
 
 /**
@@ -24,9 +24,9 @@ export interface PluginRegistry {
    * @param pluginId - Plugin identifier
    * @param method - HTTP method (GET, POST, etc.)
    * @param path - Route path
-   * @returns Handler reference or null if not found
+   * @returns Resolved route information or null if not found
    */
-  resolveRoute(pluginId: string, method: string, path: string): Promise<HandlerRef | null>;
+  resolveRoute(pluginId: string, method: string, path: string): Promise<ResolvedRoute | null>;
 }
 
 /**
@@ -36,4 +36,8 @@ export type ResolvedRoute = {
   pluginId: string;
   handler: HandlerRef;
   manifest: ManifestV2;
+  route: RestRouteDecl;
+  pluginRoot: string;
+  workdir: string;
+  outdir?: string;
 };

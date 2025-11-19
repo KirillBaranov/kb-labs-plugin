@@ -22,7 +22,7 @@ export function selectRunnerMode(ctx: ExecutionContext): {
   // For inspect mode, we MUST use subprocess (Node.js debugger requires separate process)
   const needsSubprocess = debugLevel === 'inspect';
   // For other debug modes, use inprocess for faster iteration
-  const useInprocess = ctx.debug && !needsSubprocess;
+  const useInprocess = Boolean(ctx.debug && !needsSubprocess);
   
   const mode: RunnerMode = needsSubprocess ? 'subprocess' : (useInprocess ? 'inprocess' : 'subprocess');
   

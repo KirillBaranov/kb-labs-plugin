@@ -48,6 +48,10 @@ export { nodeSubprocRunner } from './sandbox/node-subproc.js';
 // Errors
 export {
   toErrorEnvelope,
+  analyzeRootCause,
+  analyzeRootCauseSync,
+  type RootCauseAnalysis,
+  type RootCauseType,
   createErrorContext,
 } from './errors.js';
 
@@ -70,7 +74,8 @@ export {
 } from './artifacts.js';
 
 // Analytics
-export { emitAnalyticsEvent } from './analytics.js';
+export { emitAnalyticsEvent, setTelemetryEmitter, getTelemetryEmitter } from './analytics.js';
+export { createNoopAnalyticsEmitter } from './analytics/emitter.js';
 
 // Utils
 export { createId, hashManifest } from './utils.js';
@@ -88,6 +93,15 @@ export type {
   InvokeContext,
   MountSpec,
 } from './invoke/types.js';
+export {
+  applyHeaderTransforms,
+  listHeaderTransforms,
+} from './invoke/header-transforms.js';
+export {
+  loadCustomHeaderTransform,
+  clearHeaderTransformCache,
+  type HeaderTransformFn,
+} from './invoke/transform-loader.js';
 
 // Artifacts
 export { ArtifactBroker, parseArtifactUri } from './artifacts/broker.js';
@@ -145,3 +159,85 @@ export {
   type MockFsOperation,
   type MockFsRecord,
 } from './mocks/fs-mock.js';
+
+// Events
+export {
+  createEventBus,
+  acquirePluginBus,
+  releasePluginBus,
+  getPluginBusRefs,
+  DEFAULT_CONFIG as DEFAULT_EVENT_BUS_CONFIG,
+} from './events/index.js';
+export type {
+  EventBus,
+  EventEnvelope,
+  EventScope,
+  EmitOptions as EventEmitOptions,
+  SubscriptionOptions as EventSubscriptionOptions,
+  WaitForOptions as EventWaitForOptions,
+  EventBusConfig,
+  EventBusError,
+} from './events/index.js';
+
+// Unified Plugin Context
+export {
+  createPluginContext,
+  createCapabilitySet,
+  createEventSchemaRegistry,
+  createNoopEventBridge,
+  createIsolatedEventBridge,
+  isKnownPluginHost,
+  KNOWN_PLUGIN_HOSTS,
+} from './context/index.js';
+export type {
+  PluginContext,
+  PluginContextOptions,
+  PluginContextMetadata,
+  CapabilitySet,
+  PluginEventDefinition,
+  PluginEventEnvelope,
+  PluginEventSchemaRegistry,
+  PluginEventBridge,
+  PluginHostType,
+  KnownPluginHost,
+  PresenterFacade,
+  PresenterProgressPayload,
+  AnalyticsEmitter,
+  AnalyticsEmitOptions,
+} from './context/index.js';
+export { CapabilityFlag } from './context/index.js';
+
+// Presenters
+export {
+  TTYPresenter,
+  JobRunnerPresenter,
+  HttpPresenter,
+  createNoopPresenter,
+} from './presenter/index.js';
+export type {
+  TTYPresenterOptions,
+  TTYPresenterFormatter,
+  JobRunnerPresenterOptions,
+  JobRunnerPresenterEvent,
+  HttpPresenterOptions,
+  PresenterMessageLevel,
+  PresenterMessageOptions,
+  PresenterEventPayload,
+  ConfirmOptions,
+} from './presenter/index.js';
+
+export {
+  OperationTracker,
+  type TrackedOperation,
+  type TrackedOperationStatus,
+} from './operations/operation-tracker.js';
+export {
+  getTrackedOperations,
+  clearTrackedOperations,
+} from './operations/tracked-operations.js';
+
+export {
+  SmartConfigHelper,
+  type EnsureSectionOptions,
+  type EnsureSectionResult,
+} from './config/config-helper.js';

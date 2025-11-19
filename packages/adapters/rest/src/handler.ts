@@ -9,11 +9,18 @@ import type {
 } from '@kb-labs/plugin-manifest';
 import type {
   ExecutionContext,
-  ExecuteResult,
   HandlerRef,
 } from '@kb-labs/plugin-runtime';
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { execute as runtimeExecute, createId } from '@kb-labs/plugin-runtime';
+import {
+  execute as runtimeExecute,
+  createId,
+  createPluginContext,
+  createNoopEventBridge,
+  createNoopAnalyticsEmitter,
+  OperationTracker,
+  HttpPresenter,
+} from '@kb-labs/plugin-runtime';
 import type { PluginRegistry } from '@kb-labs/plugin-runtime';
 import * as path from 'node:path';
 import type { 
@@ -95,7 +102,8 @@ export async function executeRoute(
   pluginRoot?: string,
   workdir?: string,
   outdir?: string,
-  registry?: PluginRegistry
+  registry?: PluginRegistry,
+  timeoutMs?: number
 ): Promise<void> {
   const requestId = (request.id || createId()) as string;
   
@@ -110,6 +118,23 @@ export async function executeRoute(
   const defaultWorkdir = workdir || defaultPluginRoot;
   const defaultOutdir = outdir || path.join(defaultWorkdir, 'out');
 
+  const presenter = new HttpPresenter();
+  const operationTracker = new OperationTracker();
+  const pluginContext = createPluginContext('rest', {
+    requestId,
+    pluginId: manifest.id,
+    pluginVersion: manifest.version,
+    presenter,
+    events: createNoopEventBridge(),
+    analytics: createNoopAnalyticsEmitter(),
+    metadata: {
+      method: route.method,
+      path: route.path,
+      basePath,
+    },
+    getTrackedOperations: () => operationTracker.toArray(),
+  });
+
   const execCtx = createExecutionContext(
     route,
     manifest,
@@ -119,6 +144,32 @@ export async function executeRoute(
     defaultWorkdir,
     defaultOutdir
   );
+  execCtx.pluginContext = pluginContext;
+  execCtx.operationTracker = operationTracker;
+
+  const headerState = (request as any).kbHeaderState as
+    | {
+        sanitized?: Record<string, string>;
+        sensitive?: Set<string>;
+        rateLimitKeys?: Record<string, string>;
+      }
+    | undefined;
+  if (headerState) {
+    const ctxWithHeaders = execCtx as typeof execCtx & {
+      headers?: {
+        inbound: Record<string, string>;
+        sensitive?: string[];
+        rateLimitKeys?: Record<string, string>;
+      };
+    };
+    ctxWithHeaders.headers = {
+      inbound: { ...(headerState.sanitized ?? {}) },
+      sensitive: headerState.sensitive ? Array.from(headerState.sensitive) : undefined,
+      rateLimitKeys: headerState.rateLimitKeys
+        ? { ...headerState.rateLimitKeys }
+        : undefined,
+    };
+  }
 
   // Add traceId to context
   execCtx.traceId = traceId;
@@ -164,7 +215,8 @@ export async function executeRoute(
   const perms = manifest.permissions || {};
 
   // Execute via runtime with registry
-  const result = await runtimeExecute(
+  type RuntimeResult = Awaited<ReturnType<typeof runtimeExecute>>;
+  const runtimePromise = runtimeExecute(
     {
       handler: handlerRef,
       input,
@@ -175,9 +227,60 @@ export async function executeRoute(
     registry
   );
 
+  let timeoutHandle: NodeJS.Timeout | undefined;
+  let timedOut = false;
+
+  let result: RuntimeResult;
+  if (timeoutMs && timeoutMs > 0) {
+    const timeoutPromise = new Promise<RuntimeResult>(resolve => {
+      timeoutHandle = setTimeout(() => {
+        timedOut = true;
+        const timeoutResult = {
+          ok: false,
+          error: {
+            status: 'error',
+            http: 504,
+            code: 'E_PLUGIN_TIMEOUT',
+            message: `Route ${route.method} ${route.path} exceeded timeout of ${timeoutMs}ms`,
+            meta: {
+              requestId,
+              pluginId: manifest.id,
+              pluginVersion: manifest.version,
+              routeOrCommand: route.path,
+              timeoutMs,
+              timeMs: timeoutMs,
+            },
+          },
+          metrics: {
+            timeMs: timeoutMs,
+          },
+        } as RuntimeResult;
+        resolve(timeoutResult);
+      }, timeoutMs);
+    });
+    result = await Promise.race([runtimePromise, timeoutPromise]);
+  } else {
+    result = await runtimePromise;
+  }
+
+  if (timeoutHandle) {
+    clearTimeout(timeoutHandle);
+  }
+
+  if (timedOut) {
+    runtimePromise.catch(error => {
+      request.log.warn({ err: error }, 'Plugin execution completed after timeout');
+    });
+    if (timeoutMs && timeoutMs > 0) {
+      reply.header('Retry-After', Math.max(1, Math.ceil(timeoutMs / 1000)).toString());
+    }
+  }
+
   if (!result.ok) {
     // Error - send ErrorEnvelope
-    reply.status(result.error.http).send(result.error);
+    // Default to 500 if http status is not provided
+    const errorStatusCode = result.error.http || 500;
+    reply.status(errorStatusCode).send(result.error);
     return;
   }
 

@@ -4,6 +4,7 @@
  */
 
 import type { ManifestV2, RestRouteDecl, SchemaRef } from '@kb-labs/plugin-manifest';
+import { resolveHeaderPolicy } from './header-policy.js';
 
 /**
  * OpenAPI 3.0 spec structure
@@ -51,10 +52,15 @@ function schemaRefToOpenAPI(
 /**
  * Generate OpenAPI path from route
  */
+function normalizeHeaderName(name: string): string {
+  return name.toLowerCase();
+}
+
 function generatePath(
   route: RestRouteDecl,
   pluginId: string,
-  basePath: string
+  basePath: string,
+  manifest: ManifestV2
 ): Record<string, unknown> {
   const method = route.method.toLowerCase();
   const pathItem: Record<string, unknown> = {
@@ -64,15 +70,17 @@ function generatePath(
   };
 
   // Request
+  const parameters: Array<Record<string, unknown>> = [];
+
   if (route.input) {
     if (route.method === 'GET' || route.method === 'DELETE') {
-      pathItem.parameters = [
+      parameters.push(
         {
           name: 'query',
           in: 'query',
           schema: schemaRefToOpenAPI(route.input, pluginId),
-        },
-      ];
+        }
+      );
     } else {
       pathItem.requestBody = {
         content: {
@@ -82,6 +90,62 @@ function generatePath(
         },
       };
     }
+  }
+
+  const effectiveHeaders = resolveHeaderPolicy(manifest, route, basePath);
+
+  if (effectiveHeaders) {
+    const inboundHeaders = effectiveHeaders.inbound.filter(
+      (rule) =>
+        (rule.direction === undefined || rule.direction === 'in' || rule.direction === 'both') &&
+        (rule.action === 'forward' || rule.action === 'map')
+    );
+
+    const headerParameters = new Map<string, Record<string, unknown>>();
+
+    for (const rule of inboundHeaders) {
+      if (rule.match.kind !== 'exact') {
+        continue;
+      }
+      const headerName = normalizeHeaderName(rule.match.name);
+
+      if (!headerParameters.has(headerName)) {
+        headerParameters.set(headerName, {
+          name: headerName,
+          in: 'header',
+          required: Boolean(rule.required),
+          schema: { type: 'string' },
+          description:
+            rule.action === 'map'
+              ? `Forwarded and remapped header (server maps to ${rule.mapTo})`
+              : 'Forwarded header',
+          'x-kb-header-rule': {
+            action: rule.action,
+            sensitive: Boolean(rule.sensitive),
+            cacheVary: Boolean(rule.cacheVary),
+            rateLimitKey: Boolean(rule.rateLimitKey),
+          },
+        });
+      } else if (rule.required) {
+        headerParameters.get(headerName)!.required = true;
+      }
+    }
+
+    if (headerParameters.size > 0) {
+      parameters.push(...Array.from(headerParameters.values()));
+    }
+
+    (pathItem[method] as Record<string, unknown>)['x-kb-headers'] = {
+      defaults: effectiveHeaders.defaults,
+      allowList: effectiveHeaders.allowList,
+      denyList: effectiveHeaders.denyList,
+      inbound: inboundHeaders,
+      outbound: effectiveHeaders.outbound,
+    };
+  }
+
+  if (parameters.length > 0) {
+    pathItem.parameters = parameters;
   }
 
   // Response
@@ -139,6 +203,41 @@ function generatePath(
   };
 
   pathItem.responses = responses;
+
+  if (effectiveHeaders) {
+    const successStatus = String(route.method === 'POST' ? 201 : 200);
+    const successResponse = responses[successStatus] as Record<string, unknown>;
+
+    const outboundHeaders = effectiveHeaders.outbound.filter(
+      (rule) =>
+        (rule.direction === undefined || rule.direction === 'out' || rule.direction === 'both') &&
+        rule.action === 'forward' &&
+        rule.exposeToStudio
+    );
+
+    if (outboundHeaders.length > 0) {
+      const headers: Record<string, unknown> = {};
+
+      for (const rule of outboundHeaders) {
+        if (rule.match.kind !== 'exact') {
+          continue;
+        }
+        const headerName = rule.match.name;
+        headers[headerName] = {
+          schema: { type: 'string' },
+          description: 'Plugin-provided header',
+          'x-kb-header-rule': {
+            sensitive: Boolean(rule.sensitive),
+            cacheVary: Boolean(rule.cacheVary),
+          },
+        };
+      }
+
+      if (Object.keys(headers).length > 0) {
+        successResponse.headers = headers;
+      }
+    }
+  }
 
   // Security
   if (route.security && route.security.length > 0) {
@@ -231,7 +330,7 @@ export function generateOpenAPI(manifest: ManifestV2): OpenAPISpec {
       paths[path] = {};
     }
 
-    Object.assign(paths[path], generatePath(route, manifest.id, basePath));
+    Object.assign(paths[path], generatePath(route, manifest.id, basePath, manifest));
   }
 
   // Generate security schemes
@@ -246,6 +345,8 @@ export function generateOpenAPI(manifest: ManifestV2): OpenAPISpec {
     },
     paths,
   };
+
+  (spec as unknown as Record<string, unknown>)['x-kb-plugin-id'] = manifest.id;
 
   if (Object.keys(securitySchemes).length > 0) {
     spec.components = {

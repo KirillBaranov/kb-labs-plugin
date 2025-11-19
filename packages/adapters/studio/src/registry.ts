@@ -3,19 +3,25 @@
  * Studio registry generation from ManifestV2
  */
 
-import type { ManifestV2 } from '@kb-labs/plugin-manifest';
+import type { ManifestV2, RestRouteDecl } from '@kb-labs/plugin-manifest';
+import type { DataSource } from '@kb-labs/plugin-manifest';
+import { resolveHeaderPolicy } from '@kb-labs/plugin-adapter-rest/header-policy';
 
 /**
  * Studio registry entry (widget)
  */
 export interface StudioRegistryEntry {
   id: string;
-  kind: 'panel' | 'card' | 'table' | 'chart' | 'custom';
+  kind: 'panel' | 'card' | 'cardlist' | 'table' | 'chart' | 'tree' | 'timeline' | 'metric' | 'logs' | 'json' | 'diff' | 'status' | 'progress' | 'infopanel' | 'keyvalue' | 'form' | 'input-display' | 'custom';
   component?: string;
+  title?: string;
+  description?: string;
   data?: {
-    source?: import('@kb-labs/plugin-manifest').DataSource;
+    source?: DataSource;
     schema?: unknown;
+    headers?: StudioHeaderHints;
   };
+  options?: Record<string, unknown>;
   pollingMs?: number;
   order?: number;
   layoutHint?: {
@@ -23,12 +29,196 @@ export interface StudioRegistryEntry {
     h?: number;
     minW?: number;
     minH?: number;
+    height?: 'auto' | number | 'fit-content';
+  };
+  /** Widget actions */
+  actions?: Array<{
+    id: string;
+    label: string;
+    type?: 'button' | 'modal' | 'link' | 'dropdown';
+    icon?: string;
+    variant?: 'primary' | 'default' | 'danger';
+    handler?: {
+      type: 'rest' | 'navigate' | 'callback' | 'event' | 'modal';
+      config: Record<string, unknown>;
+    };
+    confirm?: {
+      title: string;
+      description: string;
+    };
+    disabled?: boolean | string;
+    visible?: boolean | string;
+    order?: number;
+  }>;
+  /** Event bus configuration */
+  events?: {
+    emit?: string[];
+    subscribe?: string[];
   };
   /** Plugin metadata */
   plugin: {
     id: string;
     version: string;
     displayName?: string;
+  };
+}
+
+/**
+ * Header hints derived from manifest header policies
+ */
+export interface StudioHeaderHints {
+  required: string[];
+  optional: string[];
+  autoInjected: string[];
+  deny: string[];
+  sensitive: string[];
+  patterns?: string[];
+}
+
+const SYSTEM_AUTO_HEADERS = ['traceparent', 'tracestate', 'x-request-id', 'x-trace-id', 'x-idempotency-key'];
+
+type HeaderRuleLike = {
+  match:
+    | { kind: 'exact'; name: string }
+    | { kind: 'prefix'; prefix: string }
+    | { kind: 'regex'; pattern: string; flags?: string };
+  action: 'forward' | 'strip' | 'map';
+  mapTo?: string;
+  required?: boolean;
+  sensitive?: boolean;
+};
+
+function headerCase(name: string): string {
+  return name
+    .toLowerCase()
+    .split('-')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join('-');
+}
+
+function normalizePathFragment(path: string | undefined): string {
+  if (!path) {
+    return '';
+  }
+  const withoutQuery = path.split('?')[0]?.trim() ?? '';
+  return withoutQuery.replace(/^\/+/, '');
+}
+
+function normalizeRouteAgainstBase(routePath: string, basePath: string): string {
+  const fragment = normalizePathFragment(routePath);
+  if (!fragment) {
+    return '';
+  }
+  const baseFragment = normalizePathFragment(basePath);
+  if (!baseFragment) {
+    return fragment;
+  }
+  if (fragment.startsWith(baseFragment)) {
+    const remainder = fragment.slice(baseFragment.length);
+    return remainder.replace(/^\/+/, '');
+  }
+  return fragment;
+}
+
+function findRestRoute(
+  manifest: ManifestV2,
+  source: Extract<DataSource, { type: 'rest' }>
+): RestRouteDecl | undefined {
+  if (!manifest.rest?.routes || manifest.rest.routes.length === 0) {
+    return undefined;
+  }
+
+  const method = (source.method ?? 'GET').toUpperCase();
+  const sourceFragment = normalizePathFragment(source.routeId);
+  const basePath = manifest.rest?.basePath || `/v1/plugins/${manifest.id}`;
+
+  for (const route of manifest.rest.routes) {
+    const routeMethod = route.method?.toUpperCase() ?? 'GET';
+    if (routeMethod !== method) {
+      continue;
+    }
+    const routeFragment = normalizeRouteAgainstBase(route.path ?? '', basePath);
+    if (routeFragment === sourceFragment) {
+      return route;
+    }
+  }
+
+  // Fallback: return first route with matching method
+  return manifest.rest.routes.find((route) => (route.method?.toUpperCase() ?? 'GET') === method);
+}
+
+function extractRuleTargets(rule: HeaderRuleLike): string[] {
+  if (rule.action === 'map' && rule.mapTo) {
+    return [rule.mapTo.toLowerCase()];
+  }
+  if (rule.match.kind === 'exact') {
+    return [rule.match.name.toLowerCase()];
+  }
+  return [];
+}
+
+function computeHeaderHints(
+  manifest: ManifestV2,
+  source: Extract<DataSource, { type: 'rest' }>
+): StudioHeaderHints | undefined {
+  const route = findRestRoute(manifest, source);
+  if (!route) {
+    return undefined;
+  }
+
+  const basePath = manifest.rest?.basePath || `/v1/plugins/${manifest.id}`;
+  const policy = resolveHeaderPolicy(manifest, route, basePath);
+  if (!policy) {
+    return undefined;
+  }
+
+  const required = new Set<string>();
+  const optional = new Set<string>();
+  const sensitive = new Set<string>();
+  const deny = new Set<string>((policy.denyList ?? []).map((name: string) => name.toLowerCase()));
+  const patterns: string[] = [];
+
+  for (const rule of policy.inbound ?? []) {
+    if (rule.match.kind === 'prefix') {
+      patterns.push(`${headerCase(rule.match.prefix)}*`);
+    } else if (rule.match.kind === 'regex') {
+      patterns.push(`/${rule.match.pattern}/${rule.match.flags ?? ''}`);
+    }
+
+    const targets = extractRuleTargets(rule);
+    if (targets.length === 0) {
+      continue;
+    }
+
+    if (rule.required) {
+      for (const target of targets) {
+        required.add(target);
+      }
+    } else if (rule.action !== 'strip') {
+      for (const target of targets) {
+        optional.add(target);
+      }
+    }
+
+    if (rule.sensitive) {
+      for (const target of targets) {
+        sensitive.add(target);
+      }
+    }
+  }
+
+  for (const allow of policy.allowList ?? []) {
+    optional.add(allow.toLowerCase());
+  }
+
+  return {
+    required: Array.from(required).map(headerCase).sort(),
+    optional: Array.from(optional).map(headerCase).sort(),
+    autoInjected: SYSTEM_AUTO_HEADERS.map(headerCase),
+    deny: Array.from(deny).map(headerCase).sort(),
+    sensitive: Array.from(sensitive).map(headerCase).sort(),
+    patterns: patterns.length > 0 ? patterns : undefined,
   };
 }
 
@@ -54,6 +244,29 @@ export interface StudioLayoutEntry {
   id: string;
   name: string;
   template: string;
+  kind?: 'grid' | 'two-pane';
+  title?: string;
+  description?: string;
+  config?: Record<string, unknown>;
+  widgets?: string[];
+  actions?: Array<{
+    id: string;
+    label: string;
+    type?: 'button' | 'modal' | 'link' | 'dropdown';
+    icon?: string;
+    variant?: 'primary' | 'default' | 'danger';
+    handler?: {
+      type: 'rest' | 'navigate' | 'callback' | 'event' | 'modal';
+      config: Record<string, unknown>;
+    };
+    confirm?: {
+      title: string;
+      description: string;
+    };
+    disabled?: boolean | string;
+    visible?: boolean | string;
+    order?: number;
+  }>;
   plugin: {
     id: string;
     version: string;
@@ -97,19 +310,40 @@ export function toRegistry(manifest: ManifestV2): StudioRegistry {
   if (manifest.studio?.widgets) {
     for (const widget of manifest.studio.widgets) {
       // Map widget kind to registry kind
-      const registryKind: 'panel' | 'card' | 'table' | 'chart' | 'custom' =
-        widget.kind === 'panel' || widget.kind === 'card' || widget.kind === 'table' || widget.kind === 'chart'
-          ? widget.kind
-          : 'custom';
+      // If widget has a component, it's custom
+      // Otherwise, keep the original kind (it will be resolved in WidgetRenderer)
+      const registryKind: StudioRegistryEntry['kind'] =
+        widget.component
+          ? 'custom' // If component is provided, it's always custom
+          : widget.kind;
       
+      const data: StudioRegistryEntry['data'] | undefined = widget.data
+        ? {
+            ...widget.data,
+            source: widget.data.source ? { ...widget.data.source } : undefined,
+          }
+        : undefined;
+
+      if (data?.source && data.source.type === 'rest') {
+        const headerHints = computeHeaderHints(manifest, data.source);
+        if (headerHints) {
+          data.headers = headerHints;
+        }
+      }
+
       widgets.push({
         id: widget.id,
         kind: registryKind,
         component: widget.component,
-        data: widget.data,
+        title: widget.title,
+        description: widget.description,
+        data,
+        options: widget.options ? { ...widget.options } : undefined,
         pollingMs: widget.pollingMs,
         order: widget.order,
         layoutHint: widget.layoutHint,
+        actions: widget.actions,
+        events: widget.events,
         plugin: {
           id: manifest.id,
           version: manifest.version,
@@ -139,10 +373,30 @@ export function toRegistry(manifest: ManifestV2): StudioRegistry {
   // Process layouts
   if (manifest.studio?.layouts) {
     for (const layout of manifest.studio.layouts) {
+      // Validate layout widgets if specified
+      const layoutWidgets = layout.widgets ? [...layout.widgets] : undefined;
+      if (layoutWidgets && manifest.studio.widgets) {
+        const widgetIds = new Set(manifest.studio.widgets.map(w => w.id));
+        const invalidWidgets = layoutWidgets.filter(id => !widgetIds.has(id));
+        if (invalidWidgets.length > 0) {
+          // Log warning but don't fail - let Studio handle it with better UX
+          console.warn(
+            `[Manifest ${manifest.id}] Layout "${layout.id}" references non-existent widgets: ${invalidWidgets.join(', ')}. ` +
+            `Available widgets: ${Array.from(widgetIds).join(', ')}`
+          );
+        }
+      }
+
       layouts.push({
         id: layout.id,
         name: layout.name || layout.id,
         template: layout.template || layout.kind || 'grid',
+        kind: layout.kind,
+        title: layout.title,
+        description: layout.description,
+        config: layout.config ? { ...layout.config } : undefined,
+        widgets: layoutWidgets,
+        actions: layout.actions,
         plugin: {
           id: manifest.id,
           version: manifest.version,

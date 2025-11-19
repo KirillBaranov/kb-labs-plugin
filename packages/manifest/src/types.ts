@@ -44,6 +44,27 @@ export interface ArtifactAccess {
 }
 
 /**
+ * Shell command specification for permissions
+ */
+export type ShellCommandPattern = string | { command: string; args?: string[] };
+
+/**
+ * Shell execution permissions
+ */
+export interface ShellPermission {
+  /** Allow list of commands and patterns (e.g., 'tsc', 'pnpm exec *', { command: 'git', args: ['status'] }) */
+  allow: Array<ShellCommandPattern>;
+  /** Deny list of commands (overrides allow, highest priority) */
+  deny?: Array<ShellCommandPattern>;
+  /** Commands that require user confirmation */
+  requireConfirmation?: Array<ShellCommandPattern>;
+  /** Default timeout in milliseconds */
+  timeoutMs?: number;
+  /** Maximum concurrent shell processes */
+  maxConcurrent?: number;
+}
+
+/**
  * Permission specification with strict unions and allow/deny lists
  */
 export interface PermissionSpec {
@@ -73,6 +94,41 @@ export interface PermissionSpec {
   invoke?: InvokePermission;
   /** Artifact access permissions */
   artifacts?: ArtifactAccess;
+  /** Shell execution permissions */
+  shell?: ShellPermission;
+  /** Event bus permissions */
+  events?: {
+    /** Allowed topics/prefixes for emit */
+    produce?: string[];
+    /** Allowed topics/prefixes for subscriptions */
+    consume?: string[];
+    /** Allowed scopes */
+    scopes?: Array<'local' | 'plugin' | 'system'>;
+    /** Optional schema references per topic */
+    schemas?: Record<string, SchemaRef>;
+    /** Maximum payload size per event (bytes) */
+    maxPayloadBytes?: number;
+    /** Maximum listeners per topic */
+    maxListenersPerTopic?: number;
+    /** Maximum queued events per scope */
+    maxQueueSize?: number;
+    /** Drop policy when queue saturated */
+    dropPolicy?: 'drop-oldest' | 'drop-new';
+    /** Quota: events per minute */
+    eventsPerMinute?: number;
+    /** Quota: concurrent handler executions */
+    concurrentHandlers?: number;
+    /** Duplicate cache size */
+    duplicateCacheSize?: number;
+    /** Duplicate entry TTL (ms) */
+    duplicateTtlMs?: number;
+    /** Default timeout for waitFor (ms) */
+    defaultWaitTimeoutMs?: number;
+    /** Shutdown drain timeout (ms) */
+    shutdownTimeoutMs?: number;
+    /** Keys to redact in logs */
+    redactKeys?: string[];
+  };
 }
 
 /**
@@ -119,6 +175,8 @@ export interface CliFlagDecl {
  * CLI command declaration
  */
 export interface CliCommandDecl {
+  /** CLI manifest schema version (defaults to '1.0') */
+  manifestVersion?: '1.0';
   /** Unique command identifier (e.g., 'ai-review:review') */
   id: string;
   /** Command group (e.g., 'ai-review') */
@@ -155,6 +213,8 @@ export interface RestRouteDecl {
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   /** Route path (must be within basePath) */
   path: string;
+  /** Route-specific timeout in milliseconds */
+  timeoutMs?: number;
   /** Input schema (body for POST/PUT/PATCH, query for GET) */
   input?: SchemaRef;
   /** Output schema */
@@ -167,6 +227,77 @@ export interface RestRouteDecl {
   security?: ('none' | 'user' | 'token' | 'oauth')[];
   /** Permissions specific to this route */
   permissions?: PermissionSpec;
+}
+
+/**
+ * Header matching rule
+ */
+export type HeaderMatch =
+  | { kind: 'exact'; name: string }
+  | { kind: 'prefix'; prefix: string }
+  | { kind: 'regex'; pattern: string; flags?: string };
+
+export type HeaderValidator =
+  | { kind: 'regex'; pattern: string; flags?: string }
+  | { kind: 'enum'; values: string[] }
+  | { kind: 'length'; min?: number; max?: number };
+
+export interface HeaderRule {
+  match: HeaderMatch;
+  direction?: 'in' | 'out' | 'both';
+  action: 'forward' | 'strip' | 'map';
+  mapTo?: string;
+  sensitive?: boolean;
+  validators?: HeaderValidator[];
+  required?: boolean;
+  redactInErrors?: boolean;
+  exposeToStudio?: boolean;
+  cacheVary?: boolean;
+  rateLimitKey?: boolean;
+  transform?: string;
+}
+
+export interface HeaderPolicy {
+  schema?: 'kb.headers/1';
+  defaults?: 'deny' | 'allowSafe';
+  inbound?: HeaderRule[];
+  outbound?: HeaderRule[];
+  allowList?: string[];
+  denyList?: string[];
+  maxHeaders?: number;
+  maxHeaderBytes?: number;
+  maxValueBytes?: number;
+}
+
+export interface SecurityHeaders {
+  cors?: {
+    allowOrigins?: string[] | '*';
+    allowHeaders?: string[];
+    exposeHeaders?: string[];
+  };
+  hsts?: {
+    enabled: boolean;
+    maxAge: number;
+    includeSubDomains?: boolean;
+  };
+  cookies?: {
+    sameSite?: 'Lax' | 'Strict' | 'None';
+    secure?: boolean;
+    httpOnly?: boolean;
+  };
+  csp?: string;
+  referrerPolicy?: string;
+}
+
+export interface HeadersConfig {
+  version?: 1;
+  defaults?: HeaderPolicy;
+  routes?: Array<{
+    routeId: `${Uppercase<string>} ${string}`;
+    policy: HeaderPolicy;
+  }>;
+  security?: SecurityHeaders;
+  profile?: string;
 }
 
 /**
@@ -194,6 +325,7 @@ export type StudioWidgetDecl<O = Record<string, unknown>> = {
   kind:
     | 'panel'
     | 'card'
+    | 'cardlist'
     | 'table'
     | 'chart'
     | 'tree'
@@ -203,7 +335,11 @@ export type StudioWidgetDecl<O = Record<string, unknown>> = {
     | 'json'
     | 'diff'
     | 'status'
-    | 'progress';
+    | 'progress'
+    | 'infopanel'
+    | 'keyvalue'
+    | 'form'
+    | 'input-display';
   /** Widget title */
   title: string;
   /** Widget description */
@@ -211,7 +347,7 @@ export type StudioWidgetDecl<O = Record<string, unknown>> = {
   /** Data configuration */
   data: {
     source: DataSource;
-    schema: SchemaRef;
+    schema?: SchemaRef;
   };
   /** UI options (typed downstream) */
   options?: O;
@@ -221,6 +357,34 @@ export type StudioWidgetDecl<O = Record<string, unknown>> = {
     h: number;
     minW?: number;
     minH?: number;
+    /** Height control: 'auto' (fit content), number (fixed px), 'fit-content' (minimal) */
+    height?: 'auto' | number | 'fit-content';
+  };
+  /** Widget actions (buttons, modals, etc.) */
+  actions?: Array<{
+    id: string;
+    label: string;
+    type?: 'button' | 'modal' | 'link' | 'dropdown';
+    icon?: string;
+    variant?: 'primary' | 'default' | 'danger';
+    handler?: {
+      type: 'rest' | 'navigate' | 'callback' | 'event' | 'modal';
+      config: Record<string, unknown>;
+    };
+    confirm?: {
+      title: string;
+      description: string;
+    };
+    disabled?: boolean | string;
+    visible?: boolean | string;
+    order?: number;
+  }>;
+  /** Event bus configuration */
+  events?: {
+    /** Events this widget can emit */
+    emit?: string[];
+    /** Events this widget subscribes to */
+    subscribe?: string[];
   };
   /** Polling interval in milliseconds (0 = no polling) */
   pollingMs?: number;
@@ -265,6 +429,27 @@ export interface StudioLayoutDecl {
   /** Layout-specific configuration */
   config?: Record<string, unknown>;
   // For grid: required keys: cols (object with sm, md, lg), rowHeight (number)
+  /** Explicit list of widget IDs to render in this layout */
+  widgets?: string[];
+  /** Layout actions (page-level actions) */
+  actions?: Array<{
+    id: string;
+    label: string;
+    type?: 'button' | 'modal' | 'link' | 'dropdown';
+    icon?: string;
+    variant?: 'primary' | 'default' | 'danger';
+    handler?: {
+      type: 'rest' | 'navigate' | 'callback' | 'event' | 'modal';
+      config: Record<string, unknown>;
+    };
+    confirm?: {
+      title: string;
+      description: string;
+    };
+    disabled?: boolean | string;
+    visible?: boolean | string;
+    order?: number;
+  }>;
 }
 
 /**
@@ -308,6 +493,21 @@ export interface LifecycleHooks {
   onDisable?: string;
 }
 
+/**
+ * Plugin setup specification
+ */
+export interface SetupSpec {
+  /** Handler reference invoked during setup (e.g., './setup.js#run') */
+  handler: string;
+  /** Human-readable description of what setup does */
+  describe: string;
+  /**
+   * Permissions granted to the setup handler. Must explicitly declare filesystem
+   * access (allow/deny patterns, mode) and any other resources it needs.
+   */
+  permissions: PermissionSpec;
+}
+
 export interface ManifestV2 {
   /** Schema version */
   schema: 'kb.plugin/2';
@@ -327,6 +527,8 @@ export interface ManifestV2 {
   dependencies?: PluginDependency[];
   /** Lifecycle hooks */
   lifecycle?: LifecycleHooks;
+  /** Setup command declaration for workspace initialization */
+  setup?: SetupSpec;
   /** CLI commands */
   cli?: {
     commands: CliCommandDecl[];
@@ -335,8 +537,15 @@ export interface ManifestV2 {
   rest?: {
     /** Base path for all routes (e.g., '/v1/plugins/ai-review') */
     basePath?: `/v1/plugins/${string}`;
+    /** Default route behaviour */
+    defaults?: {
+      /** Default timeout for plugin routes (milliseconds) */
+      timeoutMs?: number;
+    };
     routes: RestRouteDecl[];
   };
+  /** Header policies (plugin defaults + per-route overrides) */
+  headers?: HeadersConfig;
   /** Studio widgets */
   studio?: {
     widgets: StudioWidgetDecl[];

@@ -4,8 +4,8 @@
  */
 
 import type { ManifestV2 } from '@kb-labs/plugin-manifest';
-import type { CliCommand, CliContext, FlagBuilder } from '@kb-labs/cli-core';
-import { registerFlags } from './flags.js';
+import type { CliCommand, CliContext } from '@kb-labs/cli-core/public';
+import { registerFlags, type FlagBuilder } from './flags.js';
 import { executeCommand } from './handler.js';
 import type { ExecutionContext } from '@kb-labs/plugin-runtime';
 

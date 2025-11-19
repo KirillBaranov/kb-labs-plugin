@@ -6,7 +6,7 @@
 import type { ManifestV2 } from '@kb-labs/plugin-manifest';
 import type { ExecutionContext } from '../types.js';
 import type { ArtifactBroker } from '../artifacts/broker.js';
-import { createDebugLogger, createLoggerOptionsFromContext } from '@kb-labs/sandbox';
+import { createRuntimeLogger } from '../logging.js';
 
 /**
  * Write artifacts if declared
@@ -21,8 +21,9 @@ export async function writeArtifactsIfAny(
     return;
   }
 
-  const loggerOptions = createLoggerOptionsFromContext(ctx);
-  const logger = createDebugLogger(ctx.debug || false, 'runtime:artifacts', loggerOptions);
+  const logger = createRuntimeLogger('artifacts', ctx, {
+    manifestId: manifest.id,
+  });
   const { substitutePathTemplate } = await import('../artifacts.js');
 
   // Use artifactBroker if available, otherwise fall back to old writeArtifact
@@ -101,6 +102,17 @@ export async function writeArtifactsIfAny(
           profile: 'default',
           pluginId: ctx.pluginId,
         });
+
+        // Skip artifacts with unresolved placeholders (like {file})
+        // These are declarative artifacts that should be written explicitly
+        if (resolvedPath.includes('{')) {
+          logger.debug('Skipping artifact with unresolved placeholders (declarative)', {
+            artifactId: artifactDecl.id,
+            pathTemplate: artifactDecl.pathTemplate,
+            resolvedPath,
+          });
+          continue;
+        }
 
         // Create URI: artifact://plugin-id/path
         const artifactUri = `artifact://${ctx.pluginId}/${resolvedPath}`;
@@ -216,4 +228,5 @@ export async function writeArtifactsIfAny(
     }
   }
 }
+
 

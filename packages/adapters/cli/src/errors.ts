@@ -4,7 +4,7 @@
  */
 
 import type { PluginErrorEnvelope } from '@kb-labs/api-contracts';
-import type { CliContext } from '@kb-labs/cli-core';
+import type { CliContext } from '@kb-labs/cli-core/public';
 
 /**
  * Print error envelope to stderr
