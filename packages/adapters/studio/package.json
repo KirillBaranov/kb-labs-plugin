@@ -1,6 +1,7 @@
 {
   "name": "@kb-labs/plugin-adapter-studio",
   "version": "0.1.0",
+  "description": "Studio adapter for KB Labs plugins, enabling widget rendering and UI integration",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -28,10 +29,11 @@
   },
   "dependencies": {
     "@kb-labs/plugin-manifest": "workspace:*",
-    "@kb-labs/api-contracts": "link:../../../kb-labs-api-contracts/packages/api-contracts"
+    "@kb-labs/plugin-adapter-rest": "workspace:*",
+    "@kb-labs/api-contracts": "workspace:*"
   },
   "devDependencies": {
-    "@kb-labs/devkit": "link:../../../kb-labs-devkit",
+    "@kb-labs/devkit": "workspace:*",
     "@types/node": "^24.3.3",
     "@typescript-eslint/eslint-plugin": "^8",
     "@typescript-eslint/parser": "^8",

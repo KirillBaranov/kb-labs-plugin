@@ -1,6 +1,7 @@
 {
   "name": "@kb-labs/plugin-adapter-cli",
   "version": "0.1.0",
+  "description": "CLI adapter for KB Labs plugins, handling command execution and discovery",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -27,14 +28,26 @@
     "test:watch": "vitest -c ../../vitest.config.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.929.0",
+    "@kb-labs/api-contracts": "workspace:*",
+    "@kb-labs/cli-core": "workspace:*",
+    "@kb-labs/core": "workspace:*",
+    "@kb-labs/core-sys": "link:../../../kb-labs-core/packages/sys",
     "@kb-labs/plugin-manifest": "workspace:*",
     "@kb-labs/plugin-runtime": "workspace:*",
     "@kb-labs/sandbox": "workspace:*",
-    "@kb-labs/api-contracts": "link:../../../kb-labs-api-contracts/packages/api-contracts",
-    "@kb-labs/cli-core": "link:../../../kb-labs-cli/packages/core"
+    "ajv": "^8.17.1",
+    "ajv-formats": "^2.1.1",
+    "execa": "^9.6.0",
+    "glob": "^11.0.0",
+    "minimatch": "^10.0.1",
+    "picomatch": "^4.0.2",
+    "uuidv7": "^1.0.0",
+    "yaml": "^2.8.0",
+    "zod": "^4.1.5"
   },
   "devDependencies": {
-    "@kb-labs/devkit": "link:../../../kb-labs-devkit",
+    "@kb-labs/devkit": "workspace:*",
     "@types/node": "^24.3.3",
     "@typescript-eslint/eslint-plugin": "^8",
     "@typescript-eslint/parser": "^8",

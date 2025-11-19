@@ -1,21 +1,7 @@
 {
   "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
-    "baseUrl": "../../..",
-    "outDir": "./dist",
-    "types": ["node"],
-    "skipLibCheck": true,
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
-    "paths": {
-      "@kb-labs/plugin-manifest": ["packages/manifest/dist"],
-      "@kb-labs/plugin-runtime": ["packages/runtime/dist"],
-      "@kb-labs/sandbox": ["../kb-labs-core/packages/sandbox/dist"],
-      "@kb-labs/api-contracts": ["../kb-labs-api-contracts/packages/api-contracts/dist"],
-      "@kb-labs/cli-core": ["../kb-labs-cli/packages/core/dist"]
-    }
+    "noEmit": true
   },
-  "include": [
-    "src"
-  ]
+  "include": ["src"]
 }

@@ -1,18 +1,9 @@
 {
   "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
-    "baseUrl": "../../..",
+    "baseUrl": "../..",
     "outDir": "./dist",
-    "types": ["node"],
-    "skipLibCheck": true,
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "esModuleInterop": true,
-    "paths": {
-      "@kb-labs/plugin-manifest": ["packages/manifest/dist"],
-      "@kb-labs/plugin-runtime": ["packages/runtime/dist"],
-      "@kb-labs/api-contracts": ["../kb-labs-api-contracts/packages/api-contracts/dist"]
-    }
+    "types": ["node"]
   },
   "include": [
     "src"

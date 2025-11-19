@@ -9,7 +9,9 @@
     "resolveJsonModule": true,
     "paths": {
       "@kb-labs/plugin-manifest": ["packages/manifest/dist"],
-      "@kb-labs/api-contracts": ["../kb-labs-api-contracts/packages/api-contracts/dist"]
+      "@kb-labs/plugin-adapter-rest": ["packages/adapters/rest/dist"],
+      "@kb-labs/plugin-adapter-rest/header-policy": ["packages/adapters/rest/src/header-policy.js"],
+      "@kb-labs/api-contracts": ["../kb-labs-rest-api/packages/api-contracts/dist"]
     }
   },
   "include": [

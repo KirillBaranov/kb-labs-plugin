@@ -1,11 +1,16 @@
 {
   "name": "@kb-labs/plugin-adapter-rest",
   "version": "0.1.0",
+  "description": "REST API adapter for KB Labs plugins, providing HTTP endpoints for plugin functionality",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./header-policy": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     }
@@ -27,15 +32,20 @@
     "test:watch": "vitest -c ../../vitest.config.ts"
   },
   "dependencies": {
+    "@kb-labs/analytics-sdk-node": "link:../../../kb-labs-analytics/packages/analytics-sdk-node",
     "@kb-labs/plugin-manifest": "workspace:*",
     "@kb-labs/plugin-runtime": "workspace:*",
-    "@kb-labs/api-contracts": "link:../../../kb-labs-api-contracts/packages/api-contracts",
+    "@kb-labs/core-workspace": "workspace:*",
+    "@kb-labs/core-sys": "workspace:*",
+    "@kb-labs/sandbox": "workspace:*",
+    "@kb-labs/api-contracts": "workspace:*",
     "fastify": "^4.28.1",
     "zod": "^4.1.5",
-    "zod-to-openapi": "^0.2.1"
+    "zod-to-openapi": "^0.2.1",
+    "minimatch": "^10.0.1"
   },
   "devDependencies": {
-    "@kb-labs/devkit": "link:../../../kb-labs-devkit",
+    "@kb-labs/devkit": "workspace:*",
     "@types/node": "^24.3.3",
     "@typescript-eslint/eslint-plugin": "^8",
     "@typescript-eslint/parser": "^8",
