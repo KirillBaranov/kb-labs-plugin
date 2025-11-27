@@ -428,6 +428,12 @@ export function buildRuntime(
   fetch: (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
   fs: FSLike;
   env: (key: string) => string | undefined;
+  logger: {
+    debug: (msg: string, meta?: Record<string, unknown>) => void;
+    info: (msg: string, meta?: Record<string, unknown>) => void;
+    warn: (msg: string, meta?: Record<string, unknown>) => void;
+    error: (msg: string, meta?: Record<string, unknown>) => void;
+  };
   log: (
     level: 'debug' | 'info' | 'warn' | 'error',
     msg: string,
@@ -485,12 +491,15 @@ export function buildRuntime(
   // Build env accessor
   const envAccessor = createEnvAccessor(perms.env?.allow, env);
 
-  // Build log function (sends via IPC)
+  // Build log function (sends via IPC and uses new logging system)
+  // For subprocess: send via IPC to parent
+  // Also use new logging system for unified logging
   const log = (
     level: 'debug' | 'info' | 'warn' | 'error',
     msg: string,
     meta?: Record<string, unknown>
   ): void => {
+    // Send via IPC for subprocess communication (legacy)
     if (process.send) {
       process.send({
         type: 'LOG',
@@ -501,6 +510,39 @@ export function buildRuntime(
           timestamp: Date.now(),
         },
       });
+    }
+
+    // Also use new unified logging system
+    // Dynamic import to avoid circular dependencies
+    try {
+      const { getLogger } = require('@kb-labs/core-sys/logging');
+      const logger = getLogger(`runtime:plugin:${ctx.pluginId || 'unknown'}`).child({
+        meta: {
+          layer: 'runtime',
+          reqId: ctx.requestId,
+          traceId: ctx.traceId,
+          spanId: ctx.spanId,
+          pluginId: ctx.pluginId,
+          ...meta,
+        },
+      });
+
+      switch (level) {
+        case 'debug':
+          logger.debug(msg, meta);
+          break;
+        case 'info':
+          logger.info(msg, meta);
+          break;
+        case 'warn':
+          logger.warn(msg, meta);
+          break;
+        case 'error':
+          logger.error(msg, meta);
+          break;
+      }
+    } catch {
+      // If new logging system not available, fallback to IPC only
     }
   };
 
@@ -571,11 +613,20 @@ export function buildRuntime(
 
   const events = createRuntimeEvents(ctx);
 
+  // Create unified logger interface (wraps the log function)
+  const logger = {
+    debug: (msg: string, meta?: Record<string, unknown>) => log('debug', msg, meta),
+    info: (msg: string, meta?: Record<string, unknown>) => log('info', msg, meta),
+    warn: (msg: string, meta?: Record<string, unknown>) => log('warn', msg, meta),
+    error: (msg: string, meta?: Record<string, unknown>) => log('error', msg, meta),
+  };
+
   return {
     fetch,
     fs,
     env: envAccessor,
-    log,
+    logger,  // ✅ NEW unified API
+    log,     // ⚠️ DEPRECATED but still works
     invoke,
     artifacts,
     shell,

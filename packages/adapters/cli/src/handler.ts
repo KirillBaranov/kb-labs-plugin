@@ -16,7 +16,7 @@ import type {
   PresenterProgressPayload,
   ConfirmOptions,
 } from '@kb-labs/plugin-runtime';
-import type { CliContext, Presenter } from '@kb-labs/cli-core/public';
+import type { CliContext, Presenter } from '@kb-labs/cli-contracts';
 import { execute as runtimeExecute } from '@kb-labs/plugin-runtime';
 import {
   createId,
@@ -158,7 +158,15 @@ function resolveErrorMessage(error: unknown): string {
 
 function safeSerialize(payload: Record<string, unknown>): string | null {
   try {
-    return JSON.stringify(payload, null, 2);
+    // CRITICAL OOM FIX: Use compact JSON (no pretty-print) to avoid split('\n') memory issues
+    // V8's JSON.stringify(obj, null, 2) internally calls split('\n') which causes OOM on large objects
+    // Also limit payload size
+    const MAX_PAYLOAD_SIZE = 10000; // 10KB max
+    const str = JSON.stringify(payload); // Compact format!
+    if (str.length > MAX_PAYLOAD_SIZE) {
+      return `[Payload too large: ${str.length} chars, truncated]`;
+    }
+    return str;
   } catch {
     return null;
   }
@@ -303,7 +311,18 @@ export async function executeCommand(
     },
   });
   
+  // Output теперь использует глобальный logger напрямую (через getLogger)
+  // OutputSink больше не нужен для записи в файлы
+  // Можно добавить опционально только если нужна обратная связь (Logging → Output UI)
+  // const outputSink = createOutputSink(output);
+  // addSink(outputSink);
+  
   // Create logger with unified options using context helper
+  // IMPORTANT: Only enable debug logging if KB_LOG_LEVEL=debug or --debug flag is set
+  // This respects parent process logging configuration (KB_LOG_LEVEL from bin.ts)
+  const logLevel = process.env.KB_LOG_LEVEL || 'silent';
+  const shouldDebugLog = debugFlag || logLevel === 'debug';
+
   const logger = getLogger('cli:command').child({
     meta: {
       layer: 'cli',
@@ -316,14 +335,16 @@ export async function executeCommand(
       format,
     },
   });
-  
-  // Group related debug logs
-  logger.debug('executeCommand called', {
-    pluginRoot: pluginRoot || 'undefined',
-    commandId: command.id,
-    handler: command.handler,
-  });
-  
+
+  // Group related debug logs (only in debug mode)
+  if (shouldDebugLog) {
+    logger.debug('executeCommand called', {
+      pluginRoot: pluginRoot || 'undefined',
+      commandId: command.id,
+      handler: command.handler,
+    });
+  }
+
   // Default plugin root (where manifest is located) - required
   if (!pluginRoot) {
     throw new Error('pluginRoot is required for CLI command execution');
@@ -331,7 +352,7 @@ export async function executeCommand(
   const defaultPluginRoot = pluginRoot;
   const defaultWorkdir = workdir || defaultPluginRoot;
   const defaultOutdir = outdir || path.join(defaultWorkdir, 'out');
-  
+
   const analyticsEmitter = createNoopAnalyticsEmitter();
   const operationTracker = new OperationTracker();
 
@@ -351,12 +372,14 @@ export async function executeCommand(
     getTrackedOperations: () => operationTracker.toArray(),
   });
 
-  logger.debug('Request IDs created', { requestId, traceId });
-  logger.debug('Execution context', {
-    defaultPluginRoot,
-    defaultWorkdir,
-    defaultOutdir,
-  });
+  if (shouldDebugLog) {
+    logger.debug('Request IDs created', { requestId, traceId });
+    logger.debug('Execution context', {
+      defaultPluginRoot,
+      defaultWorkdir,
+      defaultOutdir,
+    });
+  }
 
   const execCtx = createExecutionContext(
     command,
@@ -404,6 +427,13 @@ export async function executeCommand(
     spanId: execCtx.spanId,
     parentSpanId: execCtx.parentSpanId,
     debug: execCtx.debug,
+    // Add logger to context (for direct use)
+    logger: logger.child({
+      meta: {
+        plugin: manifest.id,
+        command: command.id,
+      },
+    }),
   };
   execCtx.adapterContext = adapterContext;
   
@@ -416,17 +446,19 @@ export async function executeCommand(
     execCtx.debugLevel = debugLevel;
   }
 
-  logger.debug('Created adapterContext', {
-    hasAdapterContext: !!adapterContext,
-    adapterContextType: adapterContext?.type,
-  });
-  
-  logger.debug('Debug configuration', {
-    debugFlag,
-    debugLevel: debugLevel || 'none',
-    format,
-    jsonMode,
-  });
+  if (shouldDebugLog) {
+    logger.debug('Created adapterContext', {
+      hasAdapterContext: !!adapterContext,
+      adapterContextType: adapterContext?.type,
+    });
+
+    logger.debug('Debug configuration', {
+      debugFlag,
+      debugLevel: debugLevel || 'none',
+      format,
+      jsonMode,
+    });
+  }
 
   const eventsConfig = resolveEventBusConfig(manifest);
   const permissions = manifest.permissions as { events?: { scopes?: string[] } } | undefined;
@@ -446,7 +478,10 @@ export async function executeCommand(
         logger.info?.(message, meta);
         break;
       default:
-        logger.debug(message, meta);
+        // Only log debug messages if in debug mode
+        if (shouldDebugLog) {
+          logger.debug(message, meta);
+        }
     }
   };
 
@@ -576,11 +611,13 @@ export async function executeCommand(
 
   // Execute via runtime with registry
     try {
-      logger.debug('About to call runtimeExecute', {
-      handler: `${handlerRef.file}#${handlerRef.export}`,
-      pluginRoot: execCtx.pluginRoot,
-      workdir: execCtx.workdir,
-    });
+      if (shouldDebugLog) {
+        logger.debug('About to call runtimeExecute', {
+          handler: `${handlerRef.file}#${handlerRef.export}`,
+          pluginRoot: execCtx.pluginRoot,
+          workdir: execCtx.workdir,
+        });
+      }
     
       result = await runtimeExecute(
       {
@@ -596,15 +633,29 @@ export async function executeCommand(
     // Log result details (even without --debug if error)
     // Always log result structure if error (for debugging)
       if (!result || !result.ok) {
-        logger.error('Handler execution failed', {
-        resultExists: !!result,
-        resultOk: result?.ok,
-        error: result?.error ? JSON.stringify(result.error, null, 2) : undefined,
-        logLines: result?.logs?.length || 0,
-        fullResult: JSON.stringify(result, null, 2),
-      });
+        const DEBUG_MODE = process.env.DEBUG_SANDBOX === '1' || process.env.NODE_ENV === 'development';
+
+        if (DEBUG_MODE) {
+          // CRITICAL OOM FIX: Avoid JSON.stringify with pretty-print on large result objects
+          const errorStr = result?.error ? JSON.stringify(result.error).substring(0, 500) : undefined;
+          const resultStr = JSON.stringify(result).substring(0, 1000); // Truncate to 1KB max
+          logger.error('Handler execution failed', {
+            resultExists: !!result,
+            resultOk: result?.ok,
+            error: errorStr ? `${errorStr}...` : undefined,
+            logLines: result?.logs?.length || 0,
+            fullResult: `${resultStr}...`,
+          });
+        } else {
+          // Simple error message in production
+          logger.error('Handler execution failed', {
+            error: result?.error?.message || result?.error || 'Unknown error'
+          });
+        }
       } else {
-        logger.debug('runtimeExecute completed successfully');
+        if (shouldDebugLog) {
+          logger.debug('runtimeExecute completed successfully');
+        }
       }
     } catch (error: unknown) {
       // Catch and re-throw with more context
@@ -663,7 +714,9 @@ export async function executeCommand(
     
     // Add error details if available
     if (error?.details && Object.keys(error.details).length > 0) {
-      errorMessage += `\nDetails:\n${JSON.stringify(error.details, null, 2)}\n`;
+      // CRITICAL OOM FIX: Use compact JSON and truncate
+      const detailsStr = JSON.stringify(error.details).substring(0, 1000);
+      errorMessage += `\nDetails:\n${detailsStr}${detailsStr.length >= 1000 ? '...' : ''}\n`;
     }
     
     // Add fixes if available
@@ -827,7 +880,8 @@ export async function executeCommand(
         const exportDir = path.dirname(exportPath);
         await fs.mkdir(exportDir, { recursive: true });
         const chromeFormat = exportProfileChromeFormat(result.profile);
-        await fs.writeFile(exportPath, JSON.stringify(chromeFormat, null, 2));
+        // CRITICAL OOM FIX: Use compact JSON for large profile data
+        await fs.writeFile(exportPath, JSON.stringify(chromeFormat));
         output.info(`📊 Profile exported to: ${exportPath}`);
         output.info(`   Open in Chrome DevTools: chrome://tracing → Load`);
       } catch (error: any) {

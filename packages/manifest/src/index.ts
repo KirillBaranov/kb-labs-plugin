@@ -70,3 +70,19 @@ export {
   getDeprecationWarning,
   shouldUseV1,
 } from './deprecation.js';
+
+// Helpers
+export {
+  createManifestV2,
+  defineCommandFlags,
+  type ExtractArtifactIdsFromContracts,
+  type ExtractCommandIdsFromContracts,
+} from './helpers.js';
+
+// Migration helpers
+export {
+  migrateToCreateManifest,
+  extractContractsFromManifest,
+  generateZodSchemasFromContracts,
+  generateContractFile,
+} from './migration-helpers.js';

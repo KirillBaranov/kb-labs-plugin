@@ -4,7 +4,7 @@
  */
 
 import type { ManifestV2 } from '@kb-labs/plugin-manifest';
-import type { CliContext } from '@kb-labs/cli-core/public';
+import type { CliContext } from '@kb-labs/cli-contracts';
 
 /**
  * Print debug information

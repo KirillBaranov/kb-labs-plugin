@@ -30,6 +30,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.929.0",
     "@kb-labs/api-contracts": "workspace:*",
+    "@kb-labs/cli-contracts": "workspace:*",
     "@kb-labs/cli-core": "workspace:*",
     "@kb-labs/core": "workspace:*",
     "@kb-labs/core-sys": "link:../../../kb-labs-core/packages/sys",

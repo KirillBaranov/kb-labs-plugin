@@ -34,6 +34,9 @@ export type LogStreamCallback = (line: string, level: 'info' | 'warn' | 'error' 
 
 /**
  * Runtime extensions for cross-plugin capabilities
+ * 
+ * @deprecated Use `runtime` API instead (e.g., `ctx.runtime.invoke()` instead of `ctx.extensions.invoke.invoke()`)
+ * This will be removed in a future version. Migrate to runtime API for better type safety and consistency.
  */
 export interface RuntimeExtensions {
   /** Artifact broker for reading/writing artifacts */
@@ -54,6 +57,86 @@ export interface RuntimeExtensions {
     createEnvelope?: (topic: string, payload: unknown, scope: EventScope) => EventEnvelope;
   };
 }
+
+/**
+ * Runtime API for plugin handlers
+ * Provides low-level system APIs (fetch, fs, env, shell, invoke, artifacts)
+ */
+export type RuntimeAPI = {
+  fetch: (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
+  fs: FSLike;
+  env: (key: string) => string | undefined;
+  /**
+   * Unified logger interface (recommended)
+   * @example ctx.logger.info('message', { meta })
+   */
+  logger: {
+    debug: (msg: string, meta?: Record<string, unknown>) => void;
+    info: (msg: string, meta?: Record<string, unknown>) => void;
+    warn: (msg: string, meta?: Record<string, unknown>) => void;
+    error: (msg: string, meta?: Record<string, unknown>) => void;
+  };
+  /**
+   * @deprecated Use ctx.logger.info() instead. Will be removed in v2.0
+   * @example ctx.runtime.log('info', 'message', { meta })
+   */
+  log: (
+    level: 'debug' | 'info' | 'warn' | 'error',
+    msg: string,
+    meta?: Record<string, unknown>
+  ) => void;
+  invoke: <T = unknown>(
+    request: import('./invoke/types.js').InvokeRequest
+  ) => Promise<import('./invoke/types.js').InvokeResult<T>>;
+  artifacts: {
+    read: (
+      request: import('./artifacts/broker.js').ArtifactReadRequest
+    ) => Promise<Buffer | object>;
+    write: (
+      request: import('./artifacts/broker.js').ArtifactWriteRequest
+    ) => Promise<{
+      path: string;
+      meta: import('./artifacts/broker.js').ArtifactMeta;
+    }>;
+  };
+  shell: {
+    exec: (
+      command: string,
+      args: string[],
+      options?: import('./shell/types.js').ShellExecOptions
+    ) => Promise<import('./shell/types.js').ShellResult>;
+    spawn: (
+      command: string,
+      args: string[],
+      options?: import('./shell/types.js').ShellSpawnOptions
+    ) => Promise<import('./shell/types.js').ShellSpawnResult>;
+  };
+  analytics?: (
+    event: Partial<TelemetryEvent>
+  ) => Promise<TelemetryEmitResult>;
+  events?: {
+    emit<T = unknown>(topic: string, payload: T, options?: import('./events/index.js').EmitOptions): Promise<EventEnvelope<T> | null>;
+    on<T = unknown>(
+      topic: string,
+      handler: (event: EventEnvelope<T>) => void | Promise<void>,
+      options?: import('./events/index.js').SubscriptionOptions
+    ): () => void;
+    once<T = unknown>(
+      topic: string,
+      handler: (event: EventEnvelope<T>) => void | Promise<void>,
+      options?: import('./events/index.js').SubscriptionOptions
+    ): () => void;
+    off(topic: string, handler?: (event: EventEnvelope) => void | Promise<void>, options?: import('./events/index.js').SubscriptionOptions): void;
+    waitFor<T = unknown>(
+      topic: string,
+      predicate?: (event: EventEnvelope<T>) => boolean,
+      options?: import('./events/index.js').WaitForOptions<T>
+    ): Promise<EventEnvelope<T>>;
+  };
+  config: {
+    ensureSection: (section: string) => import('./config/config-helper.js').SmartConfigHelper;
+  };
+};
 
 export interface HeaderContext {
   inbound: Record<string, string>;
@@ -131,7 +214,12 @@ export interface ExecutionContext {
   /** Resource tracker for cleanup */
   resources?: import('@kb-labs/sandbox').ResourceTracker;
   
-  /** Extension point for future capabilities */
+  /** 
+   * Extension point for future capabilities
+   * 
+   * @deprecated Use `runtime` API instead (e.g., `ctx.runtime.invoke()` instead of `ctx.extensions.invoke.invoke()`)
+   * This will be removed in a future version. Migrate to runtime API for better type safety and consistency.
+   */
   extensions?: RuntimeExtensions & Record<string, unknown>;
   
   /** Lifecycle hooks (optional, for observability) */
@@ -295,7 +383,14 @@ export type PluginHandler = (
       fs: FSLike;
       /** Whitelisted environment variable access */
       env: (key: string) => string | undefined;
-      /** Structured logging */
+      /** Unified logger interface (recommended) */
+      logger: {
+        debug: (msg: string, meta?: Record<string, unknown>) => void;
+        info: (msg: string, meta?: Record<string, unknown>) => void;
+        warn: (msg: string, meta?: Record<string, unknown>) => void;
+        error: (msg: string, meta?: Record<string, unknown>) => void;
+      };
+      /** @deprecated Structured logging - use ctx.runtime.logger instead */
       log: (
         level: 'debug' | 'info' | 'warn' | 'error',
         msg: string,

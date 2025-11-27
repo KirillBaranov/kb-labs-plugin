@@ -4,7 +4,7 @@
  */
 
 import type { PluginErrorEnvelope } from '@kb-labs/api-contracts';
-import type { CliContext } from '@kb-labs/cli-core/public';
+import type { CliContext } from '@kb-labs/cli-contracts';
 
 /**
  * Print error envelope to stderr
@@ -20,7 +20,9 @@ export function printErrorEnvelope(
 
   // Print details if available
   if (details) {
-    context.presenter.error(`Details: ${JSON.stringify(details, null, 2)}`);
+    // CRITICAL OOM FIX: Use compact JSON and truncate
+    const detailsStr = JSON.stringify(details).substring(0, 1000);
+    context.presenter.error(`Details: ${detailsStr}${detailsStr.length >= 1000 ? '...' : ''}`);
   }
 
   // Print meta information

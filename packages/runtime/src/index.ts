@@ -31,6 +31,7 @@ export {
 export type {
   ExecutionContext,
   RuntimeExtensions,
+  RuntimeAPI,
   ExecuteInput,
   ExecuteResult,
   ExecMetrics,
@@ -44,6 +45,7 @@ export type {
 // Sandbox
 export type { SandboxRunner } from './sandbox/runner.js';
 export { nodeSubprocRunner } from './sandbox/node-subproc.js';
+export { buildRuntime } from './sandbox/child/runtime.js';
 
 // Errors
 export {
@@ -241,3 +243,11 @@ export {
   type EnsureSectionOptions,
   type EnsureSectionResult,
 } from './config/config-helper.js';
+
+// Logging
+export {
+  createRuntimeLogger,
+  createPluginLogger,
+  type RuntimeLogger,
+  type PluginLogger,
+} from './logging.js';

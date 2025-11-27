@@ -198,7 +198,7 @@ export function validateExecutionContext(
 
   // Validate each rule
   for (const rule of rules) {
-    const value = (ctx as Record<string, unknown>)[rule.field];
+    const value = (ctx as unknown as Record<string, unknown>)[rule.field];
     const exists = value !== undefined;
 
     // Check required fields
@@ -304,7 +304,7 @@ export function applyFixes(
   fixes: ValidationFix[]
 ): ExecutionContext {
   const fixedCtx = { ...ctx };
-  const ctxRecord = fixedCtx as Record<string, unknown>;
+  const ctxRecord = fixedCtx as unknown as Record<string, unknown>;
 
   for (const fix of fixes) {
     if (!fix.autoApplicable) continue;

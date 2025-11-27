@@ -22,5 +22,5 @@ export { printErrorEnvelope, mapErrorToExitCode } from './errors.js';
 // Debug
 export { printDebugInfo } from './debug.js';
 
-// Logging
-export { initCliLogging, createCliLogger } from './logging.js';
+// Logging utilities removed - use @kb-labs/core-sys/logging directly
+// import { getLogger } from '@kb-labs/core-sys/logging';

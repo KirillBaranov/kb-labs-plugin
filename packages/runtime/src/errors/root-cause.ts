@@ -97,14 +97,20 @@ async function loadErrorHistory(
 
 /**
  * Calculate similarity between two error messages
+ * CRITICAL OOM FIX: Truncate messages to avoid split() memory issues on huge error messages
  */
 function calculateSimilarity(msg1: string, msg2: string): number {
-  const words1 = new Set(msg1.toLowerCase().split(/\s+/));
-  const words2 = new Set(msg2.toLowerCase().split(/\s+/));
-  
+  // Truncate to first 10KB to avoid OOM on huge error messages
+  const MAX_MSG_LENGTH = 10000;
+  const truncated1 = msg1.length > MAX_MSG_LENGTH ? msg1.substring(0, MAX_MSG_LENGTH) : msg1;
+  const truncated2 = msg2.length > MAX_MSG_LENGTH ? msg2.substring(0, MAX_MSG_LENGTH) : msg2;
+
+  const words1 = new Set(truncated1.toLowerCase().split(/\s+/));
+  const words2 = new Set(truncated2.toLowerCase().split(/\s+/));
+
   const intersection = new Set([...words1].filter((x) => words2.has(x)));
   const union = new Set([...words1, ...words2]);
-  
+
   return union.size > 0 ? intersection.size / union.size : 0;
 }
 
@@ -260,7 +266,7 @@ function extractLocationFromStack(stack?: string): RootCauseAnalysis['rootCause'
 
   // Match patterns like: "at functionName (file.ts:123:45)"
   const match = stack.match(/at\s+(\w+)\s+\(([^:]+):(\d+):(\d+)\)/);
-  if (match) {
+  if (match && match[1] && match[2] && match[3]) {
     return {
       function: match[1],
       file: match[2],
@@ -270,7 +276,7 @@ function extractLocationFromStack(stack?: string): RootCauseAnalysis['rootCause'
 
   // Match patterns like: "file.ts:123:45"
   const fileMatch = stack.match(/([^:]+):(\d+):(\d+)/);
-  if (fileMatch) {
+  if (fileMatch && fileMatch[1] && fileMatch[2]) {
     return {
       file: fileMatch[1],
       line: parseInt(fileMatch[2], 10),

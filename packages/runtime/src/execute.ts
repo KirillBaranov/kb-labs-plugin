@@ -299,11 +299,14 @@ export async function execute(
         
         // Log result structure for debugging (even without --debug if error)
         if (!res || !res.ok) {
+          // CRITICAL OOM FIX: Use compact JSON and truncate to avoid memory issues
+          const errorStr = res?.error ? JSON.stringify(res.error).substring(0, 500) : undefined;
+          const resStr = JSON.stringify(res).substring(0, 1000); // Truncate to 1KB max
           logger.error('Runner returned error', {
             resExists: !!res,
             resOk: res?.ok,
-            error: res?.error ? JSON.stringify(res.error, null, 2) : undefined,
-            fullRes: JSON.stringify(res, null, 2),
+            error: errorStr ? `${errorStr}...` : undefined,
+            fullRes: `${resStr}...`,
           });
         }
         

@@ -79,7 +79,14 @@ function setupLogPipes(
   if (child.stdout) {
     child.stdout.setEncoding('utf8');
     child.stdout.on('data', (data: string) => {
-      const lines = data.split('\n').filter((line) => line.trim());
+      // CRITICAL OOM FIX: Truncate data to 100KB before split() to avoid memory issues on huge output
+      // V8's split('\n') creates massive arrays with millions of strings when data is multi-MB
+      const MAX_DATA_LENGTH = 100000; // 100KB max per chunk
+      const truncated = data.length > MAX_DATA_LENGTH
+        ? data.substring(0, MAX_DATA_LENGTH) + '\n[TRUNCATED: output too large]'
+        : data;
+
+      const lines = truncated.split('\n').filter((line) => line.trim());
       for (const line of lines) {
         ringBuffer.append(`[stdout] ${line}`);
       }
@@ -89,7 +96,14 @@ function setupLogPipes(
   if (child.stderr) {
     child.stderr.setEncoding('utf8');
     child.stderr.on('data', (data: string) => {
-      const lines = data.split('\n').filter((line) => line.trim());
+      // CRITICAL OOM FIX: Truncate data to 100KB before split() to avoid memory issues on huge output
+      // V8's split('\n') creates massive arrays with millions of strings when data is multi-MB
+      const MAX_DATA_LENGTH = 100000; // 100KB max per chunk
+      const truncated = data.length > MAX_DATA_LENGTH
+        ? data.substring(0, MAX_DATA_LENGTH) + '\n[TRUNCATED: output too large]'
+        : data;
+
+      const lines = truncated.split('\n').filter((line) => line.trim());
       for (const line of lines) {
         ringBuffer.append(`[stderr] ${line}`);
       }
@@ -389,6 +403,12 @@ function createInProcessRunner(): SandboxRunner {
 
       try {
         // In dev mode, load handler directly (no sandbox)
+        if (!ctx.pluginRoot) {
+          throw new Error('pluginRoot is required for handler execution');
+        }
+        if (!handler.file || !handler.export) {
+          throw new Error('Handler file and export are required');
+        }
         const handlerPath = path.resolve(ctx.pluginRoot, handler.file);
         const handlerModule = await import(handlerPath);
         const handlerFn = handlerModule[handler.export];
@@ -414,6 +434,7 @@ function createInProcessRunner(): SandboxRunner {
         );
 
         // Patch runtime.log to collect logs in dev mode
+        // runtime.log already uses new logging system via buildRuntime
         const originalLog = runtime.log;
         runtime.log = (level, msg, meta) => {
           devLogs.push(`[${level}] ${msg}${meta ? ` ${JSON.stringify(meta)}` : ''}`);
@@ -421,6 +442,8 @@ function createInProcessRunner(): SandboxRunner {
         };
 
         // Execute handler
+        // Note: For CLI handlers, runtime is available via ctx.extensions (deprecated but functional)
+        // For REST handlers, runtime is passed as a separate object
         const result = await handlerFn(input, {
           requestId: ctx.requestId,
           pluginId: ctx.pluginId,
