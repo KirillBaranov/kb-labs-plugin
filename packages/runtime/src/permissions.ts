@@ -272,12 +272,99 @@ function normalizeHost(host: string): string {
 }
 
 /**
+ * State broker permission check
+ * Validates namespace access based on permission spec
+ */
+export function checkStatePermission(
+  permission: PermissionSpec['state'],
+  namespace: string,
+  operation: 'read' | 'write' | 'delete',
+  pluginId: string
+): PermissionCheckResult {
+  if (!permission) {
+    return {
+      granted: false,
+      reason: 'State access not permitted (no state permission)',
+    };
+  }
+
+  // Own namespace access (plugin can access its own namespace by default)
+  const ownNamespace = pluginId.replace('@kb-labs/', '').replace(/-plugin$/, '');
+
+  if (namespace === ownNamespace) {
+    // Check if own namespace access is explicitly restricted
+    if (permission.own) {
+      const allowed = permission.own[operation] ?? true; // default: allow own namespace
+      if (!allowed) {
+        return {
+          granted: false,
+          reason: `State ${operation} on own namespace '${namespace}' is restricted`,
+          details: { namespace, operation, ownPermissions: permission.own },
+        };
+      }
+    }
+    return { granted: true };
+  }
+
+  // External namespace access (requires explicit declaration)
+  if (!permission.external || permission.external.length === 0) {
+    return {
+      granted: false,
+      reason: `State access to external namespace '${namespace}' not permitted (no external permissions declared)`,
+      details: { namespace, operation },
+    };
+  }
+
+  // Find matching external namespace permission
+  const externalPerm = permission.external.find((ext) => ext.namespace === namespace);
+
+  if (!externalPerm) {
+    return {
+      granted: false,
+      reason: `State access to external namespace '${namespace}' not permitted (namespace not in external permissions)`,
+      details: {
+        namespace,
+        operation,
+        declaredNamespaces: permission.external.map(e => e.namespace),
+      },
+    };
+  }
+
+  // Check if the specific operation is allowed
+  const allowed = externalPerm[operation] ?? false; // default: deny external access
+
+  if (!allowed) {
+    return {
+      granted: false,
+      reason: `State ${operation} on external namespace '${namespace}' not permitted`,
+      details: {
+        namespace,
+        operation,
+        externalPermissions: externalPerm,
+      },
+    };
+  }
+
+  // Require reason for write/delete on external namespaces
+  if ((operation === 'write' || operation === 'delete') && !externalPerm.reason) {
+    return {
+      granted: false,
+      reason: `State ${operation} on external namespace '${namespace}' requires a reason in manifest`,
+      details: { namespace, operation },
+    };
+  }
+
+  return { granted: true };
+}
+
+/**
  * Check all permissions from PermissionSpec
  */
 export interface PermissionCheckAllResult {
   fs?: PermissionCheckResult;
   net?: PermissionCheckResult;
   env?: PermissionCheckResult;
+  state?: PermissionCheckResult;
   allGranted: boolean;
 }
 
@@ -287,6 +374,9 @@ export async function checkAllPermissions(
     fsTarget?: string;
     netTarget?: string;
     envVar?: string;
+    stateNamespace?: string;
+    stateOperation?: 'read' | 'write' | 'delete';
+    pluginId?: string;
   }
 ): Promise<PermissionCheckAllResult> {
   if (!permissions) {
@@ -320,6 +410,24 @@ export async function checkAllPermissions(
       context.envVar
     );
     if (!results.env.granted) {
+      results.allGranted = false;
+    }
+  }
+
+  // Check state permission
+  if (
+    permissions.state !== undefined &&
+    context.stateNamespace &&
+    context.stateOperation &&
+    context.pluginId
+  ) {
+    results.state = checkStatePermission(
+      permissions.state,
+      context.stateNamespace,
+      context.stateOperation,
+      context.pluginId
+    );
+    if (!results.state.granted) {
       results.allGranted = false;
     }
   }

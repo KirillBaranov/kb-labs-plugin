@@ -45,6 +45,8 @@ export interface RuntimeExtensions {
   invoke?: import('./invoke/broker.js').InvokeBroker;
   /** Shell broker for command execution */
   shell?: import('./shell/broker.js').ShellBroker;
+  /** Job broker for background and scheduled jobs */
+  jobs?: import('./jobs/broker.js').JobBroker;
   /** Event bus services */
   events?: {
     /** Local scope bus (per execution chain) */

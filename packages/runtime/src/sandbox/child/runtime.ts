@@ -7,9 +7,11 @@ import type { PermissionSpec, ManifestV2 } from '@kb-labs/plugin-manifest';
 import type { ExecutionContext, FSLike } from '../../types.js';
 import type { InvokeBroker } from '../../invoke/broker.js';
 import type { ArtifactBroker } from '../../artifacts/broker.js';
+import type { StateBroker } from '@kb-labs/state-broker';
 import { createWhitelistedFetch } from '../../io/net.js';
 import { createFsShim } from '../../io/fs.js';
 import { createEnvAccessor } from '../../io/env.js';
+import { createStateAPI, type StateRuntimeAPI } from '../../io/state.js';
 import { SmartConfigHelper } from '../../config/config-helper.js';
 import type {
   EmitOptions,
@@ -423,7 +425,8 @@ export function buildRuntime(
   manifest: ManifestV2,
   invokeBroker?: InvokeBroker,
   artifactBroker?: ArtifactBroker,
-  shellBroker?: import('../../shell/broker.js').ShellBroker
+  shellBroker?: import('../../shell/broker.js').ShellBroker,
+  stateBroker?: StateBroker
 ): {
   fetch: (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
   fs: FSLike;
@@ -474,6 +477,7 @@ export function buildRuntime(
       options?: import('../../config/config-helper.js').EnsureSectionOptions
     ) => Promise<import('../../config/config-helper.js').EnsureSectionResult>;
   };
+  state?: StateRuntimeAPI;
 } {
   // Build network fetch (with whitelisting and dry-run support)
   const fetch = createWhitelistedFetch(perms.net, globalThis.fetch, ctx);
@@ -613,6 +617,11 @@ export function buildRuntime(
 
   const events = createRuntimeEvents(ctx);
 
+  // Build state API (if broker available and permissions granted)
+  const state = stateBroker && perms.state
+    ? createStateAPI(stateBroker, ctx.pluginId, perms.state)
+    : undefined;
+
   // Create unified logger interface (wraps the log function)
   const logger = {
     debug: (msg: string, meta?: Record<string, unknown>) => log('debug', msg, meta),
@@ -634,6 +643,7 @@ export function buildRuntime(
     events,
     config: {
       ensureSection: configHelper.ensureSection.bind(configHelper)
-    }
+    },
+    state,
   };
 }
