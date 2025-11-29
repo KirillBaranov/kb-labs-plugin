@@ -16,6 +16,8 @@ export enum CapabilityFlag {
   ArtifactsWrite = 'artifacts:write',
   Invoke = 'invoke:call',
   ShellExec = 'shell:exec',
+  JobsSubmit = 'jobs:submit',
+  JobsSchedule = 'jobs:schedule',
   StructuredLogging = 'logging:structured',
   MultiTenant = 'tenant:supported',
 }

@@ -5,6 +5,7 @@
 
 import type { ArtifactBroker } from '../artifacts/broker.js';
 import type { InvokeBroker } from '../invoke/broker.js';
+import type { JobBroker } from '../jobs/broker.js';
 import {
   createNoopPresenter,
   type PresenterFacade,
@@ -58,6 +59,7 @@ export interface PluginContext {
   analytics: AnalyticsEmitter;
   artifacts?: ArtifactBroker;
   invoke?: InvokeBroker;
+  jobs?: JobBroker;
   capabilities: CapabilitySet;
   metadata?: PluginContextMetadata;
   getTrackedOperations?: () => OperationWithMetadata[];
@@ -73,6 +75,7 @@ export interface PluginContextOptions {
   analytics?: AnalyticsEmitter;
   artifacts?: ArtifactBroker;
   invoke?: InvokeBroker;
+  jobs?: JobBroker;
   capabilities?: Iterable<CapabilityFlag>;
   metadata?: PluginContextMetadata;
   /**
@@ -108,6 +111,7 @@ export function createPluginContext(
   const analyticsProvided = options.analytics !== undefined;
   const artifactsProvided = options.artifacts !== undefined;
   const invokeProvided = options.invoke !== undefined;
+  const jobsProvided = options.jobs !== undefined;
   const getTrackedOperationsFn = options.getTrackedOperations;
 
   if (presenterProvided) {
@@ -144,6 +148,10 @@ export function createPluginContext(
     capabilitySet.extend([CapabilityFlag.Invoke]);
   }
 
+  if (jobsProvided) {
+    capabilitySet.extend([CapabilityFlag.JobsSubmit, CapabilityFlag.JobsSchedule]);
+  }
+
   if (options.tenantId) {
     capabilitySet.extend([CapabilityFlag.MultiTenant]);
   }
@@ -159,6 +167,7 @@ export function createPluginContext(
     analytics,
     artifacts: options.artifacts,
     invoke: options.invoke,
+    jobs: options.jobs,
     capabilities: capabilitySet,
     metadata: options.metadata,
     getTrackedOperations: getTrackedOperationsFn,

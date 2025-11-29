@@ -23,6 +23,7 @@ import type {
   StudioWidgetDecl,
   StudioMenuDecl,
   StudioLayoutDecl,
+  JobDecl,
 } from './types.js';
 
 /**
@@ -519,6 +520,26 @@ export const studioLayoutDeclSchema: z.ZodType<StudioLayoutDecl> = z
   );
 
 /**
+ * Job declaration schema
+ */
+export const jobDeclSchema: z.ZodType<JobDecl> = z.object({
+  id: z.string().min(1),
+  handler: z.string().regex(/^\.\/.*#\w+$/, 'Handler must be in format ./path/to/file.js#exportName'),
+  schedule: z.string().min(1), // Validated at runtime by cron-parser
+  describe: z.string().optional(),
+  input: z.unknown().optional(),
+  enabled: z.boolean().default(true),
+  priority: z.number().int().min(1).max(10).default(5),
+  timeout: z.number().int().positive().default(1200000),
+  retries: z.number().int().min(0).max(5).default(2),
+  tags: z.array(z.string()).optional(),
+  startAt: z.number().int().positive().optional(),
+  endAt: z.number().int().positive().optional(),
+  maxRuns: z.number().int().positive().optional(),
+  permissions: permissionSpecSchema.optional(),
+});
+
+/**
  * Manifest v2 schema
  */
 export const manifestV2Schema: z.ZodType<ManifestV2> = z.object({
@@ -569,6 +590,7 @@ export const manifestV2Schema: z.ZodType<ManifestV2> = z.object({
       layouts: z.array(studioLayoutDeclSchema).optional(),
     })
     .optional(),
+  jobs: z.array(jobDeclSchema).optional(),
 });
 
 /**

@@ -65,6 +65,95 @@ export interface ShellPermission {
 }
 
 /**
+ * Job submission permissions
+ */
+export interface JobSubmitPermission {
+  /** Allow list of handler paths (e.g., ['handlers/*'], ['handlers/sync-*']) */
+  allow?: string[];
+  /** Maximum concurrent jobs */
+  maxConcurrent?: number;
+  /** Maximum duration per job in milliseconds */
+  maxDuration?: number;
+  /** Quotas for job submission */
+  quotas?: {
+    /** Maximum jobs per minute */
+    perMinute?: number;
+    /** Maximum jobs per hour */
+    perHour?: number;
+    /** Maximum jobs per day */
+    perDay?: number;
+  };
+}
+
+/**
+ * Job scheduling permissions
+ */
+export interface JobSchedulePermission {
+  /** Allow list of handler paths (e.g., ['handlers/*'], ['handlers/sync-*']) */
+  allow?: string[];
+  /** Maximum active schedules */
+  maxSchedules?: number;
+  /** Minimum interval between runs in milliseconds */
+  minInterval?: number;
+  /** Quotas for schedule creation */
+  quotas?: {
+    /** Maximum schedules per hour */
+    perHour?: number;
+    /** Maximum schedules per day */
+    perDay?: number;
+  };
+}
+
+/**
+ * Job and cron permissions
+ */
+export interface JobPermission {
+  /** Permissions for one-time background jobs */
+  submit?: JobSubmitPermission;
+  /** Permissions for recurring scheduled jobs */
+  schedule?: JobSchedulePermission;
+}
+
+/**
+ * State broker namespace access specification
+ */
+export interface StateNamespaceAccess {
+  /** Namespace identifier (e.g., 'mind', 'workflow', 'analytics') */
+  namespace: string;
+  /** Read permission */
+  read?: boolean;
+  /** Write permission */
+  write?: boolean;
+  /** Delete permission */
+  delete?: boolean;
+  /** Human-readable reason (REQUIRED for write/delete on external namespaces) */
+  reason?: string;
+}
+
+/**
+ * State broker permissions
+ */
+export interface StatePermission {
+  /** Access to own namespace (default: all permissions granted) */
+  own?: {
+    read?: boolean;
+    write?: boolean;
+    delete?: boolean;
+  };
+  /** Access to external namespaces (explicit declaration required) */
+  external?: StateNamespaceAccess[];
+  /** Quotas for state operations */
+  quotas?: {
+    /** Maximum entries this plugin can create */
+    maxEntries?: number;
+    /** Maximum total size in bytes */
+    maxSizeBytes?: number;
+    /** Maximum operations per minute */
+    operationsPerMinute?: number;
+  };
+}
+
+/**
  * Permission specification with strict unions and allow/deny lists
  */
 export interface PermissionSpec {
@@ -96,6 +185,8 @@ export interface PermissionSpec {
   artifacts?: ArtifactAccess;
   /** Shell execution permissions */
   shell?: ShellPermission;
+  /** Job and cron permissions */
+  jobs?: JobPermission;
   /** Event bus permissions */
   events?: {
     /** Allowed topics/prefixes for emit */
@@ -129,6 +220,8 @@ export interface PermissionSpec {
     /** Keys to redact in logs */
     redactKeys?: string[];
   };
+  /** State broker permissions */
+  state?: StatePermission;
 }
 
 /**
@@ -508,6 +601,56 @@ export interface SetupSpec {
   permissions: PermissionSpec;
 }
 
+/**
+ * Job declaration for recurring scheduled tasks
+ */
+export interface JobDecl {
+  /** Unique job identifier within plugin (e.g., 'auto-index') */
+  id: string;
+
+  /** Handler reference: './handlers/auto-index.js#run' */
+  handler: string;
+
+  /** Cron schedule expression or interval string
+   * - Cron: "0 * * * *" (hourly), "0 0 * * *" (daily)
+   * - Interval: "5m", "1h", "30s"
+   */
+  schedule: string;
+
+  /** Human-readable description */
+  describe?: string;
+
+  /** Input data passed to handler */
+  input?: unknown;
+
+  /** Whether job is enabled (default: true) */
+  enabled?: boolean;
+
+  /** Job priority (1-10, default: 5, higher = more important) */
+  priority?: number;
+
+  /** Execution timeout in milliseconds (default: 1200000 = 20min) */
+  timeout?: number;
+
+  /** Number of retry attempts on failure (default: 2) */
+  retries?: number;
+
+  /** Tags for filtering and organization */
+  tags?: string[];
+
+  /** Start timestamp (when to begin scheduling, optional) */
+  startAt?: number;
+
+  /** End timestamp (when to stop scheduling, optional) */
+  endAt?: number;
+
+  /** Maximum number of executions (optional) */
+  maxRuns?: number;
+
+  /** Permissions specific to this job (inherits from plugin if not specified) */
+  permissions?: PermissionSpec;
+}
+
 export interface ManifestV2 {
   /** Schema version */
   schema: 'kb.plugin/2';
@@ -552,6 +695,8 @@ export interface ManifestV2 {
     menus?: StudioMenuDecl[];
     layouts?: StudioLayoutDecl[];
   };
+  /** Scheduled jobs */
+  jobs?: JobDecl[];
 }
 
 /**

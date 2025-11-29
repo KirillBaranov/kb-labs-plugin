@@ -12,6 +12,8 @@ export type {
   ArtifactAccess,
   ShellPermission,
   ShellCommandPattern,
+  StatePermission,
+  StateNamespaceAccess,
   SchemaRef,
   DataSource,
   ArtifactDecl,
@@ -77,6 +79,11 @@ export {
   defineCommandFlags,
   type ExtractArtifactIdsFromContracts,
   type ExtractCommandIdsFromContracts,
+  // Example generation
+  generateExamples,
+  exampleBuilder,
+  type ExampleTemplate,
+  ExampleBuilder,
 } from './helpers.js';
 
 // Migration helpers

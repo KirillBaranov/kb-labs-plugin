@@ -172,6 +172,104 @@ async function validateHandlerRef(
 }
 
 /**
+ * Validate command examples match flag definitions
+ */
+function validateCommandExamples(
+  command: { id: string; flags?: Array<{ name: string; type: string; choices?: string[]; required?: boolean }>; examples?: string[] },
+  group: string
+): LintError[] {
+  const errors: LintError[] = [];
+
+  // 1. Check if examples exist
+  if (!command.examples || command.examples.length === 0) {
+    errors.push({
+      code: 'COMMAND_MISSING_EXAMPLES',
+      message: `Command ${command.id} has no examples`,
+      location: `cli.commands[${command.id}].examples`,
+      severity: 'warning',
+    });
+    return errors;
+  }
+
+  // 2. Validate each example
+  for (const example of command.examples) {
+    // Check format: should start with 'kb <group> <command>'
+    const expectedPrefix = `kb ${group} ${command.id}`;
+    if (!example.startsWith(expectedPrefix)) {
+      errors.push({
+        code: 'EXAMPLE_INVALID_FORMAT',
+        message: `Example should start with "${expectedPrefix}", got: "${example.substring(0, 50)}..."`,
+        location: `cli.commands[${command.id}].examples`,
+        severity: 'error',
+      });
+      continue;
+    }
+
+    // 3. Extract flags from example
+    const flagMatches = example.matchAll(/--([a-z0-9-]+)(?:\s+(?:"([^"]+)"|'([^']+)'|(\S+)))?/g);
+    const usedFlags = new Map<string, string | boolean>();
+
+    for (const match of flagMatches) {
+      const flagName = match[1];
+      const flagValue = match[2] || match[3] || match[4] || true;
+      usedFlags.set(flagName || '', flagValue);
+    }
+
+    // 4. Check that all used flags exist
+    for (const [flagName, flagValue] of usedFlags) {
+      const flagDef = command.flags?.find(f => f.name === flagName);
+
+      if (!flagDef) {
+        errors.push({
+          code: 'EXAMPLE_UNKNOWN_FLAG',
+          message: `Example uses unknown flag --${flagName}`,
+          location: `cli.commands[${command.id}].examples`,
+          severity: 'error',
+        });
+        continue;
+      }
+
+      // 5. Check type match
+      if (flagDef.type === 'boolean' && flagValue !== true) {
+        errors.push({
+          code: 'EXAMPLE_FLAG_TYPE_MISMATCH',
+          message: `Boolean flag --${flagName} should not have a value in example`,
+          location: `cli.commands[${command.id}].examples`,
+          severity: 'warning',
+        });
+      }
+
+      // 6. Check choices
+      if (flagDef.choices && typeof flagValue === 'string') {
+        if (!flagDef.choices.includes(flagValue)) {
+          errors.push({
+            code: 'EXAMPLE_FLAG_INVALID_CHOICE',
+            message: `Flag --${flagName} value "${flagValue}" is not in allowed choices: ${flagDef.choices.join(', ')}`,
+            location: `cli.commands[${command.id}].examples`,
+            severity: 'error',
+          });
+        }
+      }
+    }
+
+    // 7. Check required flags are present
+    const requiredFlags = command.flags?.filter(f => f.required) || [];
+    for (const flagDef of requiredFlags) {
+      if (!usedFlags.has(flagDef.name)) {
+        errors.push({
+          code: 'EXAMPLE_MISSING_REQUIRED_FLAG',
+          message: `Example missing required flag --${flagDef.name}`,
+          location: `cli.commands[${command.id}].examples`,
+          severity: 'warning',
+        });
+      }
+    }
+  }
+
+  return errors;
+}
+
+/**
  * Lint manifest
  */
 export async function lintManifest(
@@ -272,6 +370,10 @@ export async function lintManifest(
         cwd
       );
       errors.push(...handlerErrors);
+
+      // 5a. Validate command examples
+      const exampleErrors = validateCommandExamples(command, manifest.group || 'unknown');
+      errors.push(...exampleErrors);
     }
   }
 

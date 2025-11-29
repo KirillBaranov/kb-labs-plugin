@@ -164,6 +164,9 @@ const result = await execute(
 - **Event system** - Plugin event bus
 - **Snapshot system** - Execution snapshots
 - **Trace system** - Execution tracing
+- **Background Jobs** - One-time asynchronous task execution via JobBroker
+- **Scheduled Jobs** - Recurring cron-based tasks via CronScheduler
+- **Adaptive Throttling** - Load-based job submission control with degradation states
 
 ## 📦 API Reference
 
@@ -196,9 +199,25 @@ const result = await execute(
 - `createEventBus(config?)`: Create event bus
 - `acquirePluginBus(pluginId)`: Acquire plugin event bus
 
+#### Job Functions
+
+- `JobBroker`: Job broker for background and scheduled task execution
+  - `submit(request: BackgroundJobRequest): Promise<JobHandle>` - Submit one-time background job
+  - `schedule(request: ScheduledJobRequest): Promise<ScheduleHandle>` - Schedule recurring job
+  - `healthCheck(): Promise<HealthCheckResult>` - Get system health status
+- `CronScheduler`: Cron-based job scheduler
+  - `register(entry: ScheduleEntry): Promise<string>` - Register recurring schedule
+  - `cancel(scheduleId: string): Promise<void>` - Cancel schedule
+  - `pause/resume(scheduleId: string): Promise<void>` - Pause/resume schedule
+- `DegradationController`: Adaptive throttling controller
+  - `getState(): DegradationState` - Get current state (normal/degraded/critical)
+  - `healthCheck(): Promise<HealthCheckResult>` - Get detailed health metrics
+
 ### Types & Interfaces
 
 See detailed API documentation in code comments and exports.
+
+**📖 For comprehensive JobBroker/CronScheduler documentation, see [docs/jobs-api.md](./docs/jobs-api.md)**
 
 ## 🔧 Configuration
 
@@ -344,6 +363,67 @@ import { checkCapabilities } from '@kb-labs/plugin-runtime';
 const result = checkCapabilities(['fs.read', 'net.fetch'], ['fs.read']);
 // result.granted: ['fs.read']
 // result.missing: ['net.fetch']
+```
+
+### Example 4: Submit Background Job
+
+```typescript
+// In your plugin handler
+export default async function handler(ctx: PluginContext, input: any) {
+  // Submit one-time background job
+  const job = await ctx.jobs.submit({
+    handler: 'handlers/process-data.ts',
+    input: { dataId: input.id },
+    priority: 8,        // 1-10, high priority
+    timeout: 60000,     // 1 minute timeout
+    retries: 3,         // Retry 3 times on failure
+    tags: ['data-processing']
+  });
+
+  // Wait for result
+  const result = await job.getResult();
+  return { jobId: job.id, result };
+}
+```
+
+### Example 5: Schedule Recurring Job
+
+```typescript
+// In your plugin handler
+export default async function handler(ctx: PluginContext, input: any) {
+  // Schedule daily report at 9 AM
+  const schedule = await ctx.jobs.schedule({
+    handler: 'handlers/daily-report.ts',
+    schedule: '0 9 * * *',  // Cron: every day at 9 AM
+    // Or use interval syntax: '1h', '5m', '30s'
+    input: { reportType: 'sales' },
+    priority: 7,
+    timeout: 300000,    // 5 minutes
+    maxRuns: 30         // Stop after 30 executions
+  });
+
+  // Pause/resume schedule
+  await schedule.pause();
+  await schedule.resume();
+
+  return { scheduleId: schedule.id };
+}
+```
+
+### Example 6: Check System Health
+
+```typescript
+// Check health before submitting critical job
+const health = await ctx.jobs.healthCheck();
+
+if (health.state === 'critical') {
+  console.warn('System overloaded:', health.metrics);
+  console.warn('Recommendations:', health.recommendations);
+  // Wait or handle degradation
+} else {
+  // System healthy, submit job
+  await ctx.jobs.submit({ ... });
+}
 ```
 
 ## 🤝 Contributing

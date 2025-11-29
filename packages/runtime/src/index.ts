@@ -17,6 +17,7 @@ export {
   checkFsPermission,
   checkNetPermission,
   checkEnvPermission,
+  checkStatePermission,
   checkAllPermissions,
   type PermissionCheckResult,
   type PermissionCheckAllResult,
@@ -67,6 +68,7 @@ export {
 export { pickEnv, createEnvAccessor } from './io/env.js';
 export { createWhitelistedFetch, isHostAllowed } from './io/net.js';
 export { createFsShim } from './io/fs.js';
+export { createStateAPI, type StateRuntimeAPI } from './io/state.js';
 
 // Artifacts
 export {
@@ -251,3 +253,36 @@ export {
   type RuntimeLogger,
   type PluginLogger,
 } from './logging.js';
+
+// Jobs (background and scheduled jobs)
+export { JobBroker } from './jobs/broker.js';
+export {
+  checkSubmitPermission,
+  checkSchedulePermission,
+} from './jobs/permissions.js';
+export { QuotaTracker } from './jobs/quotas.js';
+export type {
+  BackgroundJobRequest,
+  ScheduledJobRequest,
+  JobHandle,
+  ScheduleHandle,
+  JobStatus,
+  ScheduleStatus,
+  JobInfo,
+  ScheduleInfo,
+  JobResult,
+  JobFilter,
+  LogEntry,
+} from './jobs/types.js';
+
+// Degradation and adaptive throttling
+export { DegradationController } from './jobs/degradation/controller.js';
+export { SystemMetricsCollector } from './jobs/degradation/metrics.js';
+export type {
+  DegradationState,
+  SystemMetrics,
+  DegradationThresholds,
+  DegradationActions,
+  DegradationControllerOptions,
+  HealthCheckResult,
+} from './jobs/degradation/types.js';

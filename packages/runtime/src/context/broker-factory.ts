@@ -9,11 +9,15 @@ import type { PluginRegistry } from '../registry.js';
 import type { InvokeBroker } from '../invoke/broker.js';
 import type { ArtifactBroker } from '../artifacts/broker.js';
 import type { ShellBroker } from '../shell/broker.js';
+import type { JobBroker } from '../jobs/broker.js';
+import type { CronScheduler } from '../jobs/cron/scheduler.js';
+import type { DegradationController } from '../jobs/degradation/controller.js';
 import type { PresenterFacade } from './plugin-context.js';
 import type { ChainLimits, InvokeContext } from '../invoke/types.js';
 import { InvokeBroker as InvokeBrokerImpl } from '../invoke/broker.js';
 import { ArtifactBroker as ArtifactBrokerImpl } from '../artifacts/broker.js';
 import { ShellBroker as ShellBrokerImpl } from '../shell/broker.js';
+import { JobBroker as JobBrokerImpl } from '../jobs/broker.js';
 import { CapabilityFlag } from './capabilities.js';
 
 /**
@@ -80,6 +84,35 @@ export function createShellBroker(
   }
   
   return new ShellBrokerImpl(manifest, ctx, presenter);
+}
+
+/**
+ * Create job broker (only if job permissions are declared and workflow engine is available)
+ */
+export function createJobBroker(
+  manifest: ManifestV2,
+  ctx: ExecutionContext,
+  workflowEngine?: any, // TODO: Type as WorkflowEngine once we have proper integration
+  cronScheduler?: CronScheduler,
+  degradationController?: DegradationController
+): JobBroker | undefined {
+  const jobPerms = manifest.permissions?.jobs;
+  if (!jobPerms) {
+    return undefined;
+  }
+
+  // WorkflowEngine is required
+  if (!workflowEngine) {
+    return undefined;
+  }
+
+  return new JobBrokerImpl(
+    workflowEngine,
+    manifest,
+    ctx,
+    cronScheduler,
+    degradationController
+  );
 }
 
 
