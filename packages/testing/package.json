@@ -1,0 +1,40 @@
+{
+  "name": "@kb-labs/plugin-testing",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "Testing utilities for plugins with type safety",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "clean": "rimraf dist",
+    "build": "tsup --config tsup.config.ts",
+    "dev": "tsup --config tsup.config.ts --watch",
+    "lint": "eslint src",
+    "type-check": "tsc --noEmit -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@kb-labs/cli-command-kit": "workspace:*",
+    "@kb-labs/plugin-manifest": "workspace:*",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@kb-labs/devkit": "workspace:*",
+    "@types/node": "^22.10.2",
+    "rimraf": "^6.0.1",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3"
+  }
+}
+
