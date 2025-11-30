@@ -13,7 +13,7 @@
  * - PATCH: Type corrections, documentation updates
  */
 
-export * from './shell/index.js';
-export * from './artifacts/index.js';
-export * from './invoke/index.js';
+export * from './shell/index';
+export * from './artifacts/index';
+export * from './invoke/index';
 
