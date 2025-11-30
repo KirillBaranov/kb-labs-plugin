@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { lintManifest } from './lint.js';
+import { lintManifest } from './lint';
 import type { ManifestV2 } from '@kb-labs/plugin-manifest';
 
 describe('lintManifest - validateCommandExamples', () => {

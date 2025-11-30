@@ -8,26 +8,26 @@ export {
   generateOpenAPIFile,
   generateOpenAPIs,
   mergeOpenAPIs,
-} from './openapi.js';
+} from './openapi';
 // Re-export with shorter name for convenience
-export { generateOpenAPIFile as generateOpenAPI } from './openapi.js';
+export { generateOpenAPIFile as generateOpenAPI } from './openapi';
 
 // Studio registry codegen
 export {
   generateStudioRegistry,
-} from './registry.js';
+} from './registry';
 
 // Studio registry watcher
 export {
   watchManifests,
-} from './watch.js';
+} from './watch';
 
 // Linting
 export {
   lintManifest,
   type LintResult,
   type LintError,
-} from './lint.js';
+} from './lint';
 
 // CLI commands
 export {
@@ -35,4 +35,4 @@ export {
   createGenerateStudioRegistryCommand,
   createLintPluginCommand,
   registerDevtoolsCommands,
-} from './cli.js';
+} from './cli';

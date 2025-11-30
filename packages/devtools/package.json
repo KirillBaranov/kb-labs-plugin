@@ -28,7 +28,7 @@
     "test:watch": "vitest -c ../../vitest.config.ts"
   },
   "dependencies": {
-    "@kb-labs/cli-core": "link:../../../kb-labs-cli/packages/core",
+    "@kb-labs/cli-core": "link:../../../kb-labs-cli/packages/cli-core",
     "@kb-labs/plugin-adapter-rest": "link:../adapters/rest",
     "@kb-labs/plugin-adapter-studio": "link:../adapters/studio",
     "@kb-labs/plugin-manifest": "link:../manifest",
@@ -37,7 +37,7 @@
   },
   "devDependencies": {
     "@kb-labs/devkit": "link:../../../kb-labs-devkit",
-    "@types/node": "^24.10.0",
+    "@types/node": "^24.3.3",
     "@typescript-eslint/eslint-plugin": "^8",
     "@typescript-eslint/parser": "^8",
     "eslint": "^9",

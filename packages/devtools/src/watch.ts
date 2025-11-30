@@ -6,7 +6,7 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { watch } from 'node:fs';
-import { generateStudioRegistry } from './registry.js';
+import { generateStudioRegistry } from './registry';
 import type { ManifestV2 } from '@kb-labs/plugin-manifest';
 
 /**

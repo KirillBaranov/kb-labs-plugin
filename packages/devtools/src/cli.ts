@@ -4,10 +4,10 @@
  */
 
 import type { ManifestV2 } from '@kb-labs/plugin-manifest';
-import { generateOpenAPIFile, generateOpenAPIs, mergeOpenAPIs } from './openapi.js';
-import { generateStudioRegistry } from './registry.js';
-import { watchManifests } from './watch.js';
-import { lintManifest } from './lint.js';
+import { generateOpenAPIFile, generateOpenAPIs, mergeOpenAPIs } from './openapi';
+import { generateStudioRegistry } from './registry';
+import { watchManifests } from './watch';
+import { lintManifest } from './lint';
 import type { CliCommand, CliContext, FlagBuilder } from '@kb-labs/cli-core';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
