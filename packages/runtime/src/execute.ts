@@ -45,6 +45,8 @@ import {
 } from './context/index.js';
 import { writeArtifactsIfAny } from './artifacts/index.js';
 import { OperationTracker } from './operations/operation-tracker.js';
+import { createStateBroker } from '@kb-labs/state-broker';
+import { createStateAPI } from './io/state.js';
 
 
 /**
@@ -99,6 +101,11 @@ export async function execute(
     args.perms.capabilities
   );
 
+  // Create state broker with graceful fallback
+  // Try to connect to daemon if available, otherwise use in-memory
+  const stateBroker = createStateBroker();
+  const stateAPI = createStateAPI(stateBroker, args.manifest.id, args.perms.state);
+
   // 5. Create analytics emitter
   const analyticsEmitter = createAnalyticsEmitter(ctx);
 
@@ -119,7 +126,8 @@ export async function execute(
     resources,
     invokeBroker,
     artifactBroker,
-    shellBroker
+    shellBroker,
+    stateAPI
   );
   
   // Validate context version

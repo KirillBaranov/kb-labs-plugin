@@ -48,6 +48,50 @@ export interface PluginContextMetadata {
   [key: string]: unknown;
 }
 
+/**
+ * Context for plugin commands (sandbox, restricted)
+ *
+ * Used by:
+ * - defineCommand() handlers (CLI adapter)
+ * - definePluginHandler() handlers (REST adapter)
+ *
+ * SAME context for CLI and REST! The execution path is identical:
+ * Both run through runtime.execute() → sandbox (child process) → handler.
+ *
+ * The ONLY difference:
+ * - CLI: presenter is CliPresenter (terminal output)
+ * - REST: presenter is HttpPresenter (buffering only, no terminal)
+ *
+ * @example CLI handler
+ * ```typescript
+ * import { defineCommand, type PluginContext } from '@kb-labs/plugin-runtime';
+ *
+ * export const run = defineCommand({
+ *   name: 'devlink:plan',
+ *   async handler(ctx: PluginContext, argv, flags) {
+ *     // Sandbox - restricted access via brokers
+ *     ctx.presenter.message('Planning...');
+ *     await ctx.invoke?.({ pluginId: 'other', command: 'run' });
+ *     await ctx.artifacts?.write({ key: 'plan', data: plan });
+ *   }
+ * });
+ * ```
+ *
+ * @example REST handler
+ * ```typescript
+ * import { definePluginHandler, type PluginContext } from '@kb-labs/plugin-runtime';
+ *
+ * export const handlePlan = definePluginHandler({
+ *   async handle(input, ctx: PluginContext) {
+ *     // SAME APIs as CLI!
+ *     ctx.presenter.message('Planning...');  // Buffered, no terminal
+ *     await ctx.invoke?.({ pluginId: 'other', command: 'run' });
+ *     await ctx.artifacts?.write({ key: 'plan', data: plan });
+ *     return plan;
+ *   }
+ * });
+ * ```
+ */
 export interface PluginContext {
   host: PluginHostType;
   requestId: string;

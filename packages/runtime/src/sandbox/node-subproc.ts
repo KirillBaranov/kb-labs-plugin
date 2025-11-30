@@ -423,7 +423,7 @@ function createInProcessRunner(): SandboxRunner {
         const { pickEnv } = await import('../io/env.js');
         const { buildRuntime } = await import('./child/runtime.js');
         const env = pickEnv(process.env, perms.env?.allow);
-        const runtime = buildRuntime(
+        const builtRuntime = buildRuntime(
           perms,
           ctx,
           env,
@@ -433,25 +433,50 @@ function createInProcessRunner(): SandboxRunner {
           args.shellBroker
         );
 
-        // Patch runtime.log to collect logs in dev mode
-        // runtime.log already uses new logging system via buildRuntime
-        const originalLog = runtime.log;
-        runtime.log = (level, msg, meta) => {
-          devLogs.push(`[${level}] ${msg}${meta ? ` ${JSON.stringify(meta)}` : ''}`);
-          originalLog(level, msg, meta);
+        // Extract new API groups and legacy runtime
+        const { api, output, runtime: legacyRuntime } = builtRuntime;
+
+        // Patch output logger to collect logs in dev mode
+        const originalDebug = output.debug;
+        const originalInfo = output.info;
+        const originalWarn = output.warn;
+        const originalError = output.error;
+
+        output.debug = (msg, meta) => {
+          devLogs.push(`[debug] ${msg}${meta ? ` ${JSON.stringify(meta)}` : ''}`);
+          originalDebug(msg, meta);
+        };
+        output.info = (msg, meta) => {
+          devLogs.push(`[info] ${msg}${meta ? ` ${JSON.stringify(meta)}` : ''}`);
+          originalInfo(msg, meta);
+        };
+        output.warn = (msg, meta) => {
+          devLogs.push(`[warn] ${msg}${meta ? ` ${JSON.stringify(meta)}` : ''}`);
+          originalWarn(msg, meta);
+        };
+        output.error = (msg, meta) => {
+          devLogs.push(`[error] ${msg}${meta ? ` ${JSON.stringify(meta)}` : ''}`);
+          originalError(msg, meta);
         };
 
-        // Execute handler
-        // Note: For CLI handlers, runtime is available via ctx.extensions (deprecated but functional)
-        // For REST handlers, runtime is passed as a separate object
+        // Execute handler with NEW context structure
+        // Handlers receive: metadata (flat) + runtime + api + output
         const result = await handlerFn(input, {
+          // Metadata (flat)
           requestId: ctx.requestId,
           pluginId: ctx.pluginId,
           outdir: ctx.outdir,
           traceId: ctx.traceId,
           spanId: ctx.spanId,
           parentSpanId: ctx.parentSpanId,
-          runtime,
+
+          // NEW API groups
+          api,
+          output,
+
+          // Legacy runtime (for backward compatibility)
+          // Contains fs, fetch, env + deprecated logger/invoke/etc
+          runtime: legacyRuntime,
         });
 
         const endTime = Date.now();

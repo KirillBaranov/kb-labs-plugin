@@ -4,7 +4,7 @@
  */
 
 import type { PermissionSpec, ManifestV2 } from '@kb-labs/plugin-manifest';
-import type { ExecutionContext, FSLike } from '../../types.js';
+import type { ExecutionContext, FSLike, PluginAPI, PluginOutput, RuntimeAPI } from '../../types.js';
 import type { InvokeBroker } from '../../invoke/broker.js';
 import type { ArtifactBroker } from '../../artifacts/broker.js';
 import type { StateBroker } from '@kb-labs/state-broker';
@@ -13,6 +13,8 @@ import { createFsShim } from '../../io/fs.js';
 import { createEnvAccessor } from '../../io/env.js';
 import { createStateAPI, type StateRuntimeAPI } from '../../io/state.js';
 import { SmartConfigHelper } from '../../config/config-helper.js';
+import { createPluginAPI, createPluginOutput } from '../../context-factories.js';
+import { deprecateObject, deprecateFunction } from '../../deprecation.js';
 import type {
   EmitOptions,
   EventBusConfig,
@@ -410,13 +412,19 @@ function createRuntimeEvents(ctx: ExecutionContext): RuntimeEventsApi | undefine
 
 /**
  * Build safe runtime context for handler execution
+ *
+ * Returns both new API groups (api, output) and legacy runtime for backward compatibility
+ *
  * @param perms - Resolved permissions
  * @param ctx - Execution context
  * @param env - Filtered environment (already whitelisted)
  * @param manifest - Plugin manifest
  * @param invokeBroker - Invoke broker for cross-plugin calls
  * @param artifactBroker - Artifact broker for artifact access
- * @returns Runtime context with shimmed APIs
+ * @param shellBroker - Shell broker for command execution
+ * @param stateBroker - State broker for persistent state
+ * @param jobBroker - Job broker for background jobs
+ * @returns Runtime context with both new (api, output) and legacy (runtime) APIs
  */
 export function buildRuntime(
   perms: PermissionSpec,
@@ -426,58 +434,78 @@ export function buildRuntime(
   invokeBroker?: InvokeBroker,
   artifactBroker?: ArtifactBroker,
   shellBroker?: import('../../shell/broker.js').ShellBroker,
-  stateBroker?: StateBroker
+  stateBroker?: StateBroker,
+  jobBroker?: import('../../jobs/broker.js').JobBroker
 ): {
-  fetch: (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
-  fs: FSLike;
-  env: (key: string) => string | undefined;
-  logger: {
-    debug: (msg: string, meta?: Record<string, unknown>) => void;
-    info: (msg: string, meta?: Record<string, unknown>) => void;
-    warn: (msg: string, meta?: Record<string, unknown>) => void;
-    error: (msg: string, meta?: Record<string, unknown>) => void;
+  // === NEW API GROUPS ===
+  /** New Plugin API (ctx.api) */
+  api: PluginAPI;
+  /** New Output API (ctx.output) */
+  output: PluginOutput;
+
+  // === LEGACY RUNTIME (for backward compatibility) ===
+  /** @deprecated Use separate api/output instead */
+  runtime: {
+    fetch: (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
+    fs: FSLike;
+    env: (key: string) => string | undefined;
+    /** @deprecated Use ctx.output.* instead */
+    logger: {
+      debug: (msg: string, meta?: Record<string, unknown>) => void;
+      info: (msg: string, meta?: Record<string, unknown>) => void;
+      warn: (msg: string, meta?: Record<string, unknown>) => void;
+      error: (msg: string, meta?: Record<string, unknown>) => void;
+    };
+    /** @deprecated Use ctx.output.* instead */
+    log: (
+      level: 'debug' | 'info' | 'warn' | 'error',
+      msg: string,
+      meta?: Record<string, unknown>
+    ) => void;
+    /** @deprecated Use ctx.api.invoke() instead */
+    invoke: <T = unknown>(
+      request: import('../../invoke/types.js').InvokeRequest
+    ) => Promise<import('../../invoke/types.js').InvokeResult<T>>;
+    /** @deprecated Use ctx.api.artifacts instead */
+    artifacts: {
+      read: (
+        request: import('../../artifacts/broker.js').ArtifactReadRequest
+      ) => Promise<Buffer | object>;
+      write: (
+        request: import('../../artifacts/broker.js').ArtifactWriteRequest
+      ) => Promise<{
+        path: string;
+        meta: import('../../artifacts/broker.js').ArtifactMeta;
+      }>;
+    };
+    /** @deprecated Use ctx.api.shell instead */
+    shell: {
+      exec: (
+        command: string,
+        args: string[],
+        options?: import('../../shell/types.js').ShellExecOptions
+      ) => Promise<import('../../shell/types.js').ShellResult>;
+      spawn: (
+        command: string,
+        args: string[],
+        options?: import('../../shell/types.js').ShellSpawnOptions
+      ) => Promise<import('../../shell/types.js').ShellSpawnResult>;
+    };
+    /** @deprecated Use ctx.api.analytics instead */
+    analytics?: (event: Partial<import('@kb-labs/core-types').TelemetryEvent>) => Promise<import('@kb-labs/core-types').TelemetryEmitResult>;
+    /** @deprecated Use ctx.api.events instead */
+    events?: RuntimeEventsApi;
+    /** @deprecated Use ctx.api.config instead */
+    config: {
+      ensureSection: (
+        pointer: string,
+        value: unknown,
+        options?: import('../../config/config-helper.js').EnsureSectionOptions
+      ) => Promise<import('../../config/config-helper.js').EnsureSectionResult>;
+    };
+    /** @deprecated Use ctx.api.state instead */
+    state?: StateRuntimeAPI;
   };
-  log: (
-    level: 'debug' | 'info' | 'warn' | 'error',
-    msg: string,
-    meta?: Record<string, unknown>
-  ) => void;
-  invoke: <T = unknown>(
-    request: import('../../invoke/types.js').InvokeRequest
-  ) => Promise<import('../../invoke/types.js').InvokeResult<T>>;
-  artifacts: {
-    read: (
-      request: import('../../artifacts/broker.js').ArtifactReadRequest
-    ) => Promise<Buffer | object>;
-    write: (
-      request: import('../../artifacts/broker.js').ArtifactWriteRequest
-    ) => Promise<{
-      path: string;
-      meta: import('../../artifacts/broker.js').ArtifactMeta;
-    }>;
-  };
-  shell: {
-    exec: (
-      command: string,
-      args: string[],
-      options?: import('../../shell/types.js').ShellExecOptions
-    ) => Promise<import('../../shell/types.js').ShellResult>;
-    spawn: (
-      command: string,
-      args: string[],
-      options?: import('../../shell/types.js').ShellSpawnOptions
-    ) => Promise<import('../../shell/types.js').ShellSpawnResult>;
-  };
-  analytics?: (event: Partial<import('@kb-labs/core-types').TelemetryEvent>) => Promise<import('@kb-labs/core-types').TelemetryEmitResult>;
-  events?: RuntimeEventsApi;
-  config: {
-    ensureSection: (
-      pointer: string,
-      value: unknown,
-      options?: import('../../config/config-helper.js').EnsureSectionOptions
-    ) => Promise<import('../../config/config-helper.js').EnsureSectionResult>;
-  };
-  state?: StateRuntimeAPI;
 } {
   // Build network fetch (with whitelisting and dry-run support)
   const fetch = createWhitelistedFetch(perms.net, globalThis.fetch, ctx);
@@ -630,20 +658,95 @@ export function buildRuntime(
     error: (msg: string, meta?: Record<string, unknown>) => log('error', msg, meta),
   };
 
-  return {
+  // === CREATE NEW API GROUPS ===
+  const api = createPluginAPI({
+    invokeBroker,
+    stateBroker: state,
+    artifactBroker,
+    shellBroker,
+    eventBus: events ? { emit: events.emit, on: events.on, once: events.once, off: events.off, waitFor: events.waitFor } as any : undefined,
+    jobBroker,
+    configHelper: (section: string) => new SmartConfigHelper({
+      workdir: ctx.workdir,
+      fs,
+      tracker: ctx.operationTracker,
+      defaultConfigPath: '.kb/kb-labs.config.json'
+    }),
+    analytics,
+  });
+
+  const output = createPluginOutput({
+    logger,
+    // Presenter is not available in child process (subprocess)
+    // It's only available in the parent process or in-process execution
+    presenter: undefined,
+  });
+
+  // === BUILD LEGACY RUNTIME (for backward compatibility) ===
+  // Wrap deprecated APIs with deprecation warnings
+  const legacyRuntime = {
+    // System APIs (not deprecated - stay in runtime)
     fetch,
     fs,
     env: envAccessor,
-    logger,  // ✅ NEW unified API
-    log,     // ⚠️ DEPRECATED but still works
-    invoke,
-    artifacts,
-    shell,
-    analytics,
-    events,
-    config: {
-      ensureSection: configHelper.ensureSection.bind(configHelper)
-    },
-    state,
+
+    // DEPRECATED: Logging APIs
+    logger: deprecateObject(
+      'ctx.runtime.logger',
+      'ctx.output',
+      logger
+    ),
+    log: deprecateFunction(
+      'ctx.runtime.log()',
+      'ctx.output.*',
+      log
+    ),
+
+    // DEPRECATED: Plugin APIs
+    invoke: deprecateFunction(
+      'ctx.runtime.invoke',
+      'ctx.api.invoke',
+      invoke
+    ),
+    artifacts: deprecateObject(
+      'ctx.runtime.artifacts',
+      'ctx.api.artifacts',
+      artifacts
+    ),
+    shell: deprecateObject(
+      'ctx.runtime.shell',
+      'ctx.api.shell',
+      shell
+    ),
+    analytics: analytics ? deprecateFunction(
+      'ctx.runtime.analytics',
+      'ctx.api.analytics',
+      analytics
+    ) : undefined,
+    events: events ? deprecateObject(
+      'ctx.runtime.events',
+      'ctx.api.events',
+      events
+    ) : undefined,
+    config: deprecateObject(
+      'ctx.runtime.config',
+      'ctx.api.config',
+      {
+        ensureSection: configHelper.ensureSection.bind(configHelper)
+      }
+    ),
+    state: state ? deprecateObject(
+      'ctx.runtime.state',
+      'ctx.api.state',
+      state
+    ) : undefined,
+  };
+
+  return {
+    // NEW API groups
+    api,
+    output,
+    // LEGACY runtime (for backward compatibility, with deprecation warnings)
+    runtime: legacyRuntime,
   };
 }

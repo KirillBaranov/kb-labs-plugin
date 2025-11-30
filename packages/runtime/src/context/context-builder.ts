@@ -64,7 +64,8 @@ export function buildExecutionContext(
   resources: ResourceTracker,
   invokeBroker: any,
   artifactBroker: any,
-  shellBroker?: any
+  shellBroker?: any,
+  stateAPI?: any
 ): ExecutionContext {
   // Ensure pluginRoot is preserved in updatedCtx (required)
   if (!ctx.pluginRoot) {
@@ -96,6 +97,7 @@ export function buildExecutionContext(
       artifacts: artifactBroker,
       invoke: invokeBroker,
       shell: shellBroker,
+      state: stateAPI,
       events: ctx.extensions?.events,
     },
     headers: ctx.headers

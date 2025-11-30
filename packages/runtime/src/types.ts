@@ -47,6 +47,8 @@ export interface RuntimeExtensions {
   shell?: import('./shell/broker.js').ShellBroker;
   /** Job broker for background and scheduled jobs */
   jobs?: import('./jobs/broker.js').JobBroker;
+  /** State broker for persistent cross-invocation state management */
+  state?: import('./io/state.js').StateRuntimeAPI;
   /** Event bus services */
   events?: {
     /** Local scope bus (per execution chain) */
@@ -61,16 +63,176 @@ export interface RuntimeExtensions {
 }
 
 /**
- * Runtime API for plugin handlers
- * Provides low-level system APIs (fetch, fs, env, shell, invoke, artifacts)
+ * Plugin output API - unified logging and presentation
+ * Combines logger and presenter for consistent output across CLI and REST handlers
+ *
+ * @example
+ * ```typescript
+ * ctx.output.info('Processing user data');
+ * ctx.output.json({ result: data });
+ * ctx.output.progress({ current: 5, total: 10, message: 'Processing...' });
+ * ```
  */
-export type RuntimeAPI = {
+export interface PluginOutput {
+  /** Debug level logging (only shown in debug mode) */
+  debug(message: string, meta?: Record<string, unknown>): void;
+  /** Info level logging */
+  info(message: string, meta?: Record<string, unknown>): void;
+  /** Warning level logging */
+  warn(message: string, meta?: Record<string, unknown>): void;
+  /** Error level logging */
+  error(message: string, meta?: Record<string, unknown>): void;
+  /** JSON output for CLI (uses presenter) */
+  json(data: unknown): void;
+  /** Progress updates (uses presenter) */
+  progress(payload: import('./presenter/presenter-facade.js').PresenterProgressPayload): void;
+}
+
+/**
+ * Plugin API - high-level plugin capabilities
+ * Provides cross-plugin invocation, state management, artifacts, shell, events
+ *
+ * @example
+ * ```typescript
+ * // Invoke another plugin
+ * const result = await ctx.api.invoke<MyResult>({ pluginId: 'other-plugin', input: data });
+ *
+ * // State management
+ * await ctx.api.state.set('key', value, 60000); // 60s TTL
+ * const cached = await ctx.api.state.get<MyType>('key');
+ *
+ * // Events
+ * await ctx.api.events.emit('user.created', { userId: '123' });
+ * ```
+ */
+export interface PluginAPI {
+  /** Cross-plugin invocation with type-safe results */
+  invoke<TResult = unknown>(
+    request: import('./invoke/types.js').InvokeRequest
+  ): Promise<import('./invoke/types.js').InvokeResult<TResult>>;
+
+  /** State management with typed get/set */
+  state: {
+    get<T = unknown>(key: string): Promise<T | null>;
+    set<T = unknown>(key: string, value: T, ttl?: number): Promise<void>;
+    delete(key: string): Promise<void>;
+  };
+
+  /** Artifact management (read/write files in outdir) */
+  artifacts: {
+    read(
+      request: import('./artifacts/broker.js').ArtifactReadRequest
+    ): Promise<Buffer | object>;
+    write(
+      request: import('./artifacts/broker.js').ArtifactWriteRequest
+    ): Promise<{
+      path: string;
+      meta: import('./artifacts/broker.js').ArtifactMeta;
+    }>;
+  };
+
+  /** Shell execution (exec for sync, spawn for streaming) */
+  shell: {
+    exec(
+      command: string,
+      args: string[],
+      options?: import('./shell/types.js').ShellExecOptions
+    ): Promise<import('./shell/types.js').ShellResult>;
+    spawn(
+      command: string,
+      args: string[],
+      options?: import('./shell/types.js').ShellSpawnOptions
+    ): Promise<import('./shell/types.js').ShellSpawnResult>;
+  };
+
+  /** Event bus with type-safe payloads */
+  events: {
+    emit<TPayload = unknown>(
+      topic: string,
+      payload: TPayload,
+      options?: import('./events/index.js').EmitOptions
+    ): Promise<EventEnvelope<TPayload> | null>;
+
+    on<TPayload = unknown>(
+      topic: string,
+      handler: (event: EventEnvelope<TPayload>) => void | Promise<void>,
+      options?: import('./events/index.js').SubscriptionOptions
+    ): () => void;
+
+    once<TPayload = unknown>(
+      topic: string,
+      handler: (event: EventEnvelope<TPayload>) => void | Promise<void>,
+      options?: import('./events/index.js').SubscriptionOptions
+    ): () => void;
+
+    off(
+      topic: string,
+      handler?: (event: EventEnvelope) => void | Promise<void>,
+      options?: import('./events/index.js').SubscriptionOptions
+    ): void;
+
+    waitFor<TPayload = unknown>(
+      topic: string,
+      predicate?: (event: EventEnvelope<TPayload>) => boolean,
+      options?: import('./events/index.js').WaitForOptions<TPayload>
+    ): Promise<EventEnvelope<TPayload>>;
+  };
+
+  /** Background and scheduled jobs (optional) */
+  jobs?: import('./jobs/broker.js').JobBroker;
+
+  /** Config helper for ensuring config sections exist */
+  config: {
+    ensureSection: (section: string) => import('./config/config-helper.js').SmartConfigHelper;
+  };
+
+  /** Analytics emitter for custom tracking (scoped to this execution) */
+  analytics?: (event: Partial<TelemetryEvent>) => Promise<TelemetryEmitResult>;
+}
+
+/**
+ * Runtime API - low-level system capabilities
+ * Provides filesystem, HTTP client, and environment variable access
+ * These APIs are sandboxed and permission-controlled
+ *
+ * @example
+ * ```typescript
+ * // Filesystem
+ * const content = await ctx.runtime.fs.readFile('file.txt', { encoding: 'utf-8' });
+ *
+ * // HTTP
+ * const response = await ctx.runtime.fetch('https://api.example.com/data');
+ *
+ * // Environment
+ * const apiKey = ctx.runtime.env('API_KEY');
+ * ```
+ */
+export interface RuntimeAPI {
+  /** Filesystem access (shimmed for sandbox, permission-controlled) */
+  fs: FSLike;
+
+  /** HTTP client (whitelisted hosts only) */
+  fetch: (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
+
+  /** Environment variable accessor (whitelisted keys only) */
+  env: (key: string) => string | undefined;
+}
+
+/**
+ * Legacy RuntimeAPI for backward compatibility
+ * @deprecated This type will be removed in v2.0. Use the new separated APIs instead:
+ * - ctx.runtime.* for system APIs (fs, fetch, env)
+ * - ctx.api.* for plugin APIs (invoke, state, artifacts, shell, events)
+ * - ctx.output.* for logging and presentation
+ */
+export type LegacyRuntimeAPI = {
   fetch: (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
   fs: FSLike;
   env: (key: string) => string | undefined;
   /**
    * Unified logger interface (recommended)
-   * @example ctx.logger.info('message', { meta })
+   * @deprecated Use ctx.output.* instead
+   * @example ctx.output.info('message', { meta })
    */
   logger: {
     debug: (msg: string, meta?: Record<string, unknown>) => void;
@@ -79,7 +241,7 @@ export type RuntimeAPI = {
     error: (msg: string, meta?: Record<string, unknown>) => void;
   };
   /**
-   * @deprecated Use ctx.logger.info() instead. Will be removed in v2.0
+   * @deprecated Use ctx.output.info() instead. Will be removed in v2.0
    * @example ctx.runtime.log('info', 'message', { meta })
    */
   log: (
@@ -87,9 +249,15 @@ export type RuntimeAPI = {
     msg: string,
     meta?: Record<string, unknown>
   ) => void;
+  /**
+   * @deprecated Use ctx.api.invoke() instead
+   */
   invoke: <T = unknown>(
     request: import('./invoke/types.js').InvokeRequest
   ) => Promise<import('./invoke/types.js').InvokeResult<T>>;
+  /**
+   * @deprecated Use ctx.api.artifacts instead
+   */
   artifacts: {
     read: (
       request: import('./artifacts/broker.js').ArtifactReadRequest
@@ -101,6 +269,9 @@ export type RuntimeAPI = {
       meta: import('./artifacts/broker.js').ArtifactMeta;
     }>;
   };
+  /**
+   * @deprecated Use ctx.api.shell instead
+   */
   shell: {
     exec: (
       command: string,
@@ -113,9 +284,15 @@ export type RuntimeAPI = {
       options?: import('./shell/types.js').ShellSpawnOptions
     ) => Promise<import('./shell/types.js').ShellSpawnResult>;
   };
+  /**
+   * @deprecated Use ctx.api.analytics instead
+   */
   analytics?: (
     event: Partial<TelemetryEvent>
   ) => Promise<TelemetryEmitResult>;
+  /**
+   * @deprecated Use ctx.api.events instead
+   */
   events?: {
     emit<T = unknown>(topic: string, payload: T, options?: import('./events/index.js').EmitOptions): Promise<EventEnvelope<T> | null>;
     on<T = unknown>(
@@ -135,8 +312,19 @@ export type RuntimeAPI = {
       options?: import('./events/index.js').WaitForOptions<T>
     ): Promise<EventEnvelope<T>>;
   };
+  /**
+   * @deprecated Use ctx.api.config instead
+   */
   config: {
     ensureSection: (section: string) => import('./config/config-helper.js').SmartConfigHelper;
+  };
+  /**
+   * @deprecated Use ctx.api.state instead
+   */
+  state?: {
+    get<T>(key: string): Promise<T | null>;
+    set<T>(key: string, value: T, ttl?: number): Promise<void>;
+    delete(key: string): Promise<void>;
   };
 };
 
@@ -148,6 +336,11 @@ export interface HeaderContext {
 
 /**
  * Execution context - runtime information for handler execution
+ *
+ * @deprecated This type is for internal use only. Will be renamed to InternalExecutionContext in v2.5
+ * Plugin code should use PluginContext instead.
+ *
+ * @internal
  */
 export interface ExecutionContext {
   /** Context schema version (semver) */
@@ -367,86 +560,175 @@ import type { ArtifactReadRequest, ArtifactWriteRequest } from './artifacts/brok
 import type { ShellExecOptions, ShellResult, ShellSpawnOptions, ShellSpawnResult } from './shell/types.js';
 
 /**
- * Plugin handler signature - unified contract for all handlers
+ * Plugin handler context - complete context passed to all plugin handlers
+ *
+ * @example
+ * ```typescript
+ * export const handler: PluginHandler<Input, Output> = async (input, ctx) => {
+ *   // Metadata (flat)
+ *   console.log(ctx.requestId, ctx.pluginId);
+ *
+ *   // System APIs
+ *   const data = await ctx.runtime.fs.readFile('file.txt', 'utf-8');
+ *   const response = await ctx.runtime.fetch('https://api.example.com');
+ *
+ *   // Plugin APIs
+ *   await ctx.api.invoke({ pluginId: 'other', input: data });
+ *   await ctx.api.state.set('key', value, 60000);
+ *   await ctx.api.events.emit('event', payload);
+ *
+ *   // Output
+ *   ctx.output.info('Processing complete');
+ *   ctx.output.json({ result });
+ *
+ *   return result;
+ * };
+ * ```
  */
-export type PluginHandler = (
-  input: unknown,
-  ctx: {
-    requestId: string;
-    pluginId: string;
-    outdir?: string;
-    traceId?: string;
-    spanId?: string;
-    parentSpanId?: string;
-    runtime: {
-      /** Whitelisted network fetch */
-      fetch: typeof fetch;
-      /** Shimmed filesystem (promise-based) */
-      fs: FSLike;
-      /** Whitelisted environment variable access */
-      env: (key: string) => string | undefined;
-      /** Unified logger interface (recommended) */
-      logger: {
-        debug: (msg: string, meta?: Record<string, unknown>) => void;
-        info: (msg: string, meta?: Record<string, unknown>) => void;
-        warn: (msg: string, meta?: Record<string, unknown>) => void;
-        error: (msg: string, meta?: Record<string, unknown>) => void;
-      };
-      /** @deprecated Structured logging - use ctx.runtime.logger instead */
-      log: (
-        level: 'debug' | 'info' | 'warn' | 'error',
-        msg: string,
-        meta?: Record<string, unknown>
-      ) => void;
-      /** Cross-plugin invocation */
-      invoke: <T = unknown>(request: InvokeRequest) => Promise<InvokeResult<T>>;
-      /** Artifact access */
-      artifacts: {
-        read: (request: ArtifactReadRequest) => Promise<Buffer | object>;
-        write: (request: ArtifactWriteRequest) => Promise<{ path: string; meta: import('./artifacts/broker.js').ArtifactMeta }>;
-      };
-      /** Shell execution */
-      shell: {
-        exec: (command: string, args: string[], options?: ShellExecOptions) => Promise<ShellResult>;
-        spawn: (command: string, args: string[], options?: ShellSpawnOptions) => Promise<ShellSpawnResult>;
-      };
-      /** Analytics emitter for custom tracking (scoped to this execution) */
-      analytics?: (event: Partial<TelemetryEvent>) => Promise<TelemetryEmitResult>;
-      /** Event bus API */
-      events?: {
-        emit<T = unknown>(topic: string, payload: T, options?: import('./events/index.js').EmitOptions): Promise<import('./events/index.js').EventEnvelope<T> | null>;
-        on<T = unknown>(
-          topic: string,
-          handler: (event: import('./events/index.js').EventEnvelope<T>) => void | Promise<void>,
-          options?: import('./events/index.js').SubscriptionOptions
-        ): () => void;
-        once<T = unknown>(
-          topic: string,
-          handler: (event: import('./events/index.js').EventEnvelope<T>) => void | Promise<void>,
-          options?: import('./events/index.js').SubscriptionOptions
-        ): () => void;
-        off(
-          topic: string,
-          handler?: (event: import('./events/index.js').EventEnvelope) => void | Promise<void>,
-          options?: import('./events/index.js').SubscriptionOptions
-        ): void;
-        waitFor<T = unknown>(
-          topic: string,
-          predicate?: (event: import('./events/index.js').EventEnvelope<T>) => boolean,
-          options?: import('./events/index.js').WaitForOptions<T>
-        ): Promise<import('./events/index.js').EventEnvelope<T>>;
-      };
-      /** Config helper */
-      config: {
-        ensureSection: (
-          pointer: string,
-          value: unknown,
-          options?: import('./config/config-helper.js').EnsureSectionOptions
-        ) => Promise<import('./config/config-helper.js').EnsureSectionResult>;
-      };
+export interface PluginHandlerContext {
+  // === METADATA (flat, serializable) ===
+  /** Unique request identifier */
+  requestId: string;
+  /** Plugin identifier */
+  pluginId: string;
+  /** Plugin version */
+  pluginVersion?: string;
+  /** Tenant identifier (multi-tenancy) */
+  tenantId?: string;
+  /** Output directory for artifacts */
+  outdir?: string;
+  /** Working directory */
+  workdir?: string;
+  /** Distributed trace ID */
+  traceId?: string;
+  /** Current span ID */
+  spanId?: string;
+  /** Parent span ID */
+  parentSpanId?: string;
+
+  // === API GROUPS (created locally, not serialized) ===
+  /** System-level APIs (fs, fetch, env) */
+  runtime: RuntimeAPI & {
+    /**
+     * @deprecated Use ctx.output.* instead. Will be removed in v2.0
+     */
+    logger?: {
+      debug: (msg: string, meta?: Record<string, unknown>) => void;
+      info: (msg: string, meta?: Record<string, unknown>) => void;
+      warn: (msg: string, meta?: Record<string, unknown>) => void;
+      error: (msg: string, meta?: Record<string, unknown>) => void;
     };
-  }
-) => Promise<unknown>;
+    /**
+     * @deprecated Use ctx.output.* instead. Will be removed in v2.0
+     */
+    log?: (
+      level: 'debug' | 'info' | 'warn' | 'error',
+      msg: string,
+      meta?: Record<string, unknown>
+    ) => void;
+    /**
+     * @deprecated Use ctx.api.invoke() instead. Will be removed in v2.0
+     */
+    invoke?: <T = unknown>(request: InvokeRequest) => Promise<InvokeResult<T>>;
+    /**
+     * @deprecated Use ctx.api.artifacts instead. Will be removed in v2.0
+     */
+    artifacts?: {
+      read: (request: ArtifactReadRequest) => Promise<Buffer | object>;
+      write: (request: ArtifactWriteRequest) => Promise<{ path: string; meta: import('./artifacts/broker.js').ArtifactMeta }>;
+    };
+    /**
+     * @deprecated Use ctx.api.shell instead. Will be removed in v2.0
+     */
+    shell?: {
+      exec: (command: string, args: string[], options?: ShellExecOptions) => Promise<ShellResult>;
+      spawn: (command: string, args: string[], options?: ShellSpawnOptions) => Promise<ShellSpawnResult>;
+    };
+    /**
+     * @deprecated Use ctx.api.analytics instead. Will be removed in v2.0
+     */
+    analytics?: (event: Partial<TelemetryEvent>) => Promise<TelemetryEmitResult>;
+    /**
+     * @deprecated Use ctx.api.events instead. Will be removed in v2.0
+     */
+    events?: {
+      emit<T = unknown>(topic: string, payload: T, options?: import('./events/index.js').EmitOptions): Promise<import('./events/index.js').EventEnvelope<T> | null>;
+      on<T = unknown>(
+        topic: string,
+        handler: (event: import('./events/index.js').EventEnvelope<T>) => void | Promise<void>,
+        options?: import('./events/index.js').SubscriptionOptions
+      ): () => void;
+      once<T = unknown>(
+        topic: string,
+        handler: (event: import('./events/index.js').EventEnvelope<T>) => void | Promise<void>,
+        options?: import('./events/index.js').SubscriptionOptions
+      ): () => void;
+      off(
+        topic: string,
+        handler?: (event: import('./events/index.js').EventEnvelope) => void | Promise<void>,
+        options?: import('./events/index.js').SubscriptionOptions
+      ): void;
+      waitFor<T = unknown>(
+        topic: string,
+        predicate?: (event: import('./events/index.js').EventEnvelope<T>) => boolean,
+        options?: import('./events/index.js').WaitForOptions<T>
+      ): Promise<import('./events/index.js').EventEnvelope<T>>;
+    };
+    /**
+     * @deprecated Use ctx.api.config instead. Will be removed in v2.0
+     */
+    config?: {
+      ensureSection: (
+        pointer: string,
+        value: unknown,
+        options?: import('./config/config-helper.js').EnsureSectionOptions
+      ) => Promise<import('./config/config-helper.js').EnsureSectionResult>;
+    };
+    /**
+     * @deprecated Use ctx.api.state instead. Will be removed in v2.0
+     */
+    state?: {
+      get<T>(key: string): Promise<T | null>;
+      set<T>(key: string, value: T, ttl?: number): Promise<void>;
+      delete(key: string): Promise<void>;
+    };
+  };
+
+  /** Plugin-level APIs (invoke, state, artifacts, shell, events, jobs) - NEW! */
+  api?: PluginAPI;
+
+  /** Output and logging API - NEW! */
+  output?: PluginOutput;
+}
+
+/**
+ * Plugin handler signature - unified contract for all handlers
+ *
+ * @template TInput - Type of input data (default: unknown)
+ * @template TOutput - Type of output data (default: unknown)
+ *
+ * @example
+ * ```typescript
+ * // Simple handler
+ * export const handler: PluginHandler = async (input, ctx) => {
+ *   ctx.output.info('Processing');
+ *   return { result: 'ok' };
+ * };
+ *
+ * // Typed handler
+ * type Input = { userId: string };
+ * type Output = { user: User };
+ *
+ * export const handler: PluginHandler<Input, Output> = async (input, ctx) => {
+ *   const user = await fetchUser(input.userId); // input is typed!
+ *   return { user }; // return must match Output
+ * };
+ * ```
+ */
+export type PluginHandler<TInput = unknown, TOutput = unknown> = (
+  input: TInput,
+  ctx: PluginHandlerContext
+) => Promise<TOutput>;
 
 /**
  * Filesystem-like interface (promise-based, similar to fs/promises)

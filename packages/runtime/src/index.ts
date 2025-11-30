@@ -33,6 +33,10 @@ export type {
   ExecutionContext,
   RuntimeExtensions,
   RuntimeAPI,
+  LegacyRuntimeAPI,
+  PluginAPI,
+  PluginOutput,
+  PluginHandlerContext,
   ExecuteInput,
   ExecuteResult,
   ExecMetrics,
@@ -42,6 +46,17 @@ export type {
   ErrorEnvelope,
   PermissionSpecSummary,
 } from './types.js';
+
+// Plugin handler builder
+export {
+  definePluginHandler,
+  createTypedHandler,
+  type PluginHandlerConfig,
+  type InferInput,
+  type InferOutput,
+  type TypedPlugin,
+  type ZodSchema,
+} from './define-plugin-handler.js';
 
 // Sandbox
 export type { SandboxRunner } from './sandbox/runner.js';
@@ -83,6 +98,14 @@ export { createNoopAnalyticsEmitter } from './analytics/emitter.js';
 
 // Utils
 export { createId, hashManifest } from './utils.js';
+
+// Deprecation
+export {
+  deprecate,
+  deprecateFunction,
+  deprecateObject,
+  resetDeprecationWarnings,
+} from './deprecation.js';
 
 // Registry
 export type { PluginRegistry, ResolvedRoute } from './registry.js';
