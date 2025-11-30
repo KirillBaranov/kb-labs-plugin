@@ -4,7 +4,7 @@
  */
 
 import type { StudioWidgetDecl } from '@kb-labs/plugin-manifest';
-import type { StudioRegistryEntry, StudioHeaderHints } from './registry.js';
+import type { StudioRegistryEntry, StudioHeaderHints } from './registry';
 
 /**
  * Default component paths for widget kinds

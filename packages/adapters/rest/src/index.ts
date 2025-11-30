@@ -7,28 +7,28 @@
 export {
   mountRoutes,
   type PluginRuntime,
-} from './mount.js';
+} from './mount';
 
 // Validation
 export {
   resolveSchema,
   validateData,
-} from './validation.js';
+} from './validation';
 
 // Handler
-export { executeRoute } from './handler.js';
+export { executeRoute } from './handler';
 
 // Errors
 export {
   handleError,
   createErrorGuard,
-} from './errors.js';
+} from './errors';
 
 // OpenAPI
 export {
   generateOpenAPI,
   type OpenAPISpec,
-} from './openapi.js';
+} from './openapi';
 
 // Header policy utilities
 export {
@@ -36,4 +36,4 @@ export {
   compileHeaderPolicy,
   type ResolvedHeaderPolicy,
   type CompiledHeaderPolicy,
-} from './header-policy.js';
+} from './header-policy';

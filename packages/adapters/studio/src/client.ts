@@ -3,8 +3,8 @@
  * Client helpers and hooks for Studio widgets
  */
 
-import type { StudioRegistryEntry } from './registry.js';
-import { extractDataSource } from './widgets.js';
+import type { StudioRegistryEntry } from './registry';
+import { extractDataSource } from './widgets';
 
 /**
  * Hook configuration for widget data

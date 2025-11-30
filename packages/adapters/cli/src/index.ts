@@ -8,19 +8,19 @@ export {
   registerCommands,
   type RegisterOptions,
   type PluginRuntime,
-} from './register.js';
+} from './register';
 
 // Flags
-export { registerFlags, mapFlag } from './flags.js';
+export { registerFlags, mapFlag } from './flags';
 
 // Handler
-export { executeCommand } from './handler.js';
+export { executeCommand } from './handler';
 
 // Errors
-export { printErrorEnvelope, mapErrorToExitCode } from './errors.js';
+export { printErrorEnvelope, mapErrorToExitCode } from './errors';
 
 // Debug
-export { printDebugInfo } from './debug.js';
+export { printDebugInfo } from './debug';
 
 // Logging utilities removed - use @kb-labs/core-sys/logging directly
 // import { getLogger } from '@kb-labs/core-sys/logging';

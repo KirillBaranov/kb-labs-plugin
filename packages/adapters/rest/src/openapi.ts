@@ -4,7 +4,7 @@
  */
 
 import type { ManifestV2, RestRouteDecl, SchemaRef } from '@kb-labs/plugin-manifest';
-import { resolveHeaderPolicy } from './header-policy.js';
+import { resolveHeaderPolicy } from './header-policy';
 
 /**
  * OpenAPI 3.0 spec structure

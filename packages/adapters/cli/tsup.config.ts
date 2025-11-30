@@ -10,7 +10,7 @@ export default defineConfig({
   external: [
     '@kb-labs/plugin-manifest',
     '@kb-labs/plugin-runtime',
-    '@kb-labs/sandbox',
+    '@kb-labs/core-sandbox',
     '@kb-labs/cli-core',
     '@kb-labs/api-contracts',
   ],

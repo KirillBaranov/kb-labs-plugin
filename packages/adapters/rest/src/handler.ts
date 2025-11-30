@@ -26,12 +26,12 @@ import * as path from 'node:path';
 import type { 
   RestHandlerContext, 
   AdapterMetadata,
-} from '@kb-labs/sandbox';
+} from '@kb-labs/core-sandbox';
 import { 
   ADAPTER_TYPES, 
   validateAdapterMetadata,
   CURRENT_CONTEXT_VERSION,
-} from '@kb-labs/sandbox';
+} from '@kb-labs/core-sandbox';
 
 /**
  * Parse handlerRef from string format (e.g., './rest/review.js#handle')

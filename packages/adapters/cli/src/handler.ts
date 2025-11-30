@@ -42,10 +42,10 @@ import {
 } from '@kb-labs/plugin-runtime';
 import * as path from 'node:path';
 import { promises as fs } from 'node:fs';
-import type { CliHandlerContext, AdapterMetadata } from '@kb-labs/sandbox';
-import { ADAPTER_TYPES, validateAdapterMetadata } from '@kb-labs/sandbox';
+import type { CliHandlerContext, AdapterMetadata } from '@kb-labs/core-sandbox';
+import { ADAPTER_TYPES, validateAdapterMetadata } from '@kb-labs/core-sandbox';
 import { getLogger } from '@kb-labs/core-sys/logging';
-import { CURRENT_CONTEXT_VERSION } from '@kb-labs/sandbox';
+import { CURRENT_CONTEXT_VERSION } from '@kb-labs/core-sandbox';
 import { createOutput } from '@kb-labs/core-sys/output';
 import type { Output } from '@kb-labs/core-sys/output';
 

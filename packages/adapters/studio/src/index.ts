@@ -13,7 +13,7 @@ export {
   type StudioLayoutEntry,
   type StudioPluginEntry,
   type StudioHeaderHints,
-} from './registry.js';
+} from './registry';
 
 // Widgets
 export {
@@ -21,7 +21,7 @@ export {
   resolveComponentPath,
   extractDataSource,
   DEFAULT_COMPONENTS,
-} from './widgets.js';
+} from './widgets';
 
 // Client
 export {
@@ -29,7 +29,7 @@ export {
   generateClientHooks,
   createUseWidgetData,
   type WidgetDataHookConfig,
-} from './client.js';
+} from './client';
 
 // Components
 export {
@@ -38,4 +38,4 @@ export {
   loadComponentCached,
   clearComponentCache,
   type ResolvedComponent,
-} from './components.js';
+} from './components';

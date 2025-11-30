@@ -13,7 +13,7 @@ export default defineConfig({
     '@kb-labs/plugin-manifest',
     '@kb-labs/plugin-runtime',
     '@kb-labs/core-workspace',
-    '@kb-labs/sandbox',
+    '@kb-labs/core-sandbox',
     '@kb-labs/api-contracts',
     '@kb-labs/analytics-sdk-node',
     'fastify',

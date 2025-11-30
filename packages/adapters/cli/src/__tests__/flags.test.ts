@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { mapFlag, registerFlags } from '../flags.js';
+import { mapFlag, registerFlags } from '../flags';
 import type { CliFlagDecl } from '@kb-labs/plugin-manifest';
 
 describe('mapFlag', () => {

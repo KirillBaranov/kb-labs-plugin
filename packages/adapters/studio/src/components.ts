@@ -3,8 +3,8 @@
  * Component resolution and dynamic imports
  */
 
-import type { StudioRegistryEntry } from './registry.js';
-import { resolveComponentPath } from './widgets.js';
+import type { StudioRegistryEntry } from './registry';
+import { resolveComponentPath } from './widgets';
 
 /**
  * Resolved component info

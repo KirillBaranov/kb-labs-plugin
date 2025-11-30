@@ -5,14 +5,14 @@
 
 import type { ManifestV2, RestRouteDecl } from '@kb-labs/plugin-manifest';
 import type { FastifyInstance, RouteShorthandOptions, FastifyRequest, FastifyReply } from 'fastify';
-import { executeRoute } from './handler.js';
-import { resolveSchema, validateData } from './validation.js';
-import { createErrorGuard } from './errors.js';
+import { executeRoute } from './handler';
+import { resolveSchema, validateData } from './validation';
+import { createErrorGuard } from './errors';
 import { resolveWorkspaceRoot } from '@kb-labs/core-workspace';
 import {
   resolveHeaderPolicy,
   compileHeaderPolicy,
-} from './header-policy.js';
+} from './header-policy';
 
 /**
  * Runtime interface for plugin execution
