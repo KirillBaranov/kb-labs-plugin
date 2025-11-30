@@ -3,7 +3,7 @@
  * Artifacts API type definitions with versioning support
  */
 
-export * from './v1.js';
+export * from './v1';
 
 // Import v1 types for re-export with current version names
 import type {
@@ -15,7 +15,7 @@ import type {
   ArtifactListRequestV1,
   ArtifactInfoV1,
   ArtifactsApiV1,
-} from './v1.js';
+} from './v1';
 
 // Export current version as default (for convenience)
 // When v2 is introduced, this will be updated
