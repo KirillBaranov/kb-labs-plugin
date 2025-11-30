@@ -31,10 +31,10 @@ export type {
   StudioMenuDecl,
   StudioLayoutDecl,
   DisplayMetadata,
-} from './types.js';
+} from './types';
 
 // Runtime contracts
-export type { PluginContext, Handler } from './runtime.js';
+export type { PluginContext, Handler } from './runtime';
 
 // Studio widget data contracts
 export type {
@@ -44,7 +44,7 @@ export type {
   InfoPanelData,
   KeyValueItem,
   KeyValueData,
-} from './studio-widgets.js';
+} from './studio-widgets';
 
 // Validation
 export {
@@ -53,17 +53,17 @@ export {
   permissionSpecSchema,
   schemaRefSchema,
   type ValidationResult,
-} from './schema.js';
+} from './schema';
 
 // Migration
-export { migrateV1ToV2 } from './migrate.js';
+export { migrateV1ToV2 } from './migrate';
 
 // Compatibility
 export {
   detectManifestVersion,
   checkDualManifest,
   type DualManifestCheck,
-} from './compat.js';
+} from './compat';
 
 // Deprecation
 export {
@@ -71,7 +71,7 @@ export {
   isV1Allowed,
   getDeprecationWarning,
   shouldUseV1,
-} from './deprecation.js';
+} from './deprecation';
 
 // Helpers
 export {
@@ -84,7 +84,7 @@ export {
   exampleBuilder,
   type ExampleTemplate,
   ExampleBuilder,
-} from './helpers.js';
+} from './helpers';
 
 // Migration helpers
 export {
@@ -92,4 +92,4 @@ export {
   extractContractsFromManifest,
   generateZodSchemasFromContracts,
   generateContractFile,
-} from './migration-helpers.js';
+} from './migration-helpers';

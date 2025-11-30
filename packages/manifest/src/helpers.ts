@@ -3,8 +3,8 @@
  * @module @kb-labs/plugin-manifest/helpers
  */
 
-import type { ManifestV2, ArtifactDecl, CliCommandDecl } from './types.js';
-import { manifestV2Schema, type ValidationResult } from './schema.js';
+import type { ManifestV2, ArtifactDecl, CliCommandDecl } from './types';
+import { manifestV2Schema, type ValidationResult } from './schema';
 
 /**
  * Extract artifact IDs from contracts type
@@ -124,7 +124,7 @@ export type ExtractArtifactIdsFromContracts<TContracts> = ExtractArtifactIds<TCo
 export type ExtractCommandIdsFromContracts<TContracts> = ExtractCommandIds<TContracts>;
 
 /**
- * Flag schema definition (compatible with @kb-labs/cli-command-kit)
+ * Flag schema definition (compatible with @kb-labs/shared-command-kit)
  */
 type FlagSchemaDefinition = Record<
   string,
@@ -180,4 +180,4 @@ export {
   exampleBuilder,
   type ExampleTemplate,
   ExampleBuilder,
-} from './example-generator.js';
+} from './example-generator';

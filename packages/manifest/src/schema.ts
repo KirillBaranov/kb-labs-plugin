@@ -24,7 +24,7 @@ import type {
   StudioMenuDecl,
   StudioLayoutDecl,
   JobDecl,
-} from './types.js';
+} from './types';
 
 /**
  * Schema reference validation (only two formats allowed)
@@ -422,7 +422,7 @@ export const headersConfigSchema: z.ZodType<HeadersConfig> = z.object({
  * Data source schema
  */
 export const dataSourceSchema: z.ZodType<
-  import('./types.js').DataSource
+  import('./types').DataSource
 > = z.union([
   z.object({
     type: z.literal('rest'),

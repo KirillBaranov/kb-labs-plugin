@@ -4,8 +4,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { migrateV1ToV2 } from '../migrate.js';
-import type { ManifestV1 } from '../types.js';
+import { migrateV1ToV2 } from '../migrate';
+import type { ManifestV1 } from '../types';
 
 describe('migrateV1ToV2', () => {
   it('should migrate a simple v1 manifest', () => {
@@ -35,7 +35,7 @@ describe('migrateV1ToV2', () => {
           examples: ['kb ai-review review --diff changes.diff'],
           loader: async () => {
             // Skip test - ai-review package not available in this workspace
-            // const mod = await import('../../../../../../kb-labs-ai-review/packages/cli/src/commands/review.js');
+            // const mod = await import('../../../../../../kb-labs-ai-review/packages/cli/src/commands/review');
             return { run: async () => {} };
           },
         },

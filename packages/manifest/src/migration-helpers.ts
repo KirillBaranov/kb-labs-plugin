@@ -3,13 +3,13 @@
  * @module @kb-labs/plugin-manifest/migration
  */
 
-import type { ManifestV2, ArtifactDecl, CliCommandDecl } from './types.js';
+import type { ManifestV2, ArtifactDecl, CliCommandDecl } from './types';
 
 /**
  * Minimal PluginContracts interface for migration helpers
  * Full type is defined in @kb-labs/plugin-template-contracts
  */
-import type { SchemaRef } from './types.js';
+import type { SchemaRef } from './types';
 
 /**
  * Minimal PluginContracts interface for migration helpers
@@ -183,8 +183,8 @@ export function generateContractFile(manifest: ManifestV2): string {
   const contracts = extractContractsFromManifest(manifest);
   const contractsJson = JSON.stringify(contracts, null, 2);
 
-  return `import type { PluginContracts } from './types.js';\n` +
-         `import { contractsSchemaId, contractsVersion } from './version.js';\n\n` +
+  return `import type { PluginContracts } from './types';\n` +
+         `import { contractsSchemaId, contractsVersion } from './version';\n\n` +
          `export const pluginContractsManifest = ${contractsJson} as const satisfies PluginContracts;\n\n` +
          `// Извлекаем типы для использования в других местах\n` +
          `export type PluginArtifactIds = keyof typeof pluginContractsManifest.artifacts;\n` +

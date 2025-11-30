@@ -3,7 +3,7 @@
  * Manifest v2 type definitions
  */
 
-import type { Handler, PluginContext } from './runtime.js';
+import type { Handler, PluginContext } from './runtime';
 
 /**
  * Schema reference - only two formats allowed:

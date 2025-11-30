@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { generateExamples, exampleBuilder, ExampleBuilder } from './example-generator.js';
+import { generateExamples, exampleBuilder, ExampleBuilder } from './example-generator';
 
 describe('generateExamples', () => {
   describe('basic functionality', () => {

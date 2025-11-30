@@ -3,7 +3,7 @@
  * Compatibility detection and version handling
  */
 
-import type { ManifestV1, ManifestV2 } from './types.js';
+import type { ManifestV1, ManifestV2 } from './types';
 
 /**
  * Detect manifest version

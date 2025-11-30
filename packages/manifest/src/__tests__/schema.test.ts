@@ -4,8 +4,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { validateManifestV2 } from '../schema.js';
-import type { ManifestV2 } from '../types.js';
+import { validateManifestV2 } from '../schema';
+import type { ManifestV2 } from '../types';
 
 describe('validateManifestV2', () => {
   it('should validate a valid manifest', () => {

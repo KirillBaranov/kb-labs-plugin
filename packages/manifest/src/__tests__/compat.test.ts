@@ -7,8 +7,8 @@ import { describe, it, expect } from 'vitest';
 import {
   detectManifestVersion,
   checkDualManifest,
-} from '../compat.js';
-import type { ManifestV1, ManifestV2 } from '../types.js';
+} from '../compat';
+import type { ManifestV1, ManifestV2 } from '../types';
 
 describe('detectManifestVersion', () => {
   it('should detect v2 manifest', () => {

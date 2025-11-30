@@ -8,7 +8,7 @@ import type {
   ManifestV2,
   CliCommandDecl,
   CliFlagDecl,
-} from './types.js';
+} from './types';
 
 /**
  * Migrate Manifest v1 to v2
