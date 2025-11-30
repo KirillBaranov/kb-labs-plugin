@@ -2,7 +2,7 @@ import {
   getLogger,
   type Logger as CoreLogger,
 } from '@kb-labs/core-sys';
-import type { ExecutionContext } from './types.js';
+import type { ExecutionContext } from './types';
 
 type Fields = Record<string, unknown>;
 

@@ -26,24 +26,24 @@
 // @ts-expect-error - See TODO above: InvokeRequest and InvokeContext types incomplete
 
 import type { ManifestV2 } from '@kb-labs/plugin-manifest';
-import type { ExecutionContext } from '../types.js';
-import type { PluginRegistry } from '../registry.js';
+import type { ExecutionContext } from '../types';
+import type { PluginRegistry } from '../registry';
 import type {
   InvokeContext,
   InvokeRequest,
   InvokeResult,
   ChainLimits,
-} from './types.js';
-import { resolveInvokeDecision } from './permissions.js';
-import { createId } from '../utils.js';
-import { toErrorEnvelope } from '../errors.js';
+} from './types';
+import { resolveInvokeDecision } from './permissions';
+import { createId } from '../utils';
+import { toErrorEnvelope } from '../errors';
 import { ErrorCode } from '@kb-labs/api-contracts';
-import { saveTrace, rotateTraces, type TraceData, type TraceSpan } from '../trace.js';
-import { resolveRouteHeaderPolicy, matchesRule, type ResolvedHeaderPolicy } from './header-policy.js';
-import { execute as runtimeExecute } from '../execute.js';
+import { saveTrace, rotateTraces, type TraceData, type TraceSpan } from '../trace';
+import { resolveRouteHeaderPolicy, matchesRule, type ResolvedHeaderPolicy } from './header-policy';
+import { execute as runtimeExecute } from '../execute';
 import * as nodePath from 'node:path';
-import { applyHeaderTransforms } from './header-transforms.js';
-import { loadCustomHeaderTransform } from './transform-loader.js';
+import { applyHeaderTransforms } from './header-transforms';
+import { loadCustomHeaderTransform } from './transform-loader';
 
 const HOP_BY_HOP_HEADERS = new Set([
   'connection',

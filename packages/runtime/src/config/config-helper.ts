@@ -5,8 +5,8 @@ import type {
   OperationId,
   OperationMetadata
 } from '@kb-labs/setup-operations';
-import type { FSLike } from '../types.js';
-import type { OperationTracker } from '../operations/operation-tracker.js';
+import type { FSLike } from '../types';
+import type { OperationTracker } from '../operations/operation-tracker';
 
 export type ConfigMergeStrategy = 'deep' | 'shallow' | 'replace';
 

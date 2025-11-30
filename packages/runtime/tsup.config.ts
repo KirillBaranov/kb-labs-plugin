@@ -6,7 +6,7 @@ export default defineConfig({
   tsconfig: "tsconfig.build.json", // Use build-specific tsconfig without paths
   // TODO: Re-enable DTS generation after fixing InvokeRequest/InvokeContext types
   // See: src/invoke/broker.ts for details on type errors
-  dts: false, // Temporarily disabled due to type errors in invoke/broker.ts
+  dts: true, // Temporarily disabled due to type errors in invoke/broker.ts
   entry: {
     index: 'src/index.ts',
     'sandbox/child/bootstrap': 'src/sandbox/child/bootstrap.ts',
@@ -15,7 +15,7 @@ export default defineConfig({
     '@kb-labs/analytics-sdk-node',
     '@kb-labs/api-contracts',
     '@kb-labs/plugin-manifest',
-    '@kb-labs/sandbox',
+    '@kb-labs/core-sandbox',
     'minimatch',
     'semver',
     'zod',

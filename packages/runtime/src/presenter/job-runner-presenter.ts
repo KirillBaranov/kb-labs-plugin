@@ -8,7 +8,7 @@ import {
   type PresenterMessageOptions,
   type PresenterProgressPayload,
   type PresenterEventPayload,
-} from './presenter-facade.js';
+} from './presenter-facade';
 
 export type JobRunnerPresenterEvent = PresenterEventPayload & {
   runId?: string;

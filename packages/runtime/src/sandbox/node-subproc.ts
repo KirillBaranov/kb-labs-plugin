@@ -7,19 +7,19 @@ import { fork, type ChildProcess } from 'node:child_process';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { existsSync } from 'node:fs';
-import type { SandboxRunner } from './runner.js';
+import type { SandboxRunner } from './runner';
 import type {
   ExecutionContext,
   ExecuteResult,
   HandlerRef,
   ExecMetrics,
   ErrorEnvelope,
-} from '../types.js';
+} from '../types';
 import type { PermissionSpec } from '@kb-labs/plugin-manifest';
-import { pickEnv } from '../io/env.js';
+import { pickEnv } from '../io/env';
 import { ErrorCode } from '@kb-labs/api-contracts';
-import { toErrorEnvelope } from '../errors.js';
-import type { EventEnvelope, EventScope } from '../events/index.js';
+import { toErrorEnvelope } from '../errors';
+import type { EventEnvelope, EventScope } from '../events/index';
 
 /**
  * Ring buffer for log collection
@@ -381,8 +381,8 @@ function getBootstrapPath(): string {
     `Bootstrap file not found. Tried:\n` +
     `  - ${workspacePath}\n` +
     `  - ${relativePath}\n` +
-    `  - node_modules/@kb-labs/sandbox/dist/runner/bootstrap.js\n` +
-    `Make sure @kb-labs/sandbox is built: run 'pnpm build' in kb-labs-core/packages/sandbox`
+    `  - node_modules/@kb-labs/core-sandbox/dist/runner/bootstrap.js\n` +
+    `Make sure @kb-labs/core-sandbox is built: run 'pnpm build' in kb-labs-core/packages/sandbox`
   );
 }
 
@@ -420,8 +420,8 @@ function createInProcessRunner(): SandboxRunner {
         }
 
         // Build runtime (with shims, but no isolation)
-        const { pickEnv } = await import('../io/env.js');
-        const { buildRuntime } = await import('./child/runtime.js');
+        const { pickEnv } = await import('../io/env');
+        const { buildRuntime } = await import('./child/runtime');
         const env = pickEnv(process.env, perms.env?.allow);
         const builtRuntime = buildRuntime(
           perms,
@@ -506,7 +506,7 @@ function createInProcessRunner(): SandboxRunner {
         const cpuMs = (endCpu.user + endCpu.system) / 1000;
         const memMb = (process.memoryUsage().rss - memStart) / 1024 / 1024;
 
-        const { toErrorEnvelope } = await import('../errors.js');
+        const { toErrorEnvelope } = await import('../errors');
         const { ErrorCode } = await import('@kb-labs/api-contracts');
 
         const errorEnvelope = toErrorEnvelope(

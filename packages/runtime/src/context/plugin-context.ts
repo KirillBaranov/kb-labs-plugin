@@ -3,34 +3,34 @@
  * Unified PluginContext factory and supporting types.
  */
 
-import type { ArtifactBroker } from '../artifacts/broker.js';
-import type { InvokeBroker } from '../invoke/broker.js';
-import type { JobBroker } from '../jobs/broker.js';
+import type { ArtifactBroker } from '../artifacts/broker';
+import type { InvokeBroker } from '../invoke/broker';
+import type { JobBroker } from '../jobs/broker';
 import {
   createNoopPresenter,
   type PresenterFacade,
   type PresenterProgressPayload,
-} from '../presenter/presenter-facade.js';
+} from '../presenter/presenter-facade';
 import {
   createNoopAnalyticsEmitter,
   type AnalyticsEmitter,
   type AnalyticsEmitOptions,
-} from '../analytics/emitter.js';
+} from '../analytics/emitter';
 import {
   createNoopEventBridge,
   type PluginEventBridge,
-} from './plugin-events.js';
+} from './plugin-events';
 import {
   CapabilityFlag,
   createCapabilitySet,
   type CapabilitySet,
-} from './capabilities.js';
+} from './capabilities';
 import type {
   PluginEventDefinition,
   PluginEventEnvelope,
   PluginEventSchemaRegistry,
-} from './event-types.js';
-import type { PluginHostType } from './host.js';
+} from './event-types';
+import type { PluginHostType } from './host';
 import type { OperationWithMetadata } from '@kb-labs/setup-operations';
 
 export interface PluginContextMetadata {

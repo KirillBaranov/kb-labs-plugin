@@ -8,7 +8,7 @@ import {
   checkCapabilities,
   validateCapabilityNames,
   KNOWN_CAPABILITIES,
-} from '../capabilities.js';
+} from '../capabilities';
 
 describe('checkCapabilities', () => {
   it('should grant all capabilities when all required are present', () => {

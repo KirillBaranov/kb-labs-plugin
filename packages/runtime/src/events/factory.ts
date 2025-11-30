@@ -3,13 +3,13 @@
  * Helpers for constructing scoped EventBus instances.
  */
 
-import { ScopedEventBus } from './event-bus.js';
+import { ScopedEventBus } from './event-bus';
 import type {
   EventBus,
   EventBusConfig,
   EventBusInit,
   EventScope,
-} from './types.js';
+} from './types';
 
 const DEFAULT_CONFIG: EventBusConfig = {
   maxPayloadBytes: 128 * 1024,

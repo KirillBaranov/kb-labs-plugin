@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { OperationMetadata } from '@kb-labs/setup-operations';
-import { OperationTracker } from '../operation-tracker.js';
+import { OperationTracker } from '../operation-tracker';
 
 const FILE_OPERATION = {
   kind: 'file' as const,

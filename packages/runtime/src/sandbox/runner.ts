@@ -7,11 +7,11 @@ import type {
   ExecutionContext,
   ExecuteResult,
   HandlerRef,
-} from '../types.js';
+} from '../types';
 import type { PermissionSpec, ManifestV2 } from '@kb-labs/plugin-manifest';
-import type { InvokeBroker } from '../invoke/broker.js';
-import type { ArtifactBroker } from '../artifacts/broker.js';
-import type { ShellBroker } from '../shell/broker.js';
+import type { InvokeBroker } from '../invoke/broker';
+import type { ArtifactBroker } from '../artifacts/broker';
+import type { ShellBroker } from '../shell/broker';
 
 /**
  * Sandbox runner - executes handlers in isolated environment

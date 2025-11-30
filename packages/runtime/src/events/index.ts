@@ -1,5 +1,5 @@
-export * from './types.js';
-export * from './event-bus.js';
-export * from './factory.js';
-export { DEFAULT_CONFIG as DEFAULT_EVENT_BUS_CONFIG } from './factory.js';
+export * from './types';
+export * from './event-bus';
+export * from './factory';
+export { DEFAULT_CONFIG as DEFAULT_EVENT_BUS_CONFIG } from './factory';
 

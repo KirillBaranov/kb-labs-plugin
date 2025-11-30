@@ -4,7 +4,7 @@
  */
 
 import type { ManifestV2, RestRouteDecl } from '@kb-labs/plugin-manifest';
-import type { HandlerRef } from './types.js';
+import type { HandlerRef } from './types';
 
 /**
  * Plugin registry interface for runtime

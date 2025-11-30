@@ -1,2 +1,2 @@
-export { OperationTracker } from './operation-tracker.js';
-export { getTrackedOperations, clearTrackedOperations } from './tracked-operations.js';
+export { OperationTracker } from './operation-tracker';
+export { getTrackedOperations, clearTrackedOperations } from './tracked-operations';

@@ -5,7 +5,7 @@
 
 import { createHash } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
-import { createId } from '../utils.js';
+import { createId } from '../utils';
 import type {
   DropPolicy,
   EmitOptions,
@@ -17,8 +17,8 @@ import type {
   EventScope,
   SubscriptionOptions,
   WaitForOptions,
-} from './types.js';
-import { EventBusError as BusError } from './types.js';
+} from './types';
+import { EventBusError as BusError } from './types';
 
 type HandlerEntry = {
   handler: EventHandler<unknown>;

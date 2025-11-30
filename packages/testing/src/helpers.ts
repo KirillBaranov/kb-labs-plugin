@@ -5,8 +5,8 @@
 
 import type { ManifestV2 } from '@kb-labs/plugin-manifest';
 import type { PluginContracts } from '@kb-labs/plugin-template-contracts';
-import type { CommandResult } from '@kb-labs/cli-command-kit';
-import type { EnhancedCliContext } from '@kb-labs/cli-command-kit';
+import type { CommandResult } from '@kb-labs/shared-command-kit';
+import type { EnhancedCliContext } from '@kb-labs/shared-command-kit';
 import { z } from 'zod';
 
 /**

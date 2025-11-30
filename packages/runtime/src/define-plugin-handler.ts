@@ -7,7 +7,7 @@
  */
 
 import type { z as ZodNamespace } from 'zod';
-import type { PluginHandler, PluginHandlerContext } from './types.js';
+import type { PluginHandler, PluginHandlerContext } from './types';
 
 /**
  * Zod schema type (imported as type to avoid hard dependency)

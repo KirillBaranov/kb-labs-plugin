@@ -8,7 +8,7 @@ import {
   type PresenterMessageOptions,
   type PresenterProgressPayload,
   type PresenterEventPayload,
-} from './presenter-facade.js';
+} from './presenter-facade';
 
 export interface HttpPresenterOptions {
   /**

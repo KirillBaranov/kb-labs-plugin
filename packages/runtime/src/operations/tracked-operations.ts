@@ -1,4 +1,4 @@
-import type { ExecutionContext } from '../types.js';
+import type { ExecutionContext } from '../types';
 import type { OperationWithMetadata } from '@kb-labs/setup-operations';
 
 type StructuredCloneLike = <T>(value: T) => T;

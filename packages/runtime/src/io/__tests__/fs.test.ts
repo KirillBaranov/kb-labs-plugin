@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtemp, rm, readFile, access } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { createFsShim } from '../fs.js';
-import { OperationTracker } from '../../operations/operation-tracker.js';
+import { createFsShim } from '../fs';
+import { OperationTracker } from '../../operations/operation-tracker';
 
 describe('createFsShim', () => {
   let workdir: string;

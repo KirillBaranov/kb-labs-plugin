@@ -11,9 +11,9 @@ import type {
 import type {
   ExecutionContext,
   HandlerRef,
-} from '../types.js';
+} from '../types';
 import { z } from 'zod';
-import { resolveSchema } from './schema-resolver.js';
+import { resolveSchema } from './schema-resolver';
 
 /**
  * Validate input/output against schema

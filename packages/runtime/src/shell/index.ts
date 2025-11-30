@@ -3,10 +3,10 @@
  * Shell execution module
  */
 
-export * from './types.js';
-export * from './permissions.js';
-export * from './dangerous.js';
-export * from './broker.js';
+export * from './types';
+export * from './permissions';
+export * from './dangerous';
+export * from './broker';
 
 
 

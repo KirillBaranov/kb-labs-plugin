@@ -10,7 +10,7 @@ export {
   KNOWN_CAPABILITIES,
   type CapabilityCheckResult,
   type KnownCapability,
-} from './capabilities.js';
+} from './capabilities';
 
 // Permissions
 export {
@@ -21,12 +21,12 @@ export {
   checkAllPermissions,
   type PermissionCheckResult,
   type PermissionCheckAllResult,
-} from './permissions.js';
+} from './permissions';
 
 // Execution
 export {
   execute,
-} from './execute.js';
+} from './execute';
 
 // Types
 export type {
@@ -45,7 +45,7 @@ export type {
   FSLike,
   ErrorEnvelope,
   PermissionSpecSummary,
-} from './types.js';
+} from './types';
 
 // Plugin handler builder
 export {
@@ -56,12 +56,12 @@ export {
   type InferOutput,
   type TypedPlugin,
   type ZodSchema,
-} from './define-plugin-handler.js';
+} from './define-plugin-handler';
 
 // Sandbox
-export type { SandboxRunner } from './sandbox/runner.js';
-export { nodeSubprocRunner } from './sandbox/node-subproc.js';
-export { buildRuntime } from './sandbox/child/runtime.js';
+export type { SandboxRunner } from './sandbox/runner';
+export { nodeSubprocRunner } from './sandbox/node-subproc';
+export { buildRuntime } from './sandbox/child/runtime';
 
 // Errors
 export {
@@ -71,33 +71,33 @@ export {
   type RootCauseAnalysis,
   type RootCauseType,
   createErrorContext,
-} from './errors.js';
+} from './errors';
 
 // Validation
 export {
   validateManifestOnStartup,
   type ValidationResult,
-} from './validation.js';
+} from './validation';
 
 // IO
-export { pickEnv, createEnvAccessor } from './io/env.js';
-export { createWhitelistedFetch, isHostAllowed } from './io/net.js';
-export { createFsShim } from './io/fs.js';
-export { createStateAPI, type StateRuntimeAPI } from './io/state.js';
+export { pickEnv, createEnvAccessor } from './io/env';
+export { createWhitelistedFetch, isHostAllowed } from './io/net';
+export { createFsShim } from './io/fs';
+export { createStateAPI, type StateRuntimeAPI } from './io/state';
 
 // Artifacts
 export {
   writeArtifact,
   substitutePathTemplate,
   type ArtifactWriteContext,
-} from './artifacts.js';
+} from './artifacts';
 
 // Analytics
-export { emitAnalyticsEvent, setTelemetryEmitter, getTelemetryEmitter } from './analytics.js';
-export { createNoopAnalyticsEmitter } from './analytics/emitter.js';
+export { emitAnalyticsEvent, setTelemetryEmitter, getTelemetryEmitter } from './analytics';
+export { createNoopAnalyticsEmitter } from './analytics/emitter';
 
 // Utils
-export { createId, hashManifest } from './utils.js';
+export { createId, hashManifest } from './utils';
 
 // Deprecation
 export {
@@ -105,33 +105,33 @@ export {
   deprecateFunction,
   deprecateObject,
   resetDeprecationWarnings,
-} from './deprecation.js';
+} from './deprecation';
 
 // Registry
-export type { PluginRegistry, ResolvedRoute } from './registry.js';
+export type { PluginRegistry, ResolvedRoute } from './registry';
 
 // Invoke
-export { InvokeBroker } from './invoke/broker.js';
-export { resolveInvokeDecision } from './invoke/permissions.js';
+export { InvokeBroker } from './invoke/broker';
+export { resolveInvokeDecision } from './invoke/permissions';
 export type {
   InvokeRequest,
   InvokeResult,
   ChainLimits,
   InvokeContext,
   MountSpec,
-} from './invoke/types.js';
+} from './invoke/types';
 export {
   applyHeaderTransforms,
   listHeaderTransforms,
-} from './invoke/header-transforms.js';
+} from './invoke/header-transforms';
 export {
   loadCustomHeaderTransform,
   clearHeaderTransformCache,
   type HeaderTransformFn,
-} from './invoke/transform-loader.js';
+} from './invoke/transform-loader';
 
 // Artifacts
-export { ArtifactBroker, parseArtifactUri } from './artifacts/broker.js';
+export { ArtifactBroker, parseArtifactUri } from './artifacts/broker';
 export type {
   ArtifactMeta,
   ArtifactStatus,
@@ -140,7 +140,7 @@ export type {
   ArtifactWriteRequest,
   ArtifactListRequest,
   ArtifactInfo,
-} from './artifacts/broker.js';
+} from './artifacts/broker';
 
 // Snapshot
 export {
@@ -153,18 +153,18 @@ export {
   getDebugDir,
   getSnapshotsDir,
   type SnapshotData,
-} from './snapshot.js';
+} from './snapshot';
 
 // Suggestions
 export {
   getSuggestions,
   formatSuggestions,
   type ErrorSuggestion,
-} from './suggestions.js';
+} from './suggestions';
 
 // Profiler utilities (re-export from sandbox)
-export { formatTimeline, exportChromeFormat as exportProfileChromeFormat } from '@kb-labs/sandbox';
-export type { ProfileData, ProfilePhase } from '@kb-labs/sandbox';
+export { formatTimeline, exportChromeFormat as exportProfileChromeFormat } from '@kb-labs/core-sandbox';
+export type { ProfileData, ProfilePhase } from '@kb-labs/core-sandbox';
 
 // Trace utilities
 export {
@@ -178,14 +178,14 @@ export {
   getTracesDir,
   type TraceData,
   type TraceSpan,
-} from './trace.js';
+} from './trace';
 
 // Mock utilities (for testing)
 export {
   createMockFs,
   type MockFsOperation,
   type MockFsRecord,
-} from './mocks/fs-mock.js';
+} from './mocks/fs-mock';
 
 // Events
 export {
@@ -194,7 +194,7 @@ export {
   releasePluginBus,
   getPluginBusRefs,
   DEFAULT_CONFIG as DEFAULT_EVENT_BUS_CONFIG,
-} from './events/index.js';
+} from './events/index';
 export type {
   EventBus,
   EventEnvelope,
@@ -204,7 +204,7 @@ export type {
   WaitForOptions as EventWaitForOptions,
   EventBusConfig,
   EventBusError,
-} from './events/index.js';
+} from './events/index';
 
 // Unified Plugin Context
 export {
@@ -215,7 +215,7 @@ export {
   createIsolatedEventBridge,
   isKnownPluginHost,
   KNOWN_PLUGIN_HOSTS,
-} from './context/index.js';
+} from './context/index';
 export type {
   PluginContext,
   PluginContextOptions,
@@ -231,8 +231,8 @@ export type {
   PresenterProgressPayload,
   AnalyticsEmitter,
   AnalyticsEmitOptions,
-} from './context/index.js';
-export { CapabilityFlag } from './context/index.js';
+} from './context/index';
+export { CapabilityFlag } from './context/index';
 
 // Presenters
 export {
@@ -240,7 +240,7 @@ export {
   JobRunnerPresenter,
   HttpPresenter,
   createNoopPresenter,
-} from './presenter/index.js';
+} from './presenter/index';
 export type {
   TTYPresenterOptions,
   TTYPresenterFormatter,
@@ -251,23 +251,23 @@ export type {
   PresenterMessageOptions,
   PresenterEventPayload,
   ConfirmOptions,
-} from './presenter/index.js';
+} from './presenter/index';
 
 export {
   OperationTracker,
   type TrackedOperation,
   type TrackedOperationStatus,
-} from './operations/operation-tracker.js';
+} from './operations/operation-tracker';
 export {
   getTrackedOperations,
   clearTrackedOperations,
-} from './operations/tracked-operations.js';
+} from './operations/tracked-operations';
 
 export {
   SmartConfigHelper,
   type EnsureSectionOptions,
   type EnsureSectionResult,
-} from './config/config-helper.js';
+} from './config/config-helper';
 
 // Logging
 export {
@@ -275,15 +275,15 @@ export {
   createPluginLogger,
   type RuntimeLogger,
   type PluginLogger,
-} from './logging.js';
+} from './logging';
 
 // Jobs (background and scheduled jobs)
-export { JobBroker } from './jobs/broker.js';
+export { JobBroker } from './jobs/broker';
 export {
   checkSubmitPermission,
   checkSchedulePermission,
-} from './jobs/permissions.js';
-export { QuotaTracker } from './jobs/quotas.js';
+} from './jobs/permissions';
+export { QuotaTracker } from './jobs/quotas';
 export type {
   BackgroundJobRequest,
   ScheduledJobRequest,
@@ -296,11 +296,11 @@ export type {
   JobResult,
   JobFilter,
   LogEntry,
-} from './jobs/types.js';
+} from './jobs/types';
 
 // Degradation and adaptive throttling
-export { DegradationController } from './jobs/degradation/controller.js';
-export { SystemMetricsCollector } from './jobs/degradation/metrics.js';
+export { DegradationController } from './jobs/degradation/controller';
+export { SystemMetricsCollector } from './jobs/degradation/metrics';
 export type {
   DegradationState,
   SystemMetrics,
@@ -308,4 +308,4 @@ export type {
   DegradationActions,
   DegradationControllerOptions,
   HealthCheckResult,
-} from './jobs/degradation/types.js';
+} from './jobs/degradation/types';

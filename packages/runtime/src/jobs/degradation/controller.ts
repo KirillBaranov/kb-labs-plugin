@@ -11,8 +11,8 @@ import type {
   DegradationControllerOptions,
   SystemMetrics,
   HealthCheckResult,
-} from './types.js';
-import { SystemMetricsCollector } from './metrics.js';
+} from './types';
+import { SystemMetricsCollector } from './metrics';
 
 const DEFAULT_THRESHOLDS: DegradationThresholds = {
   cpu: {

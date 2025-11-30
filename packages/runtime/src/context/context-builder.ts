@@ -3,12 +3,12 @@
  * Build execution context with trace info and chain limits
  */
 
-import type { ExecutionContext } from '../types.js';
-import type { ChainLimits, InvokeContext } from '../invoke/types.js';
-import { createId } from '../utils.js';
-import { mergeTraceHeaders } from '../invoke/header-utils.js';
-import { CURRENT_CONTEXT_VERSION } from '@kb-labs/sandbox';
-import type { ResourceTracker } from '@kb-labs/sandbox';
+import type { ExecutionContext } from '../types';
+import type { ChainLimits, InvokeContext } from '../invoke/types';
+import { createId } from '../utils';
+import { mergeTraceHeaders } from '../invoke/header-utils';
+import { CURRENT_CONTEXT_VERSION } from '@kb-labs/core-sandbox';
+import type { ResourceTracker } from '@kb-labs/core-sandbox';
 
 /**
  * Initialize chain limits from context or defaults

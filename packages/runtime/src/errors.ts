@@ -4,14 +4,14 @@
  */
 
 import { ErrorCode } from '@kb-labs/api-contracts';
-import type { ExecutionContext, ErrorEnvelope, ExecMetrics, PermissionSpecSummary, ErrorContext } from './types.js';
+import type { ExecutionContext, ErrorEnvelope, ExecMetrics, PermissionSpecSummary, ErrorContext } from './types';
 import type { PermissionSpec } from '@kb-labs/plugin-manifest';
-import { analyzeRootCauseSync } from './errors/root-cause.js';
-import { validateExecutionContext } from './context/context-validator.js';
+import { analyzeRootCauseSync } from './errors/root-cause';
+import { validateExecutionContext } from './context/context-validator';
 
 // Re-export root cause types
-export type { RootCauseAnalysis, RootCauseType } from './errors/root-cause.js';
-export { analyzeRootCause, analyzeRootCauseSync } from './errors/root-cause.js';
+export type { RootCauseAnalysis, RootCauseType } from './errors/root-cause';
+export { analyzeRootCause, analyzeRootCauseSync } from './errors/root-cause';
 
 /**
  * Map error code to HTTP status

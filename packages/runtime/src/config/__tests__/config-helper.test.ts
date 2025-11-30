@@ -2,9 +2,9 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtemp, rm, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { SmartConfigHelper } from '../config-helper.js';
-import { OperationTracker } from '../../operations/operation-tracker.js';
-import { createMockFs } from '../../mocks/fs-mock.js';
+import { SmartConfigHelper } from '../config-helper';
+import { OperationTracker } from '../../operations/operation-tracker';
+import { createMockFs } from '../../mocks/fs-mock';
 
 describe('SmartConfigHelper', () => {
   let workdir: string;

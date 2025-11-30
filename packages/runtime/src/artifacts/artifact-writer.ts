@@ -4,9 +4,9 @@
  */
 
 import type { ManifestV2 } from '@kb-labs/plugin-manifest';
-import type { ExecutionContext } from '../types.js';
-import type { ArtifactBroker } from '../artifacts/broker.js';
-import { createRuntimeLogger } from '../logging.js';
+import type { ExecutionContext } from '../types';
+import type { ArtifactBroker } from '../artifacts/broker';
+import { createRuntimeLogger } from '../logging';
 
 /**
  * Write artifacts if declared
@@ -24,7 +24,7 @@ export async function writeArtifactsIfAny(
   const logger = createRuntimeLogger('artifacts', ctx, {
     manifestId: manifest.id,
   });
-  const { substitutePathTemplate } = await import('../artifacts.js');
+  const { substitutePathTemplate } = await import('../artifacts');
 
   // Use artifactBroker if available, otherwise fall back to old writeArtifact
   const useNewSystem = artifactBroker !== undefined;
@@ -185,7 +185,7 @@ export async function writeArtifactsIfAny(
           hasBroker: !!artifactBroker,
         });
         
-        const { writeArtifact } = await import('../artifacts.js');
+        const { writeArtifact } = await import('../artifacts');
         const result = await writeArtifact(
           artifactDecl,
           artifactData,

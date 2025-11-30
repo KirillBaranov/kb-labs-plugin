@@ -8,5 +8,5 @@ export {
   testCommand,
   assertCommandResult,
   createPluginTestSuite,
-} from './helpers.js';
+} from './helpers';
 

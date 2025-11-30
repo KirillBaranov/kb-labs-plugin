@@ -4,10 +4,10 @@
  */
 
 import type { ManifestV2 } from '@kb-labs/plugin-manifest';
-import type { ExecuteInput } from '../types.js';
-import type { SandboxConfig } from '@kb-labs/sandbox';
-import { selectRunnerMode } from './runner-selector.js';
-import type { ExecutionContext } from '../types.js';
+import type { ExecuteInput } from '../types';
+import type { SandboxConfig } from '@kb-labs/core-sandbox';
+import { selectRunnerMode } from './runner-selector';
+import type { ExecutionContext } from '../types';
 
 /**
  * Create sandbox runner configuration

@@ -3,6 +3,6 @@
  * Adaptive throttling and degradation control
  */
 
-export * from './types.js';
-export * from './metrics.js';
-export * from './controller.js';
+export * from './types';
+export * from './metrics';
+export * from './controller';

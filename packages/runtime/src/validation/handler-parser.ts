@@ -3,7 +3,7 @@
  * Parse handler reference from string or object format
  */
 
-import type { HandlerRef } from '../types.js';
+import type { HandlerRef } from '../types';
 
 /**
  * Parse handlerRef from string format (e.g., './rest/review.js#handle')

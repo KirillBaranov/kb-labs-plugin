@@ -4,25 +4,25 @@
  */
 
 import type { ManifestV2 } from '@kb-labs/plugin-manifest';
-import type { ExecutionContext, ErrorEnvelope } from '../types.js';
-import type { PresenterFacade } from '../presenter/presenter-facade.js';
+import type { ExecutionContext, ErrorEnvelope } from '../types';
+import type { PresenterFacade } from '../presenter/presenter-facade';
 import type {
   ShellCommandSpec,
   ShellExecOptions,
   ShellResult,
   ShellSpawnOptions,
   ShellSpawnResult,
-} from './types.js';
-import { resolveShellDecision } from './permissions.js';
-import { checkDangerousCommand, formatConfirmationMessage } from './dangerous.js';
-import { toErrorEnvelope, createErrorContext } from '../errors.js';
-import { emitAnalyticsEvent } from '../analytics.js';
-import { createRuntimeLogger } from '../logging.js';
+} from './types';
+import { resolveShellDecision } from './permissions';
+import { checkDangerousCommand, formatConfirmationMessage } from './dangerous';
+import { toErrorEnvelope, createErrorContext } from '../errors';
+import { emitAnalyticsEvent } from '../analytics';
+import { createRuntimeLogger } from '../logging';
 import { ErrorCode } from '@kb-labs/api-contracts';
 import { execa } from 'execa';
 import { spawn as nodeSpawn } from 'node:child_process';
 import type { ChildProcess } from 'node:child_process';
-import { pickEnv } from '../io/env.js';
+import { pickEnv } from '../io/env';
 
 // Error codes for shell operations (using string constants for now)
 const SHELL_PERMISSION_DENIED = 'SHELL_PERMISSION_DENIED';

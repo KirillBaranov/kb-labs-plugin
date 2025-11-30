@@ -10,11 +10,11 @@ import type {
   ExecutionContext,
   ExecuteInput,
   ExecuteResult,
-} from './types.js';
-import type { PluginRegistry } from './registry.js';
+} from './types';
+import type { PluginRegistry } from './registry';
 import { ErrorCode } from '@kb-labs/api-contracts';
-import { checkCapabilities } from './capabilities.js';
-import { emitAnalyticsEvent } from './analytics.js';
+import { checkCapabilities } from './capabilities';
+import { emitAnalyticsEvent } from './analytics';
 import { 
   createSandboxRunner, 
   Profiler,
@@ -22,15 +22,15 @@ import {
   validateContextVersion,
   analyzeInsights,
   formatInsights,
-} from '@kb-labs/sandbox';
-import { createRuntimeLogger } from './logging.js';
-import { toErrorEnvelope, createErrorContext } from './errors.js';
-import { createId } from './utils.js';
-import { saveSnapshot, rotateSnapshots } from './snapshot.js';
-import type { ErrorEnvelope } from './types.js';
+} from '@kb-labs/core-sandbox';
+import { createRuntimeLogger } from './logging';
+import { toErrorEnvelope, createErrorContext } from './errors';
+import { createId } from './utils';
+import { saveSnapshot, rotateSnapshots } from './snapshot';
+import type { ErrorEnvelope } from './types';
 // Import from refactored modules
-import { validateInput, validateOutput } from './validation/index.js';
-import { createRunnerConfig } from './runner/index.js';
+import { validateInput, validateOutput } from './validation/index';
+import { createRunnerConfig } from './runner/index';
 import {
   initializeChainLimits,
   initializeChainState,
@@ -42,11 +42,11 @@ import {
   createAnalyticsEmitter,
   validateExecutionContext,
   formatValidationResult,
-} from './context/index.js';
-import { writeArtifactsIfAny } from './artifacts/index.js';
-import { OperationTracker } from './operations/operation-tracker.js';
-import { createStateBroker } from '@kb-labs/state-broker';
-import { createStateAPI } from './io/state.js';
+} from './context/index';
+import { writeArtifactsIfAny } from './artifacts/index';
+import { OperationTracker } from './operations/operation-tracker';
+import { createStateBroker } from '@kb-labs/core-state-broker';
+import { createStateAPI } from './io/state';
 
 
 /**

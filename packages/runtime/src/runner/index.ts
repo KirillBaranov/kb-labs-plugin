@@ -3,7 +3,7 @@
  * Runner selection and configuration utilities
  */
 
-export { selectRunnerMode, type RunnerMode } from './runner-selector.js';
-export { createRunnerConfig } from './runner-config.js';
+export { selectRunnerMode, type RunnerMode } from './runner-selector';
+export { createRunnerConfig } from './runner-config';
 
 

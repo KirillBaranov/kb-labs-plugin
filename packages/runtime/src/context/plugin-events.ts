@@ -3,12 +3,12 @@
  * Event bridge abstraction wired into PluginContext.
  */
 
-import { createEventSchemaRegistry, getDefaultEventSchemaRegistry } from './event-types.js';
+import { createEventSchemaRegistry, getDefaultEventSchemaRegistry } from './event-types';
 import type {
   PluginEventDefinition,
   PluginEventEnvelope,
   PluginEventSchemaRegistry,
-} from './event-types.js';
+} from './event-types';
 
 export interface PluginEventBridge {
   emit<TPayload>(event: PluginEventEnvelope<TPayload>): Promise<void>;

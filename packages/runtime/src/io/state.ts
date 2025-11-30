@@ -4,8 +4,8 @@
  */
 
 import type { PermissionSpec } from '@kb-labs/plugin-manifest';
-import type { StateBroker } from '@kb-labs/state-broker';
-import { checkStatePermission } from '../permissions.js';
+import type { StateBroker } from '@kb-labs/core-state-broker';
+import { checkStatePermission } from '../permissions';
 
 export interface StateRuntimeAPI {
   get<T>(key: string): Promise<T | null>;

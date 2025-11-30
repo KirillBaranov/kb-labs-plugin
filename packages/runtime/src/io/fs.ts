@@ -7,10 +7,10 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import type { Operation, OperationId } from '@kb-labs/setup-operations';
 import type { PermissionSpec } from '@kb-labs/plugin-manifest';
-import type { FSLike, ExecutionContext } from '../types.js';
-import type { OperationTracker } from '../operations/operation-tracker.js';
+import type { FSLike, ExecutionContext } from '../types';
+import type { OperationTracker } from '../operations/operation-tracker';
 import { minimatch } from 'minimatch';
-import { emitAnalyticsEvent } from '../analytics.js';
+import { emitAnalyticsEvent } from '../analytics';
 
 const MAX_INLINE_CONTENT_LENGTH = 4096;
 const MAX_TRACKED_CONTENT_BYTES = 5 * 1024 * 1024; // 5MB safety cap

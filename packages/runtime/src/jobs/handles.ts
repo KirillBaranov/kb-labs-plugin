@@ -14,7 +14,7 @@ import type {
   ScheduleStatus,
   ScheduleInfo,
   JobInfo,
-} from './types.js';
+} from './types';
 
 /**
  * JobHandle implementation

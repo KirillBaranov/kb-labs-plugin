@@ -3,9 +3,9 @@
  * Create analytics emitter for execution context
  */
 
-import type { ExecutionContext } from '../types.js';
+import type { ExecutionContext } from '../types';
 import type { TelemetryEvent, TelemetryEmitResult } from '@kb-labs/core-types';
-import { getTelemetryEmitter } from '../analytics.js';
+import { getTelemetryEmitter } from '../analytics';
 
 /**
  * Create analytics emitter for injection into context.

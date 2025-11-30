@@ -3,6 +3,6 @@
  * Artifact writing utilities
  */
 
-export { writeArtifactsIfAny } from './artifact-writer.js';
+export { writeArtifactsIfAny } from './artifact-writer';
 
 

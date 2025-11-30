@@ -4,7 +4,7 @@
  */
 
 import type { ManifestV2, ArtifactAccess } from '@kb-labs/plugin-manifest';
-import type { ExecutionContext, ErrorEnvelope } from '../types.js';
+import type { ExecutionContext, ErrorEnvelope } from '../types';
 import type {
   ArtifactStatus as ArtifactStatusContract,
   ArtifactCapability as ArtifactCapabilityContract,
@@ -15,9 +15,9 @@ import type {
   ArtifactInfo as ArtifactInfoContract,
 } from '@kb-labs/plugin-contracts';
 import { ErrorCode } from '@kb-labs/api-contracts';
-import { toErrorEnvelope, createErrorContext } from '../errors.js';
-import { emitAnalyticsEvent } from '../analytics.js';
-import { createRuntimeLogger } from '../logging.js';
+import { toErrorEnvelope, createErrorContext } from '../errors';
+import { emitAnalyticsEvent } from '../analytics';
+import { createRuntimeLogger } from '../logging';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as crypto from 'node:crypto';
@@ -171,7 +171,7 @@ export class ArtifactBroker {
   constructor(
     private callerManifest: ManifestV2,
     private callerCtx: ExecutionContext,
-    private registry?: import('../registry.js').PluginRegistry,
+    private registry?: import('../registry').PluginRegistry,
     artifactBaseDir?: string
   ) {
     // Default artifact base directory

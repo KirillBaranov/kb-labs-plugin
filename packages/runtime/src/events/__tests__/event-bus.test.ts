@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createEventBus, DEFAULT_EVENT_BUS_CONFIG } from '../index.js';
-import type { EventBus } from '../types.js';
+import { createEventBus, DEFAULT_EVENT_BUS_CONFIG } from '../index';
+import type { EventBus } from '../types';
 
 function createBus(overrides: Partial<typeof DEFAULT_EVENT_BUS_CONFIG> = {}): {
   bus: EventBus;

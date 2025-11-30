@@ -4,17 +4,17 @@
  */
 
 import type { PermissionSpec, ManifestV2 } from '@kb-labs/plugin-manifest';
-import type { ExecutionContext, FSLike, PluginAPI, PluginOutput, RuntimeAPI } from '../../types.js';
-import type { InvokeBroker } from '../../invoke/broker.js';
-import type { ArtifactBroker } from '../../artifacts/broker.js';
-import type { StateBroker } from '@kb-labs/state-broker';
-import { createWhitelistedFetch } from '../../io/net.js';
-import { createFsShim } from '../../io/fs.js';
-import { createEnvAccessor } from '../../io/env.js';
-import { createStateAPI, type StateRuntimeAPI } from '../../io/state.js';
-import { SmartConfigHelper } from '../../config/config-helper.js';
-import { createPluginAPI, createPluginOutput } from '../../context-factories.js';
-import { deprecateObject, deprecateFunction } from '../../deprecation.js';
+import type { ExecutionContext, FSLike, PluginAPI, PluginOutput, RuntimeAPI } from '../../types';
+import type { InvokeBroker } from '../../invoke/broker';
+import type { ArtifactBroker } from '../../artifacts/broker';
+import type { StateBroker } from '@kb-labs/core-state-broker';
+import { createWhitelistedFetch } from '../../io/net';
+import { createFsShim } from '../../io/fs';
+import { createEnvAccessor } from '../../io/env';
+import { createStateAPI, type StateRuntimeAPI } from '../../io/state';
+import { SmartConfigHelper } from '../../config/config-helper';
+import { createPluginAPI, createPluginOutput } from '../../context-factories';
+import { deprecateObject, deprecateFunction } from '../../deprecation';
 import type {
   EmitOptions,
   EventBusConfig,
@@ -24,7 +24,7 @@ import type {
   WaitForOptions,
   EventHandler,
   EventBus,
-} from '../../events/index.js';
+} from '../../events/index';
 
 type RuntimeEventsApi = {
   emit<T = unknown>(topic: string, payload: T, options?: EmitOptions): Promise<EventEnvelope<T> | null>;
@@ -433,9 +433,9 @@ export function buildRuntime(
   manifest: ManifestV2,
   invokeBroker?: InvokeBroker,
   artifactBroker?: ArtifactBroker,
-  shellBroker?: import('../../shell/broker.js').ShellBroker,
+  shellBroker?: import('../../shell/broker').ShellBroker,
   stateBroker?: StateBroker,
-  jobBroker?: import('../../jobs/broker.js').JobBroker
+  jobBroker?: import('../../jobs/broker').JobBroker
 ): {
   // === NEW API GROUPS ===
   /** New Plugin API (ctx.api) */
@@ -464,18 +464,18 @@ export function buildRuntime(
     ) => void;
     /** @deprecated Use ctx.api.invoke() instead */
     invoke: <T = unknown>(
-      request: import('../../invoke/types.js').InvokeRequest
-    ) => Promise<import('../../invoke/types.js').InvokeResult<T>>;
+      request: import('../../invoke/types').InvokeRequest
+    ) => Promise<import('../../invoke/types').InvokeResult<T>>;
     /** @deprecated Use ctx.api.artifacts instead */
     artifacts: {
       read: (
-        request: import('../../artifacts/broker.js').ArtifactReadRequest
+        request: import('../../artifacts/broker').ArtifactReadRequest
       ) => Promise<Buffer | object>;
       write: (
-        request: import('../../artifacts/broker.js').ArtifactWriteRequest
+        request: import('../../artifacts/broker').ArtifactWriteRequest
       ) => Promise<{
         path: string;
-        meta: import('../../artifacts/broker.js').ArtifactMeta;
+        meta: import('../../artifacts/broker').ArtifactMeta;
       }>;
     };
     /** @deprecated Use ctx.api.shell instead */
@@ -483,13 +483,13 @@ export function buildRuntime(
       exec: (
         command: string,
         args: string[],
-        options?: import('../../shell/types.js').ShellExecOptions
-      ) => Promise<import('../../shell/types.js').ShellResult>;
+        options?: import('../../shell/types').ShellExecOptions
+      ) => Promise<import('../../shell/types').ShellResult>;
       spawn: (
         command: string,
         args: string[],
-        options?: import('../../shell/types.js').ShellSpawnOptions
-      ) => Promise<import('../../shell/types.js').ShellSpawnResult>;
+        options?: import('../../shell/types').ShellSpawnOptions
+      ) => Promise<import('../../shell/types').ShellSpawnResult>;
     };
     /** @deprecated Use ctx.api.analytics instead */
     analytics?: (event: Partial<import('@kb-labs/core-types').TelemetryEvent>) => Promise<import('@kb-labs/core-types').TelemetryEmitResult>;
@@ -500,8 +500,8 @@ export function buildRuntime(
       ensureSection: (
         pointer: string,
         value: unknown,
-        options?: import('../../config/config-helper.js').EnsureSectionOptions
-      ) => Promise<import('../../config/config-helper.js').EnsureSectionResult>;
+        options?: import('../../config/config-helper').EnsureSectionOptions
+      ) => Promise<import('../../config/config-helper').EnsureSectionResult>;
     };
     /** @deprecated Use ctx.api.state instead */
     state?: StateRuntimeAPI;
@@ -580,19 +580,19 @@ export function buildRuntime(
 
   // Build invoke function
   const invoke = async <T = unknown>(
-    request: import('../../invoke/types.js').InvokeRequest
-  ): Promise<import('../../invoke/types.js').InvokeResult<T>> => {
+    request: import('../../invoke/types').InvokeRequest
+  ): Promise<import('../../invoke/types').InvokeResult<T>> => {
     if (!invokeBroker) {
       throw new Error('Invoke broker not available in this context');
     }
     const result = await invokeBroker.invoke(request);
-    return result as import('../../invoke/types.js').InvokeResult<T>;
+    return result as import('../../invoke/types').InvokeResult<T>;
   };
 
   // Build artifacts API
   const artifacts = {
     read: async (
-      request: import('../../artifacts/broker.js').ArtifactReadRequest
+      request: import('../../artifacts/broker').ArtifactReadRequest
     ): Promise<Buffer | object> => {
       if (!artifactBroker) {
         throw new Error('Artifact broker not available in this context');
@@ -600,10 +600,10 @@ export function buildRuntime(
       return artifactBroker.read(request);
     },
     write: async (
-      request: import('../../artifacts/broker.js').ArtifactWriteRequest
+      request: import('../../artifacts/broker').ArtifactWriteRequest
     ): Promise<{
       path: string;
-      meta: import('../../artifacts/broker.js').ArtifactMeta;
+      meta: import('../../artifacts/broker').ArtifactMeta;
     }> => {
       if (!artifactBroker) {
         throw new Error('Artifact broker not available in this context');
@@ -617,8 +617,8 @@ export function buildRuntime(
     exec: async (
       command: string,
       args: string[],
-      options?: import('../../shell/types.js').ShellExecOptions
-    ): Promise<import('../../shell/types.js').ShellResult> => {
+      options?: import('../../shell/types').ShellExecOptions
+    ): Promise<import('../../shell/types').ShellResult> => {
       if (!shellBroker) {
         throw new Error('Shell broker not available in this context');
       }
@@ -627,8 +627,8 @@ export function buildRuntime(
     spawn: async (
       command: string,
       args: string[],
-      options?: import('../../shell/types.js').ShellSpawnOptions
-    ): Promise<import('../../shell/types.js').ShellSpawnResult> => {
+      options?: import('../../shell/types').ShellSpawnOptions
+    ): Promise<import('../../shell/types').ShellSpawnResult> => {
       if (!shellBroker) {
         throw new Error('Shell broker not available in this context');
       }

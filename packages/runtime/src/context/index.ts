@@ -8,13 +8,13 @@ export {
   initializeChainState,
   createRemainingMsCalculator,
   buildExecutionContext,
-} from './context-builder.js';
+} from './context-builder';
 export {
   createArtifactBroker,
   createInvokeBroker,
   createShellBroker,
-} from './broker-factory.js';
-export { createAnalyticsEmitter } from './analytics-factory.js';
+} from './broker-factory';
+export { createAnalyticsEmitter } from './analytics-factory';
 export {
   createPluginContext,
   type PluginContext,
@@ -28,28 +28,28 @@ export {
   type PresenterProgressPayload,
   type AnalyticsEmitter,
   type AnalyticsEmitOptions,
-} from './plugin-context.js';
+} from './plugin-context';
 export {
   KNOWN_PLUGIN_HOSTS,
   isKnownPluginHost,
   type PluginHostType,
   type KnownPluginHost,
-} from './host.js';
+} from './host';
 export {
   CapabilityFlag,
   createCapabilitySet,
   type CapabilitySet,
-} from './capabilities.js';
+} from './capabilities';
 export {
   getDefaultEventSchemaRegistry,
   createEventSchemaRegistry,
   type PluginEventSchemaRegistry as PluginEventSchemaRegistryType,
   type PluginEventDefinition as PluginEventDefinitionType,
-} from './event-types.js';
+} from './event-types';
 export {
   createNoopEventBridge,
   createIsolatedEventBridge,
-} from './plugin-events.js';
+} from './plugin-events';
 export {
   validateExecutionContext,
   applyFixes,
@@ -61,6 +61,6 @@ export {
   type ValidationError,
   type ValidationWarning,
   type ValidationFix,
-} from './context-validator.js';
+} from './context-validator';
 
 

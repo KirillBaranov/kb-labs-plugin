@@ -4,15 +4,15 @@
  */
 
 import type { ManifestV2, PermissionSpec } from '@kb-labs/plugin-manifest';
-import type { PluginContext } from './context/plugin-context.js';
+import type { PluginContext } from './context/plugin-context';
 import type {
   EventBus,
   EventBusConfig,
   EventEnvelope,
   EventScope,
-} from './events/index.js';
-import type { AnalyticsEmitter } from './analytics/emitter.js';
-import type { OperationTracker } from './operations/operation-tracker.js';
+} from './events/index';
+import type { AnalyticsEmitter } from './analytics/emitter';
+import type { OperationTracker } from './operations/operation-tracker';
 import type { TelemetryEvent, TelemetryEmitResult } from '@kb-labs/core-types';
 
 /**
@@ -25,7 +25,7 @@ export type HandlerRef = {
   export: string;
 };
 
-import type { ChainLimits, InvokeContext } from './invoke/types.js';
+import type { ChainLimits, InvokeContext } from './invoke/types';
 
 /**
  * Log stream callback for real-time log output
@@ -40,15 +40,15 @@ export type LogStreamCallback = (line: string, level: 'info' | 'warn' | 'error' 
  */
 export interface RuntimeExtensions {
   /** Artifact broker for reading/writing artifacts */
-  artifacts?: import('./artifacts/broker.js').ArtifactBroker;
+  artifacts?: import('./artifacts/broker').ArtifactBroker;
   /** Invoke broker for cross-plugin invocation */
-  invoke?: import('./invoke/broker.js').InvokeBroker;
+  invoke?: import('./invoke/broker').InvokeBroker;
   /** Shell broker for command execution */
-  shell?: import('./shell/broker.js').ShellBroker;
+  shell?: import('./shell/broker').ShellBroker;
   /** Job broker for background and scheduled jobs */
-  jobs?: import('./jobs/broker.js').JobBroker;
+  jobs?: import('./jobs/broker').JobBroker;
   /** State broker for persistent cross-invocation state management */
-  state?: import('./io/state.js').StateRuntimeAPI;
+  state?: import('./io/state').StateRuntimeAPI;
   /** Event bus services */
   events?: {
     /** Local scope bus (per execution chain) */
@@ -85,7 +85,7 @@ export interface PluginOutput {
   /** JSON output for CLI (uses presenter) */
   json(data: unknown): void;
   /** Progress updates (uses presenter) */
-  progress(payload: import('./presenter/presenter-facade.js').PresenterProgressPayload): void;
+  progress(payload: import('./presenter/presenter-facade').PresenterProgressPayload): void;
 }
 
 /**
@@ -108,8 +108,8 @@ export interface PluginOutput {
 export interface PluginAPI {
   /** Cross-plugin invocation with type-safe results */
   invoke<TResult = unknown>(
-    request: import('./invoke/types.js').InvokeRequest
-  ): Promise<import('./invoke/types.js').InvokeResult<TResult>>;
+    request: import('./invoke/types').InvokeRequest
+  ): Promise<import('./invoke/types').InvokeResult<TResult>>;
 
   /** State management with typed get/set */
   state: {
@@ -121,13 +121,13 @@ export interface PluginAPI {
   /** Artifact management (read/write files in outdir) */
   artifacts: {
     read(
-      request: import('./artifacts/broker.js').ArtifactReadRequest
+      request: import('./artifacts/broker').ArtifactReadRequest
     ): Promise<Buffer | object>;
     write(
-      request: import('./artifacts/broker.js').ArtifactWriteRequest
+      request: import('./artifacts/broker').ArtifactWriteRequest
     ): Promise<{
       path: string;
-      meta: import('./artifacts/broker.js').ArtifactMeta;
+      meta: import('./artifacts/broker').ArtifactMeta;
     }>;
   };
 
@@ -136,13 +136,13 @@ export interface PluginAPI {
     exec(
       command: string,
       args: string[],
-      options?: import('./shell/types.js').ShellExecOptions
-    ): Promise<import('./shell/types.js').ShellResult>;
+      options?: import('./shell/types').ShellExecOptions
+    ): Promise<import('./shell/types').ShellResult>;
     spawn(
       command: string,
       args: string[],
-      options?: import('./shell/types.js').ShellSpawnOptions
-    ): Promise<import('./shell/types.js').ShellSpawnResult>;
+      options?: import('./shell/types').ShellSpawnOptions
+    ): Promise<import('./shell/types').ShellSpawnResult>;
   };
 
   /** Event bus with type-safe payloads */
@@ -150,40 +150,40 @@ export interface PluginAPI {
     emit<TPayload = unknown>(
       topic: string,
       payload: TPayload,
-      options?: import('./events/index.js').EmitOptions
+      options?: import('./events/index').EmitOptions
     ): Promise<EventEnvelope<TPayload> | null>;
 
     on<TPayload = unknown>(
       topic: string,
       handler: (event: EventEnvelope<TPayload>) => void | Promise<void>,
-      options?: import('./events/index.js').SubscriptionOptions
+      options?: import('./events/index').SubscriptionOptions
     ): () => void;
 
     once<TPayload = unknown>(
       topic: string,
       handler: (event: EventEnvelope<TPayload>) => void | Promise<void>,
-      options?: import('./events/index.js').SubscriptionOptions
+      options?: import('./events/index').SubscriptionOptions
     ): () => void;
 
     off(
       topic: string,
       handler?: (event: EventEnvelope) => void | Promise<void>,
-      options?: import('./events/index.js').SubscriptionOptions
+      options?: import('./events/index').SubscriptionOptions
     ): void;
 
     waitFor<TPayload = unknown>(
       topic: string,
       predicate?: (event: EventEnvelope<TPayload>) => boolean,
-      options?: import('./events/index.js').WaitForOptions<TPayload>
+      options?: import('./events/index').WaitForOptions<TPayload>
     ): Promise<EventEnvelope<TPayload>>;
   };
 
   /** Background and scheduled jobs (optional) */
-  jobs?: import('./jobs/broker.js').JobBroker;
+  jobs?: import('./jobs/broker').JobBroker;
 
   /** Config helper for ensuring config sections exist */
   config: {
-    ensureSection: (section: string) => import('./config/config-helper.js').SmartConfigHelper;
+    ensureSection: (section: string) => import('./config/config-helper').SmartConfigHelper;
   };
 
   /** Analytics emitter for custom tracking (scoped to this execution) */
@@ -253,20 +253,20 @@ export type LegacyRuntimeAPI = {
    * @deprecated Use ctx.api.invoke() instead
    */
   invoke: <T = unknown>(
-    request: import('./invoke/types.js').InvokeRequest
-  ) => Promise<import('./invoke/types.js').InvokeResult<T>>;
+    request: import('./invoke/types').InvokeRequest
+  ) => Promise<import('./invoke/types').InvokeResult<T>>;
   /**
    * @deprecated Use ctx.api.artifacts instead
    */
   artifacts: {
     read: (
-      request: import('./artifacts/broker.js').ArtifactReadRequest
+      request: import('./artifacts/broker').ArtifactReadRequest
     ) => Promise<Buffer | object>;
     write: (
-      request: import('./artifacts/broker.js').ArtifactWriteRequest
+      request: import('./artifacts/broker').ArtifactWriteRequest
     ) => Promise<{
       path: string;
-      meta: import('./artifacts/broker.js').ArtifactMeta;
+      meta: import('./artifacts/broker').ArtifactMeta;
     }>;
   };
   /**
@@ -276,13 +276,13 @@ export type LegacyRuntimeAPI = {
     exec: (
       command: string,
       args: string[],
-      options?: import('./shell/types.js').ShellExecOptions
-    ) => Promise<import('./shell/types.js').ShellResult>;
+      options?: import('./shell/types').ShellExecOptions
+    ) => Promise<import('./shell/types').ShellResult>;
     spawn: (
       command: string,
       args: string[],
-      options?: import('./shell/types.js').ShellSpawnOptions
-    ) => Promise<import('./shell/types.js').ShellSpawnResult>;
+      options?: import('./shell/types').ShellSpawnOptions
+    ) => Promise<import('./shell/types').ShellSpawnResult>;
   };
   /**
    * @deprecated Use ctx.api.analytics instead
@@ -294,29 +294,29 @@ export type LegacyRuntimeAPI = {
    * @deprecated Use ctx.api.events instead
    */
   events?: {
-    emit<T = unknown>(topic: string, payload: T, options?: import('./events/index.js').EmitOptions): Promise<EventEnvelope<T> | null>;
+    emit<T = unknown>(topic: string, payload: T, options?: import('./events/index').EmitOptions): Promise<EventEnvelope<T> | null>;
     on<T = unknown>(
       topic: string,
       handler: (event: EventEnvelope<T>) => void | Promise<void>,
-      options?: import('./events/index.js').SubscriptionOptions
+      options?: import('./events/index').SubscriptionOptions
     ): () => void;
     once<T = unknown>(
       topic: string,
       handler: (event: EventEnvelope<T>) => void | Promise<void>,
-      options?: import('./events/index.js').SubscriptionOptions
+      options?: import('./events/index').SubscriptionOptions
     ): () => void;
-    off(topic: string, handler?: (event: EventEnvelope) => void | Promise<void>, options?: import('./events/index.js').SubscriptionOptions): void;
+    off(topic: string, handler?: (event: EventEnvelope) => void | Promise<void>, options?: import('./events/index').SubscriptionOptions): void;
     waitFor<T = unknown>(
       topic: string,
       predicate?: (event: EventEnvelope<T>) => boolean,
-      options?: import('./events/index.js').WaitForOptions<T>
+      options?: import('./events/index').WaitForOptions<T>
     ): Promise<EventEnvelope<T>>;
   };
   /**
    * @deprecated Use ctx.api.config instead
    */
   config: {
-    ensureSection: (section: string) => import('./config/config-helper.js').SmartConfigHelper;
+    ensureSection: (section: string) => import('./config/config-helper').SmartConfigHelper;
   };
   /**
    * @deprecated Use ctx.api.state instead
@@ -398,16 +398,16 @@ export interface ExecutionContext {
   analytics?: (event: Partial<TelemetryEvent>) => Promise<TelemetryEmitResult>;
   
   /** Adapter-specific context (typed) */
-  adapterContext?: import('@kb-labs/sandbox').HandlerContext;
+  adapterContext?: import('@kb-labs/core-sandbox').HandlerContext;
   
   /** Adapter metadata */
-  adapterMeta?: import('@kb-labs/sandbox').AdapterMetadata;
+  adapterMeta?: import('@kb-labs/core-sandbox').AdapterMetadata;
   
   /** Abort signal for cancellation */
   signal?: AbortSignal;
   
   /** Resource tracker for cleanup */
-  resources?: import('@kb-labs/sandbox').ResourceTracker;
+  resources?: import('@kb-labs/core-sandbox').ResourceTracker;
   
   /** 
    * Extension point for future capabilities
@@ -418,7 +418,7 @@ export interface ExecutionContext {
   extensions?: RuntimeExtensions & Record<string, unknown>;
   
   /** Lifecycle hooks (optional, for observability) */
-  hooks?: import('@kb-labs/sandbox').LifecycleHooks;
+  hooks?: import('@kb-labs/core-sandbox').LifecycleHooks;
   /** Sanitized header context propagated from gateway */
   headers?: HeaderContext;
   /** Tracker that collects file/config operations executed imperatively */
@@ -462,7 +462,7 @@ export type ExecuteResult =
       /** Plugin logs (only in debug mode) */
       logs?: string[];
       /** Performance profile (only in --debug=profile mode) */
-      profile?: import('@kb-labs/sandbox').ProfileData;
+      profile?: import('@kb-labs/core-sandbox').ProfileData;
     }
   | {
       ok: false;
@@ -471,7 +471,7 @@ export type ExecuteResult =
       /** Plugin logs (only in debug mode) */
       logs?: string[];
       /** Performance profile (only in --debug=profile mode) */
-      profile?: import('@kb-labs/sandbox').ProfileData;
+      profile?: import('@kb-labs/core-sandbox').ProfileData;
     };
 
 /**
@@ -509,7 +509,7 @@ export type ErrorEnvelope = {
   details?: Record<string, unknown>;
   trace?: string;
   /** Root cause analysis (auto-generated) */
-  rootCause?: import('./errors/root-cause.js').RootCauseAnalysis;
+  rootCause?: import('./errors/root-cause').RootCauseAnalysis;
   /** Context information at error time */
   context?: ErrorContext;
   /** Related errors from history */
@@ -555,9 +555,9 @@ export type PermissionSpecSummary = {
   capabilities?: string[];
 };
 
-import type { InvokeRequest, InvokeResult } from './invoke/types.js';
-import type { ArtifactReadRequest, ArtifactWriteRequest } from './artifacts/broker.js';
-import type { ShellExecOptions, ShellResult, ShellSpawnOptions, ShellSpawnResult } from './shell/types.js';
+import type { InvokeRequest, InvokeResult } from './invoke/types';
+import type { ArtifactReadRequest, ArtifactWriteRequest } from './artifacts/broker';
+import type { ShellExecOptions, ShellResult, ShellSpawnOptions, ShellSpawnResult } from './shell/types';
 
 /**
  * Plugin handler context - complete context passed to all plugin handlers
@@ -635,7 +635,7 @@ export interface PluginHandlerContext {
      */
     artifacts?: {
       read: (request: ArtifactReadRequest) => Promise<Buffer | object>;
-      write: (request: ArtifactWriteRequest) => Promise<{ path: string; meta: import('./artifacts/broker.js').ArtifactMeta }>;
+      write: (request: ArtifactWriteRequest) => Promise<{ path: string; meta: import('./artifacts/broker').ArtifactMeta }>;
     };
     /**
      * @deprecated Use ctx.api.shell instead. Will be removed in v2.0
@@ -652,27 +652,27 @@ export interface PluginHandlerContext {
      * @deprecated Use ctx.api.events instead. Will be removed in v2.0
      */
     events?: {
-      emit<T = unknown>(topic: string, payload: T, options?: import('./events/index.js').EmitOptions): Promise<import('./events/index.js').EventEnvelope<T> | null>;
+      emit<T = unknown>(topic: string, payload: T, options?: import('./events/index').EmitOptions): Promise<import('./events/index').EventEnvelope<T> | null>;
       on<T = unknown>(
         topic: string,
-        handler: (event: import('./events/index.js').EventEnvelope<T>) => void | Promise<void>,
-        options?: import('./events/index.js').SubscriptionOptions
+        handler: (event: import('./events/index').EventEnvelope<T>) => void | Promise<void>,
+        options?: import('./events/index').SubscriptionOptions
       ): () => void;
       once<T = unknown>(
         topic: string,
-        handler: (event: import('./events/index.js').EventEnvelope<T>) => void | Promise<void>,
-        options?: import('./events/index.js').SubscriptionOptions
+        handler: (event: import('./events/index').EventEnvelope<T>) => void | Promise<void>,
+        options?: import('./events/index').SubscriptionOptions
       ): () => void;
       off(
         topic: string,
-        handler?: (event: import('./events/index.js').EventEnvelope) => void | Promise<void>,
-        options?: import('./events/index.js').SubscriptionOptions
+        handler?: (event: import('./events/index').EventEnvelope) => void | Promise<void>,
+        options?: import('./events/index').SubscriptionOptions
       ): void;
       waitFor<T = unknown>(
         topic: string,
-        predicate?: (event: import('./events/index.js').EventEnvelope<T>) => boolean,
-        options?: import('./events/index.js').WaitForOptions<T>
-      ): Promise<import('./events/index.js').EventEnvelope<T>>;
+        predicate?: (event: import('./events/index').EventEnvelope<T>) => boolean,
+        options?: import('./events/index').WaitForOptions<T>
+      ): Promise<import('./events/index').EventEnvelope<T>>;
     };
     /**
      * @deprecated Use ctx.api.config instead. Will be removed in v2.0
@@ -681,8 +681,8 @@ export interface PluginHandlerContext {
       ensureSection: (
         pointer: string,
         value: unknown,
-        options?: import('./config/config-helper.js').EnsureSectionOptions
-      ) => Promise<import('./config/config-helper.js').EnsureSectionResult>;
+        options?: import('./config/config-helper').EnsureSectionOptions
+      ) => Promise<import('./config/config-helper').EnsureSectionResult>;
     };
     /**
      * @deprecated Use ctx.api.state instead. Will be removed in v2.0

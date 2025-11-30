@@ -3,8 +3,8 @@
  * Validation utilities for schemas and handlers
  */
 
-export { parseHandlerRef } from './handler-parser.js';
-export { resolveSchema } from './schema-resolver.js';
-export { validateSchema, validateInput, validateOutput } from './schema-validator.js';
+export { parseHandlerRef } from './handler-parser';
+export { resolveSchema } from './schema-resolver';
+export { validateSchema, validateInput, validateOutput } from './schema-validator';
 
 

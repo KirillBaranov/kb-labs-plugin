@@ -3,7 +3,7 @@
  * Typed event envelopes and schema registry utilities.
  */
 
-import type { PluginHostType } from './host.js';
+import type { PluginHostType } from './host';
 
 export type PluginEventType = string;
 

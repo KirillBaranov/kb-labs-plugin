@@ -6,15 +6,15 @@
  * maintaining backward compatibility while providing a cleaner API surface.
  */
 
-import type { PluginAPI, PluginOutput } from './types.js';
-import type { ArtifactBroker } from './artifacts/broker.js';
-import type { InvokeBroker } from './invoke/broker.js';
-import type { ShellBroker } from './shell/broker.js';
-import type { JobBroker } from './jobs/broker.js';
-import type { EventBus } from './events/index.js';
-import type { StateRuntimeAPI } from './io/state.js';
-import type { SmartConfigHelper } from './config/config-helper.js';
-import type { PresenterFacade, PresenterProgressPayload } from './presenter/presenter-facade.js';
+import type { PluginAPI, PluginOutput } from './types';
+import type { ArtifactBroker } from './artifacts/broker';
+import type { InvokeBroker } from './invoke/broker';
+import type { ShellBroker } from './shell/broker';
+import type { JobBroker } from './jobs/broker';
+import type { EventBus } from './events/index';
+import type { StateRuntimeAPI } from './io/state';
+import type { SmartConfigHelper } from './config/config-helper';
+import type { PresenterFacade, PresenterProgressPayload } from './presenter/presenter-facade';
 import type { TelemetryEvent, TelemetryEmitResult } from '@kb-labs/core-types';
 
 /**

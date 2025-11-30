@@ -7,16 +7,16 @@
  * This is serialized and passed via IPC to child process.
  */
 
-import type { PluginContext } from '../context/plugin-context.js';
-import type { ChainLimits, InvokeContext } from '../invoke/types.js';
-import type { OperationTracker } from '../operations/operation-tracker.js';
+import type { PluginContext } from '../context/plugin-context';
+import type { ChainLimits, InvokeContext } from '../invoke/types';
+import type { OperationTracker } from '../operations/operation-tracker';
 import type { TelemetryEvent, TelemetryEmitResult } from '@kb-labs/core-types';
 import type {
   AdapterMetadata,
   HandlerContext,
   LifecycleHooks,
   ResourceTracker,
-} from '@kb-labs/sandbox';
+} from '@kb-labs/core-sandbox';
 
 /**
  * Log stream callback for real-time log output

@@ -4,21 +4,21 @@
  */
 
 import type { ManifestV2 } from '@kb-labs/plugin-manifest';
-import type { ExecutionContext } from '../types.js';
-import type { PluginRegistry } from '../registry.js';
-import type { InvokeBroker } from '../invoke/broker.js';
-import type { ArtifactBroker } from '../artifacts/broker.js';
-import type { ShellBroker } from '../shell/broker.js';
-import type { JobBroker } from '../jobs/broker.js';
-import type { CronScheduler } from '../jobs/cron/scheduler.js';
-import type { DegradationController } from '../jobs/degradation/controller.js';
-import type { PresenterFacade } from './plugin-context.js';
-import type { ChainLimits, InvokeContext } from '../invoke/types.js';
-import { InvokeBroker as InvokeBrokerImpl } from '../invoke/broker.js';
-import { ArtifactBroker as ArtifactBrokerImpl } from '../artifacts/broker.js';
-import { ShellBroker as ShellBrokerImpl } from '../shell/broker.js';
-import { JobBroker as JobBrokerImpl } from '../jobs/broker.js';
-import { CapabilityFlag } from './capabilities.js';
+import type { ExecutionContext } from '../types';
+import type { PluginRegistry } from '../registry';
+import type { InvokeBroker } from '../invoke/broker';
+import type { ArtifactBroker } from '../artifacts/broker';
+import type { ShellBroker } from '../shell/broker';
+import type { JobBroker } from '../jobs/broker';
+import type { CronScheduler } from '../jobs/cron/scheduler';
+import type { DegradationController } from '../jobs/degradation/controller';
+import type { PresenterFacade } from './plugin-context';
+import type { ChainLimits, InvokeContext } from '../invoke/types';
+import { InvokeBroker as InvokeBrokerImpl } from '../invoke/broker';
+import { ArtifactBroker as ArtifactBrokerImpl } from '../artifacts/broker';
+import { ShellBroker as ShellBrokerImpl } from '../shell/broker';
+import { JobBroker as JobBrokerImpl } from '../jobs/broker';
+import { CapabilityFlag } from './capabilities';
 
 /**
  * Create artifact broker

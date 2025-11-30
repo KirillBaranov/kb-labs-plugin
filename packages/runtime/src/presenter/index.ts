@@ -7,16 +7,16 @@ export {
   TTYPresenter,
   type TTYPresenterOptions,
   type TTYPresenterFormatter,
-} from './tty-presenter.js';
+} from './tty-presenter';
 export {
   JobRunnerPresenter,
   type JobRunnerPresenterOptions,
   type JobRunnerPresenterEvent,
-} from './job-runner-presenter.js';
+} from './job-runner-presenter';
 export {
   HttpPresenter,
   type HttpPresenterOptions,
-} from './http-presenter.js';
+} from './http-presenter';
 export {
   createNoopPresenter,
   type PresenterFacade,
@@ -25,6 +25,6 @@ export {
   type PresenterProgressPayload,
   type PresenterEventPayload,
   type ConfirmOptions,
-} from './presenter-facade.js';
+} from './presenter-facade';
 
 

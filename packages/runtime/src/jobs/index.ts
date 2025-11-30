@@ -3,8 +3,8 @@
  * JobBroker - background and scheduled jobs
  */
 
-export * from './broker.js';
-export * from './types.js';
-export * from './permissions.js';
-export * from './quotas.js';
-export * from './handles.js';
+export * from './broker';
+export * from './types';
+export * from './permissions';
+export * from './quotas';
+export * from './handles';

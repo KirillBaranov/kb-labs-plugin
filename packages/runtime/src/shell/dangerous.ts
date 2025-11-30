@@ -4,7 +4,7 @@
  */
 
 import type { ShellPermission } from '@kb-labs/plugin-manifest';
-import type { ShellCommandSpec, DangerousCommandResult } from './types.js';
+import type { ShellCommandSpec, DangerousCommandResult } from './types';
 import { minimatch } from 'minimatch';
 
 /**

@@ -3,7 +3,7 @@
  * Select appropriate sandbox runner based on context
  */
 
-import type { ExecutionContext } from '../types.js';
+import type { ExecutionContext } from '../types';
 
 export type RunnerMode = 'inprocess' | 'subprocess';
 

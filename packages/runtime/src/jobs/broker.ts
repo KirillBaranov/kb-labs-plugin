@@ -4,7 +4,7 @@
  */
 
 import type { ManifestV2 } from '@kb-labs/plugin-manifest';
-import type { ExecutionContext } from '../types.js';
+import type { ExecutionContext } from '../types';
 import type { WorkflowEngine } from '@kb-labs/workflow-engine';
 import type { WorkflowSpec } from '@kb-labs/workflow-contracts';
 import type {
@@ -15,15 +15,15 @@ import type {
   JobStatus,
   JobInfo,
   JobFilter,
-} from './types.js';
-import { checkSubmitPermission, checkSchedulePermission } from './permissions.js';
-import { QuotaTracker } from './quotas.js';
-import { JobHandleImpl, ScheduleHandleImpl } from './handles.js';
-import { CronScheduler } from './cron/scheduler.js';
-import { DegradationController } from './degradation/controller.js';
-import { toErrorEnvelope } from '../errors.js';
-import { emitAnalyticsEvent } from '../analytics.js';
-import { createRuntimeLogger } from '../logging.js';
+} from './types';
+import { checkSubmitPermission, checkSchedulePermission } from './permissions';
+import { QuotaTracker } from './quotas';
+import { JobHandleImpl, ScheduleHandleImpl } from './handles';
+import { CronScheduler } from './cron/scheduler';
+import { DegradationController } from './degradation/controller';
+import { toErrorEnvelope } from '../errors';
+import { emitAnalyticsEvent } from '../analytics';
+import { createRuntimeLogger } from '../logging';
 import { ErrorCode } from '@kb-labs/api-contracts';
 
 /**

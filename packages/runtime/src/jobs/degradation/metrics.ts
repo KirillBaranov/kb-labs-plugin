@@ -5,7 +5,7 @@
 
 import * as os from 'node:os';
 import type { RedisClientFactoryResult } from '@kb-labs/workflow-engine';
-import type { SystemMetrics } from './types.js';
+import type { SystemMetrics } from './types';
 
 /**
  * Collect system metrics

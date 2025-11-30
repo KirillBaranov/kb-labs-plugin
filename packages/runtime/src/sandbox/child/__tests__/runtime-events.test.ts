@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { buildRuntime } from '../runtime.js';
-import { createEventBus, DEFAULT_EVENT_BUS_CONFIG } from '../../../events/index.js';
-import type { ExecutionContext } from '../../../types.js';
+import { buildRuntime } from '../runtime';
+import { createEventBus, DEFAULT_EVENT_BUS_CONFIG } from '../../../events/index';
+import type { ExecutionContext } from '../../../types';
 import type { PermissionSpec, ManifestV2 } from '@kb-labs/plugin-manifest';
 
 function createContext(busConfig = DEFAULT_EVENT_BUS_CONFIG): {

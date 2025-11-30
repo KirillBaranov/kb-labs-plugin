@@ -3,7 +3,7 @@
  * Context validation framework with declarative rules and auto-fixes
  */
 
-import type { ExecutionContext } from '../types.js';
+import type { ExecutionContext } from '../types';
 
 /**
  * Context validation rule

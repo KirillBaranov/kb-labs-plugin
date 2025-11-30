@@ -3,7 +3,7 @@
  * Filesystem mock for testing
  */
 
-import type { FSLike } from '../types.js';
+import type { FSLike } from '../types';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 

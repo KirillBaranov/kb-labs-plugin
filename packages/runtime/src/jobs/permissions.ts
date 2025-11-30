@@ -4,7 +4,7 @@
  */
 
 import type { ManifestV2 } from '@kb-labs/plugin-manifest';
-import type { BackgroundJobRequest, ScheduledJobRequest } from './types.js';
+import type { BackgroundJobRequest, ScheduledJobRequest } from './types';
 
 /**
  * Permission check result

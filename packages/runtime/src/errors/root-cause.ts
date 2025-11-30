@@ -5,8 +5,8 @@
 
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { getSnapshotsDir } from '../snapshot.js';
-import type { SnapshotData } from '../snapshot.js';
+import { getSnapshotsDir } from '../snapshot';
+import type { SnapshotData } from '../snapshot';
 
 /**
  * Root cause type

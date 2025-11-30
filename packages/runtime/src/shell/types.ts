@@ -6,7 +6,7 @@
  * This file is kept for backward compatibility and re-exports from contracts
  */
 
-import type { ErrorEnvelope } from '../types.js';
+import type { ErrorEnvelope } from '../types';
 import type {
   ShellExecOptions as ShellExecOptionsContract,
   ShellResult as ShellResultContract,

@@ -5,7 +5,7 @@
 
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import type { ErrorEnvelope } from './types.js';
+import type { ErrorEnvelope } from './types';
 
 /**
  * Snapshot data structure
