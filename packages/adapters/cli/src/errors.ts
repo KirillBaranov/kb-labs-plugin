@@ -3,7 +3,7 @@
  * Error handling and mapping
  */
 
-import type { PluginErrorEnvelope } from '@kb-labs/api-contracts';
+import type { PluginErrorEnvelope } from '@kb-labs/rest-api-contracts';
 import type { CliContext } from '@kb-labs/cli-contracts';
 
 /**

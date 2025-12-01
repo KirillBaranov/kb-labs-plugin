@@ -32,20 +32,20 @@
     "test:watch": "vitest -c ../../vitest.config.ts"
   },
   "dependencies": {
-    "@kb-labs/analytics-sdk-node": "link:../../../kb-labs-analytics/packages/analytics-sdk-node",
-    "@kb-labs/plugin-manifest": "workspace:*",
-    "@kb-labs/plugin-runtime": "workspace:*",
-    "@kb-labs/core-workspace": "workspace:*",
-    "@kb-labs/core-sys": "workspace:*",
-    "@kb-labs/core-sandbox": "workspace:*",
-    "@kb-labs/api-contracts": "workspace:*",
+    "@kb-labs/analytics-sdk-node": "link:../../../../kb-labs-analytics/packages/analytics-sdk-node",
+    "@kb-labs/plugin-manifest": "link:../../plugin-manifest",
+    "@kb-labs/plugin-runtime": "link:../../plugin-runtime",
+    "@kb-labs/core-workspace": "link:../../../../kb-labs-core/packages/core-workspace",
+    "@kb-labs/core-sys": "link:../../../../kb-labs-core/packages/core-sys",
+    "@kb-labs/core-sandbox": "link:../../../../kb-labs-core/packages/core-sandbox",
+    "@kb-labs/rest-api-contracts": "link:../../../../kb-labs-rest-api/packages/rest-api-contracts",
     "fastify": "^4.28.1",
     "zod": "^4.1.5",
     "zod-to-openapi": "^0.2.1",
     "minimatch": "^10.0.1"
   },
   "devDependencies": {
-    "@kb-labs/devkit": "workspace:*",
+    "@kb-labs/devkit": "link:../../../../kb-labs-devkit",
     "@types/node": "^24.3.3",
     "@typescript-eslint/eslint-plugin": "^8",
     "@typescript-eslint/parser": "^8",

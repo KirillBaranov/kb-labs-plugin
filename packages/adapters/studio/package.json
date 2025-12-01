@@ -28,12 +28,12 @@
     "test:watch": "vitest -c ../../vitest.config.ts"
   },
   "dependencies": {
-    "@kb-labs/plugin-manifest": "workspace:*",
-    "@kb-labs/plugin-adapter-rest": "workspace:*",
-    "@kb-labs/api-contracts": "workspace:*"
+    "@kb-labs/plugin-manifest": "link:../../plugin-manifest",
+    "@kb-labs/plugin-adapter-rest": "link:../rest",
+    "@kb-labs/rest-api-contracts": "link:../../../../kb-labs-rest-api/packages/rest-api-contracts"
   },
   "devDependencies": {
-    "@kb-labs/devkit": "workspace:*",
+    "@kb-labs/devkit": "link:../../../../kb-labs-devkit",
     "@types/node": "^24.3.3",
     "@typescript-eslint/eslint-plugin": "^8",
     "@typescript-eslint/parser": "^8",

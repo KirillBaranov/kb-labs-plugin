@@ -12,7 +12,7 @@ export default defineConfig({
     '@kb-labs/plugin-runtime',
     '@kb-labs/core-sandbox',
     '@kb-labs/cli-core',
-    '@kb-labs/api-contracts',
+    '@kb-labs/rest-api-contracts',
   ],
   tsconfig: './tsconfig.json',
   dts: {

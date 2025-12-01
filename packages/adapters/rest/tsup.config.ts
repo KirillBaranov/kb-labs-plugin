@@ -14,7 +14,7 @@ export default defineConfig({
     '@kb-labs/plugin-runtime',
     '@kb-labs/core-workspace',
     '@kb-labs/core-sandbox',
-    '@kb-labs/api-contracts',
+    '@kb-labs/rest-api-contracts',
     '@kb-labs/analytics-sdk-node',
     'fastify',
     'minimatch',

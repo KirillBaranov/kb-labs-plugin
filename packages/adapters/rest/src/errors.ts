@@ -3,7 +3,7 @@
  * Error mapping and handling
  */
 
-import type { PluginErrorEnvelope } from '@kb-labs/api-contracts';
+import type { PluginErrorEnvelope } from '@kb-labs/rest-api-contracts';
 import type { FastifyReply } from 'fastify';
 
 /**
