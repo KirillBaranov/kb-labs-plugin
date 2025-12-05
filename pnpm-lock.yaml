@@ -91,9 +91,6 @@ importers:
       '@aws-sdk/client-s3':
         specifier: ^3.929.0
         version: 3.940.0
-      '@kb-labs/api-contracts':
-        specifier: link:../../../../kb-labs-cli/packages/cli-api
-        version: link:../../../../kb-labs-cli/packages/cli-api
       '@kb-labs/cli-contracts':
         specifier: link:../../../../kb-labs-cli/packages/cli-contracts
         version: link:../../../../kb-labs-cli/packages/cli-contracts
@@ -110,11 +107,17 @@ importers:
         specifier: link:../../../../kb-labs-core/packages/core-sys
         version: link:../../../../kb-labs-core/packages/core-sys
       '@kb-labs/plugin-manifest':
-        specifier: link:../../manifest
-        version: link:../../manifest
+        specifier: link:../../plugin-manifest
+        version: link:../../plugin-manifest
       '@kb-labs/plugin-runtime':
-        specifier: link:../../runtime
-        version: link:../../runtime
+        specifier: link:../../plugin-runtime
+        version: link:../../plugin-runtime
+      '@kb-labs/rest-api-contracts':
+        specifier: link:../../../../kb-labs-rest-api/packages/rest-api-contracts
+        version: link:../../../../kb-labs-rest-api/packages/rest-api-contracts
+      '@kb-labs/shared-cli-ui':
+        specifier: link:../../../../kb-labs-shared/packages/shared-cli-ui
+        version: link:../../../../kb-labs-shared/packages/shared-cli-ui
       ajv:
         specifier: ^8.17.1
         version: 8.17.1
@@ -176,9 +179,6 @@ importers:
       '@kb-labs/analytics-sdk-node':
         specifier: link:../../../../kb-labs-analytics/packages/analytics-sdk-node
         version: link:../../../../kb-labs-analytics/packages/analytics-sdk-node
-      '@kb-labs/api-contracts':
-        specifier: link:../../../../kb-labs-cli/packages/cli-api
-        version: link:../../../../kb-labs-cli/packages/cli-api
       '@kb-labs/core-sandbox':
         specifier: link:../../../../kb-labs-core/packages/core-sandbox
         version: link:../../../../kb-labs-core/packages/core-sandbox
@@ -189,11 +189,14 @@ importers:
         specifier: link:../../../../kb-labs-core/packages/core-workspace
         version: link:../../../../kb-labs-core/packages/core-workspace
       '@kb-labs/plugin-manifest':
-        specifier: link:../../manifest
-        version: link:../../manifest
+        specifier: link:../../plugin-manifest
+        version: link:../../plugin-manifest
       '@kb-labs/plugin-runtime':
-        specifier: link:../../runtime
-        version: link:../../runtime
+        specifier: link:../../plugin-runtime
+        version: link:../../plugin-runtime
+      '@kb-labs/rest-api-contracts':
+        specifier: link:../../../../kb-labs-rest-api/packages/rest-api-contracts
+        version: link:../../../../kb-labs-rest-api/packages/rest-api-contracts
       fastify:
         specifier: ^4.28.1
         version: 4.29.1
@@ -237,102 +240,19 @@ importers:
 
   packages/adapters/studio:
     dependencies:
-      '@kb-labs/api-contracts':
-        specifier: link:../../../../kb-labs-cli/packages/cli-api
-        version: link:../../../../kb-labs-cli/packages/cli-api
       '@kb-labs/plugin-adapter-rest':
         specifier: link:../rest
         version: link:../rest
       '@kb-labs/plugin-manifest':
-        specifier: link:../../manifest
-        version: link:../../manifest
+        specifier: link:../../plugin-manifest
+        version: link:../../plugin-manifest
+      '@kb-labs/rest-api-contracts':
+        specifier: link:../../../../kb-labs-rest-api/packages/rest-api-contracts
+        version: link:../../../../kb-labs-rest-api/packages/rest-api-contracts
     devDependencies:
       '@kb-labs/devkit':
         specifier: link:../../../../kb-labs-devkit
         version: link:../../../../kb-labs-devkit
-      '@types/node':
-        specifier: ^24.3.3
-        version: 24.10.0
-      '@typescript-eslint/eslint-plugin':
-        specifier: ^8
-        version: 8.46.3(@typescript-eslint/parser@8.46.3(eslint@9.39.1)(typescript@5.9.3))(eslint@9.39.1)(typescript@5.9.3)
-      '@typescript-eslint/parser':
-        specifier: ^8
-        version: 8.46.3(eslint@9.39.1)(typescript@5.9.3)
-      eslint:
-        specifier: ^9
-        version: 9.39.1
-      rimraf:
-        specifier: ^6.0.1
-        version: 6.1.0
-      tsup:
-        specifier: ^8.5.0
-        version: 8.5.0(postcss@8.5.6)(typescript@5.9.3)(yaml@2.8.2)
-      typescript:
-        specifier: ^5.6.3
-        version: 5.9.3
-      vitest:
-        specifier: ^3.2.4
-        version: 3.2.4(@types/node@24.10.0)(jsdom@27.1.0)
-
-  packages/devtools:
-    dependencies:
-      '@kb-labs/cli-core':
-        specifier: link:../../../kb-labs-cli/packages/cli-core
-        version: link:../../../kb-labs-cli/packages/cli-core
-      '@kb-labs/plugin-adapter-rest':
-        specifier: link:../adapters/rest
-        version: link:../adapters/rest
-      '@kb-labs/plugin-adapter-studio':
-        specifier: link:../adapters/studio
-        version: link:../adapters/studio
-      '@kb-labs/plugin-manifest':
-        specifier: link:../manifest
-        version: link:../manifest
-      '@kb-labs/plugin-runtime':
-        specifier: link:../runtime
-        version: link:../runtime
-      glob:
-        specifier: ^11.0.0
-        version: 11.0.3
-    devDependencies:
-      '@kb-labs/devkit':
-        specifier: link:../../../kb-labs-devkit
-        version: link:../../../kb-labs-devkit
-      '@types/node':
-        specifier: ^24.3.3
-        version: 24.10.0
-      '@typescript-eslint/eslint-plugin':
-        specifier: ^8
-        version: 8.46.3(@typescript-eslint/parser@8.46.3(eslint@9.39.1)(typescript@5.9.3))(eslint@9.39.1)(typescript@5.9.3)
-      '@typescript-eslint/parser':
-        specifier: ^8
-        version: 8.46.3(eslint@9.39.1)(typescript@5.9.3)
-      eslint:
-        specifier: ^9
-        version: 9.39.1
-      rimraf:
-        specifier: ^6.0.1
-        version: 6.1.0
-      tsup:
-        specifier: ^8.5.0
-        version: 8.5.0(postcss@8.5.6)(typescript@5.9.3)(yaml@2.8.2)
-      typescript:
-        specifier: ^5.6.3
-        version: 5.9.3
-      vitest:
-        specifier: ^3.2.4
-        version: 3.2.4(@types/node@24.10.0)(jsdom@27.1.0)
-
-  packages/manifest:
-    dependencies:
-      zod:
-        specifier: ^3.23.8
-        version: 3.25.76
-    devDependencies:
-      '@kb-labs/devkit':
-        specifier: link:../../../kb-labs-devkit
-        version: link:../../../kb-labs-devkit
       '@types/node':
         specifier: ^24.3.3
         version: 24.10.0
@@ -388,11 +308,48 @@ importers:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@24.10.0)(jsdom@27.1.0)
 
-  packages/runtime:
+  packages/plugin-manifest:
     dependencies:
-      '@kb-labs/api-contracts':
-        specifier: link:../../../kb-labs-cli/packages/cli-api
-        version: link:../../../kb-labs-cli/packages/cli-api
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      '@kb-labs/devkit':
+        specifier: link:../../../kb-labs-devkit
+        version: link:../../../kb-labs-devkit
+      '@types/node':
+        specifier: ^24.3.3
+        version: 24.10.0
+      '@typescript-eslint/eslint-plugin':
+        specifier: ^8
+        version: 8.46.3(@typescript-eslint/parser@8.46.3(eslint@9.39.1)(typescript@5.9.3))(eslint@9.39.1)(typescript@5.9.3)
+      '@typescript-eslint/parser':
+        specifier: ^8
+        version: 8.46.3(eslint@9.39.1)(typescript@5.9.3)
+      eslint:
+        specifier: ^9
+        version: 9.39.1
+      rimraf:
+        specifier: ^6.0.1
+        version: 6.1.0
+      tsup:
+        specifier: ^8.5.0
+        version: 8.5.0(postcss@8.5.6)(typescript@5.9.3)(yaml@2.8.2)
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.4(@types/node@24.10.0)(jsdom@27.1.0)
+
+  packages/plugin-runtime:
+    dependencies:
+      '@kb-labs/core-platform':
+        specifier: link:../../../kb-labs-core/packages/core-platform
+        version: link:../../../kb-labs-core/packages/core-platform
+      '@kb-labs/core-runtime':
+        specifier: link:../../../kb-labs-core/packages/core-runtime
+        version: link:../../../kb-labs-core/packages/core-runtime
       '@kb-labs/core-sandbox':
         specifier: link:../../../kb-labs-core/packages/core-sandbox
         version: link:../../../kb-labs-core/packages/core-sandbox
@@ -406,20 +363,20 @@ importers:
         specifier: link:../../../kb-labs-core/packages/core-types
         version: link:../../../kb-labs-core/packages/core-types
       '@kb-labs/plugin-contracts':
-        specifier: link:../contracts
-        version: link:../contracts
+        specifier: link:../plugin-contracts
+        version: link:../plugin-contracts
       '@kb-labs/plugin-manifest':
-        specifier: link:../manifest
-        version: link:../manifest
-      '@kb-labs/setup-operations':
-        specifier: link:../../../kb-labs-core/packages/setup-operations
-        version: link:../../../kb-labs-core/packages/setup-operations
+        specifier: link:../plugin-manifest
+        version: link:../plugin-manifest
+      '@kb-labs/rest-api-contracts':
+        specifier: link:../../../kb-labs-rest-api/packages/rest-api-contracts
+        version: link:../../../kb-labs-rest-api/packages/rest-api-contracts
+      '@kb-labs/setup-engine-operations':
+        specifier: link:../../../kb-labs-setup-engine/packages/setup-engine-operations
+        version: link:../../../kb-labs-setup-engine/packages/setup-engine-operations
       '@kb-labs/workflow-contracts':
         specifier: link:../../../kb-labs-workflow/packages/workflow-contracts
         version: link:../../../kb-labs-workflow/packages/workflow-contracts
-      '@kb-labs/workflow-engine':
-        specifier: link:../../../kb-labs-workflow/packages/workflow-engine
-        version: link:../../../kb-labs-workflow/packages/workflow-engine
       execa:
         specifier: ^8.0.0
         version: 8.0.1
@@ -463,37 +420,6 @@ importers:
       vitest:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@24.10.0)(jsdom@27.1.0)
-
-  packages/testing:
-    dependencies:
-      '@kb-labs/plugin-manifest':
-        specifier: link:../manifest
-        version: link:../manifest
-      '@kb-labs/plugin-template-contracts':
-        specifier: link:../../../kb-labs-plugin-template/packages/plugin-template-contracts
-        version: link:../../../kb-labs-plugin-template/packages/plugin-template-contracts
-      '@kb-labs/shared-command-kit':
-        specifier: link:../../../kb-labs-shared/packages/shared-command-kit
-        version: link:../../../kb-labs-shared/packages/shared-command-kit
-      zod:
-        specifier: ^3.23.8
-        version: 3.25.76
-    devDependencies:
-      '@kb-labs/devkit':
-        specifier: link:../../../kb-labs-devkit
-        version: link:../../../kb-labs-devkit
-      '@types/node':
-        specifier: ^24.3.3
-        version: 24.10.0
-      rimraf:
-        specifier: ^6.0.1
-        version: 6.1.0
-      tsup:
-        specifier: ^8.5.0
-        version: 8.5.0(postcss@8.5.6)(typescript@5.9.3)(yaml@2.8.2)
-      typescript:
-        specifier: ^5.6.3
-        version: 5.9.3
 
 packages:
 
