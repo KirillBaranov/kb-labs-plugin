@@ -31,6 +31,9 @@ export type {
   StudioMenuDecl,
   StudioLayoutDecl,
   DisplayMetadata,
+  // Platform requirements
+  PlatformRequirements,
+  PlatformServiceId,
 } from './types';
 
 // Runtime contracts
@@ -52,6 +55,8 @@ export {
   manifestV2Schema,
   permissionSpecSchema,
   schemaRefSchema,
+  platformServiceIdSchema,
+  platformRequirementsSchema,
   type ValidationResult,
 } from './schema';
 
@@ -74,9 +79,9 @@ export {
 } from './deprecation';
 
 // Helpers
+// Note: createManifestV2 and defineCommandFlags moved to @kb-labs/shared-command-kit
+// Use defineManifest and defineCommandFlags from command-kit instead
 export {
-  createManifestV2,
-  defineCommandFlags,
   type ExtractArtifactIdsFromContracts,
   type ExtractCommandIdsFromContracts,
   // Example generation

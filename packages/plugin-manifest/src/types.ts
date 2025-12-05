@@ -587,6 +587,56 @@ export interface LifecycleHooks {
 }
 
 /**
+ * Platform service identifier.
+ * Maps to PlatformServices keys in @kb-labs/core-platform.
+ */
+export type PlatformServiceId =
+  // Adapter services (replaceable via kb.config.json)
+  | 'vectorStore'
+  | 'llm'
+  | 'embeddings'
+  | 'cache'
+  | 'storage'
+  | 'logger'
+  | 'analytics'
+  | 'events'
+  | 'invoke'
+  | 'artifacts'
+  // Core features (built-in)
+  | 'workflows'
+  | 'jobScheduler'
+  | 'cron'
+  | 'resources';
+
+/**
+ * Platform requirements specification.
+ * Declares which platform services the plugin needs.
+ *
+ * @example
+ * ```json
+ * {
+ *   "platform": {
+ *     "requires": ["embeddings", "vectorStore"],
+ *     "optional": ["llm"]
+ *   }
+ * }
+ * ```
+ */
+export interface PlatformRequirements {
+  /**
+   * Required platform services.
+   * Plugin will fail to load if any of these are not configured.
+   */
+  requires?: PlatformServiceId[];
+
+  /**
+   * Optional platform services.
+   * Plugin will load but features may be degraded if not available.
+   */
+  optional?: PlatformServiceId[];
+}
+
+/**
  * Plugin setup specification
  */
 export interface SetupSpec {
@@ -670,6 +720,26 @@ export interface ManifestV2 {
   dependencies?: PluginDependency[];
   /** Lifecycle hooks */
   lifecycle?: LifecycleHooks;
+  /**
+   * Platform service requirements.
+   * Declares which platform services (vectorStore, llm, workflows, etc.)
+   * this plugin needs to function.
+   *
+   * Required services are validated at plugin load time.
+   * If any required service is not configured, the plugin fails to load
+   * with a clear error message.
+   *
+   * @example
+   * ```json
+   * {
+   *   "platform": {
+   *     "requires": ["embeddings", "vectorStore"],
+   *     "optional": ["llm"]
+   *   }
+   * }
+   * ```
+   */
+  platform?: PlatformRequirements;
   /** Setup command declaration for workspace initialization */
   setup?: SetupSpec;
   /** CLI commands */

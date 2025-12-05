@@ -8,6 +8,7 @@
  */
 export interface PluginContext {
   requestId: string;
+  cwd: string; // Current working directory
   logger: { info(...a: any[]): void; error(...a: any[]): void };
   perms: { granted: string[] };
   analytics: { emit: (event: string, data: any) => Promise<void> };

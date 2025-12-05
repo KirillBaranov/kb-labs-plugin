@@ -520,6 +520,49 @@ export const studioLayoutDeclSchema: z.ZodType<StudioLayoutDecl> = z
   );
 
 /**
+ * Platform service identifier schema
+ */
+export const platformServiceIdSchema = z.enum([
+  // Adapter services (replaceable via kb.config.json)
+  'vectorStore',
+  'llm',
+  'embeddings',
+  'cache',
+  'storage',
+  'logger',
+  'analytics',
+  'events',
+  'invoke',
+  'artifacts',
+  // Core features (built-in)
+  'workflows',
+  'jobScheduler',
+  'cron',
+  'resources',
+]);
+
+/**
+ * Platform requirements schema
+ */
+export const platformRequirementsSchema = z.object({
+  requires: z.array(platformServiceIdSchema).optional(),
+  optional: z.array(platformServiceIdSchema).optional(),
+}).refine(
+  (data) => {
+    // Check for duplicates between requires and optional
+    if (data.requires && data.optional) {
+      const overlap = data.requires.filter(s => data.optional!.includes(s));
+      return overlap.length === 0;
+    }
+    return true;
+  },
+  {
+    message: 'Service cannot be both required and optional',
+    path: ['requires'],
+  }
+);
+
+/**
  * Job declaration schema
  */
 export const jobDeclSchema: z.ZodType<JobDecl> = z.object({
@@ -597,6 +640,7 @@ export const manifestV2Schema = z.object({
     })
     .optional(),
   jobs: z.array(jobDeclSchema).optional(),
+  platform: platformRequirementsSchema.optional(),
 });
 
 /**
