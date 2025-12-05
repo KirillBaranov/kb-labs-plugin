@@ -15,9 +15,7 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import {
   execute as runtimeExecute,
   createId,
-  createPluginContext,
-  createNoopEventBridge,
-  createNoopAnalyticsEmitter,
+  createPluginContextWithPlatform,
   OperationTracker,
   HttpPresenter,
 } from '@kb-labs/plugin-runtime';
@@ -120,19 +118,20 @@ export async function executeRoute(
 
   const presenter = new HttpPresenter();
   const operationTracker = new OperationTracker();
-  const pluginContext = createPluginContext('rest', {
+
+  // Create PluginContext with automatic platform integration
+  const pluginContext = createPluginContextWithPlatform({
+    host: 'rest',
     requestId,
     pluginId: manifest.id,
     pluginVersion: manifest.version,
-    presenter,
-    events: createNoopEventBridge(),
-    analytics: createNoopAnalyticsEmitter(),
+    ui: presenter,
     metadata: {
       method: route.method,
       path: route.path,
       basePath,
+      getTrackedOperations: () => operationTracker.toArray(),
     },
-    getTrackedOperations: () => operationTracker.toArray(),
   });
 
   const execCtx = createExecutionContext(

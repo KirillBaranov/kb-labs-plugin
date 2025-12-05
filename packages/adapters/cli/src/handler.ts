@@ -26,10 +26,7 @@ import {
   getSnapshotsDir,
   formatTimeline,
   exportProfileChromeFormat,
-  emitAnalyticsEvent,
-  createPluginContext,
-  createNoopEventBridge,
-  createNoopAnalyticsEmitter,
+  createPluginContextWithPlatform,
   OperationTracker,
 } from '@kb-labs/plugin-runtime';
 import {
@@ -55,6 +52,45 @@ interface CliCommandContext extends CliContext {
 
 class CliPresenterFacade implements PresenterFacade {
   constructor(private readonly presenter: Presenter) {}
+
+  // UIFacade required properties (no-op implementation for CLI)
+  readonly colors = {
+    // Semantic colors (no-op)
+    success: (s: string) => s,
+    error: (s: string) => s,
+    warning: (s: string) => s,
+    info: (s: string) => s,
+    // Accent palette (no-op)
+    primary: (s: string) => s,
+    accent: (s: string) => s,
+    highlight: (s: string) => s,
+    secondary: (s: string) => s,
+    emphasis: (s: string) => s,
+    muted: (s: string) => s,
+    foreground: (s: string) => s,
+    // Formatting (no-op)
+    dim: (s: string) => s,
+    bold: (s: string) => s,
+    underline: (s: string) => s,
+    inverse: (s: string) => s,
+  };
+
+  readonly symbols = {
+    success: '✓',
+    error: '✗',
+    warning: '⚠',
+    info: 'ℹ',
+    bullet: '•',
+    arrowRight: '→',
+    line: '─',
+    check: '✓',
+    cross: '✗',
+    pointer: '▸',
+    ellipsis: '…',
+    play: '▶',
+    separator: '│',
+    border: '─',
+  };
 
   message(text: string, options?: PresenterMessageOptions): void {
     const level = options?.level ?? 'info';
@@ -353,23 +389,22 @@ export async function executeCommand(
   const defaultWorkdir = workdir || defaultPluginRoot;
   const defaultOutdir = outdir || path.join(defaultWorkdir, 'out');
 
-  const analyticsEmitter = createNoopAnalyticsEmitter();
   const operationTracker = new OperationTracker();
 
-  const pluginContext = createPluginContext('cli', {
+  const pluginContext = createPluginContextWithPlatform({
+    host: 'cli',
     requestId,
     pluginId: manifest.id,
     pluginVersion: manifest.version,
-    presenter: new CliPresenterFacade(cliContext.presenter),
-    events: createNoopEventBridge(),
-    analytics: analyticsEmitter,
+    tenantId: process.env.KB_TENANT_ID ?? 'default',
+    ui: new CliPresenterFacade(cliContext.presenter),
     metadata: {
       cwd: defaultWorkdir,
       outdir: defaultOutdir,
       flags,
       jsonMode,
+      getTrackedOperations: () => operationTracker.toArray(),
     },
-    getTrackedOperations: () => operationTracker.toArray(),
   });
 
   if (shouldDebugLog) {
@@ -487,12 +522,9 @@ export async function executeCommand(
 
   const eventHooks = {
     analytics: async (event: string, data: Record<string, unknown>) => {
-      await emitAnalyticsEvent(event, {
-        ...data,
-        pluginId: manifest.id,
-        pluginVersion: manifest.version,
-        routeOrCommand: command.id,
-      });
+      // TODO: Re-enable analytics using pluginContext.platform.analytics.track()
+      // Analytics now flows through platform abstractions
+      // await emitAnalyticsEvent(event, { ... });
     },
     logger: busLogger,
   };
