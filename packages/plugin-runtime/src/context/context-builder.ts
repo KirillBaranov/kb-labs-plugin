@@ -60,7 +60,7 @@ export function buildExecutionContext(
   chainLimits: ChainLimits,
   chainState: InvokeContext,
   remainingMs: () => number,
-  analyticsEmitter: (event: any) => Promise<any>,
+  analyticsEmitter: ((event: any) => Promise<any>) | undefined,
   resources: ResourceTracker,
   invokeBroker: any,
   artifactBroker: any,

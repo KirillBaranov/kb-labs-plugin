@@ -19,9 +19,9 @@ import { checkSubmitPermission, checkSchedulePermission } from './permissions';
 import { QuotaTracker } from './quotas';
 import { JobHandleImpl, ScheduleHandleImpl } from './handles';
 import { toErrorEnvelope } from '../errors';
-import { emitAnalyticsEvent } from '../analytics';
 import { createRuntimeLogger } from '../logging';
 import { ErrorCode } from '@kb-labs/rest-api-contracts';
+import { emitAnalyticsEvent } from '../analytics-stub';
 
 // TODO: CronScheduler and DegradationController will be provided by workflow-engine
 // For now, accept any to break circular dependency
@@ -168,13 +168,8 @@ export class JobBroker {
       );
 
       if (!permissionCheck.allow) {
-        await emitAnalyticsEvent('job.submit.denied', {
-          caller: this.ctx.pluginId,
-          handler: request.handler,
-          reason: permissionCheck.reason,
-          traceId: this.ctx.traceId,
-          spanId: this.ctx.spanId,
-        });
+        // TODO: Re-enable analytics using platform.analytics.track()
+        // await emitAnalyticsEvent('job.submit.denied', { ... });
 
         throw toErrorEnvelope(
           ErrorCode.PLUGIN_PERMISSION_DENIED,
@@ -198,13 +193,7 @@ export class JobBroker {
 
       for (const quotaCheck of quotaChecks) {
         if (!quotaCheck.allow) {
-          await emitAnalyticsEvent('job.submit.quota_exceeded', {
-            caller: this.ctx.pluginId,
-            handler: request.handler,
-            reason: quotaCheck.reason,
-            current: quotaCheck.current,
-            limit: quotaCheck.limit,
-          });
+          // TODO: Re-enable analytics using platform.analytics.track()
 
           throw toErrorEnvelope(
             ErrorCode.PLUGIN_QUOTA_EXCEEDED,
@@ -273,14 +262,7 @@ export class JobBroker {
       await this.quotaTracker.incrementConcurrent();
 
       // 6. Emit analytics
-      await emitAnalyticsEvent('job.submit.success', {
-        caller: this.ctx.pluginId,
-        handler: request.handler,
-        jobId: run.id,
-        priority: request.priority,
-        traceId: this.ctx.traceId,
-        spanId: this.ctx.spanId,
-      });
+      // TODO: Re-enable analytics using platform.analytics.track()
 
       this.logger.info('Job submitted', {
         jobId: run.id,
@@ -351,11 +333,7 @@ export class JobBroker {
       );
 
       if (!permissionCheck.allow) {
-        await emitAnalyticsEvent('job.schedule.denied', {
-          caller: this.ctx.pluginId,
-          handler: request.handler,
-          reason: permissionCheck.reason,
-        });
+        // TODO: Re-enable analytics using platform.analytics.track()
 
         throw toErrorEnvelope(
           ErrorCode.PLUGIN_PERMISSION_DENIED,
@@ -379,13 +357,7 @@ export class JobBroker {
 
       for (const quotaCheck of quotaChecks) {
         if (!quotaCheck.allow) {
-          await emitAnalyticsEvent('job.schedule.quota_exceeded', {
-            caller: this.ctx.pluginId,
-            handler: request.handler,
-            reason: quotaCheck.reason,
-            current: quotaCheck.current,
-            limit: quotaCheck.limit,
-          });
+          // TODO: Re-enable analytics using platform.analytics.track()
 
           throw toErrorEnvelope(
             ErrorCode.PLUGIN_QUOTA_EXCEEDED,
@@ -428,12 +400,7 @@ export class JobBroker {
       await this.quotaTracker.incrementActiveSchedules();
 
       // 6. Emit analytics
-      await emitAnalyticsEvent('job.schedule.success', {
-        caller: this.ctx.pluginId,
-        handler: request.handler,
-        scheduleId,
-        schedule: request.schedule,
-      });
+      // TODO: Re-enable analytics using platform.analytics.track()
 
       this.logger.info('Job scheduled', {
         scheduleId,
@@ -481,10 +448,7 @@ export class JobBroker {
       await this.workflowEngine.cancelRun(jobId);
       await this.quotaTracker.decrementConcurrent();
 
-      await emitAnalyticsEvent('job.cancelled', {
-        caller: this.ctx.pluginId,
-        jobId,
-      });
+      // TODO: Re-enable analytics using platform.analytics.track()
 
       this.logger.info('Job cancelled', { jobId });
     } catch (error) {

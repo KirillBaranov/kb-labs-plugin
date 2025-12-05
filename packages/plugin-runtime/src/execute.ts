@@ -14,7 +14,7 @@ import type {
 import type { PluginRegistry } from './registry';
 import { ErrorCode } from '@kb-labs/rest-api-contracts';
 import { checkCapabilities } from './capabilities';
-import { emitAnalyticsEvent } from './analytics';
+import { emitAnalyticsEvent } from './analytics-stub';
 import { 
   createSandboxRunner, 
   Profiler,
@@ -39,7 +39,6 @@ import {
   createArtifactBroker,
   createInvokeBroker,
   createShellBroker,
-  createAnalyticsEmitter,
   validateExecutionContext,
   formatValidationResult,
 } from './context/index';
@@ -106,23 +105,20 @@ export async function execute(
   const stateBroker = createStateBroker();
   const stateAPI = createStateAPI(stateBroker, args.manifest.id, args.perms.state);
 
-  // 5. Create analytics emitter
-  const analyticsEmitter = createAnalyticsEmitter(ctx);
-
-  // 6. Create resource tracker for cleanup
+  // 5. Create resource tracker for cleanup
   const resources = new ResourceTracker();
 
   // Initialize operation tracker for imperative operations
   const operationTracker = ctx.operationTracker ?? new OperationTracker();
   ctx.operationTracker = operationTracker;
 
-  // 7. Build updated context with trace info and analytics
+  // 6. Build updated context with trace info
   const updatedCtx = buildExecutionContext(
     ctx,
     chainLimits,
     chainState,
     remainingMs,
-    analyticsEmitter,
+    undefined, // analytics emitter (deprecated, will use platform.analytics)
     resources,
     invokeBroker,
     artifactBroker,
@@ -142,17 +138,8 @@ export async function execute(
   }
 
   // Emit started event
-  await emitAnalyticsEvent('plugin.exec.started', {
-    pluginId: ctx.pluginId,
-    pluginVersion: ctx.pluginVersion,
-    routeOrCommand: ctx.routeOrCommand,
-    handlerRef: `${args.handler.file}#${args.handler.export}`,
-    requestId: ctx.requestId,
-    traceId: updatedCtx.traceId,
-    spanId: updatedCtx.spanId,
-    parentSpanId: updatedCtx.parentSpanId,
-    depth: (chainState as any).depth ?? 0,
-  });
+  // TODO: Re-enable analytics using platform.analytics.track()
+  // emitAnalyticsEvent('plugin.exec.started', { ... });
 
   // Check if profiling is enabled
   // Use updatedCtx after it's built to ensure debugLevel is preserved
@@ -204,14 +191,8 @@ export async function execute(
           undefined // No original error for capability check
         );
 
-        await emitAnalyticsEvent('plugin.permission.denied', {
-          pluginId: ctx.pluginId,
-          pluginVersion: ctx.pluginVersion,
-          routeOrCommand: ctx.routeOrCommand,
-          reason: 'capability_missing',
-          missing: capabilityCheck.missing,
-          requestId: ctx.requestId,
-        });
+        // TODO: Re-enable analytics using platform.analytics.track()
+        // await emitAnalyticsEvent('plugin.permission.denied', { ... });
 
         return {
           ok: false,
@@ -363,15 +344,7 @@ export async function execute(
           if (!res || !res.ok) {
             logger.debug('Handling error case', { resOk: res?.ok });
       // Runner returned error - handle it
-      await emitAnalyticsEvent('plugin.exec.failed', {
-        pluginId: ctx.pluginId,
-        pluginVersion: ctx.pluginVersion,
-        routeOrCommand: ctx.routeOrCommand,
-        reason: 'handler_error',
-        requestId: ctx.requestId,
-        errorCode: res.error?.code || 'UNKNOWN',
-        timeMs: res.metrics.timeMs,
-      });
+      // // TODO: Re-enable analytics using platform.analytics.track()
 
       // Stop profiler and add profile data to result (even on error)
       if (profiler) {
@@ -455,14 +428,7 @@ export async function execute(
           undefined // No original error for validation
         );
 
-        await emitAnalyticsEvent('plugin.exec.failed', {
-          pluginId: ctx.pluginId,
-          pluginVersion: ctx.pluginVersion,
-          routeOrCommand: ctx.routeOrCommand,
-          reason: 'output_validation_failed',
-          requestId: ctx.requestId,
-          timeMs: metrics.timeMs,
-        });
+        // // TODO: Re-enable analytics using platform.analytics.track()
 
         // Auto-save snapshot on validation error
         try {
@@ -508,24 +474,11 @@ export async function execute(
         hasData: !!res.data,
       });
       await writeArtifactsIfAny(args.manifest, ctx, res.data, artifactBroker).catch((err) => {
-        emitAnalyticsEvent('plugin.artifact.failed', {
-          pluginId: ctx.pluginId,
-          pluginVersion: ctx.pluginVersion,
-          routeOrCommand: ctx.routeOrCommand,
-          requestId: ctx.requestId,
-          error: err instanceof Error ? err.message : String(err),
-        });
+        // TODO: Re-enable analytics using platform.analytics.track()
+        // emitAnalyticsEvent('plugin.artifact.failed', { ... });
       });
 
-      await emitAnalyticsEvent('plugin.exec.finished', {
-        pluginId: ctx.pluginId,
-        pluginVersion: ctx.pluginVersion,
-        routeOrCommand: ctx.routeOrCommand,
-        requestId: ctx.requestId,
-        timeMs: res.metrics.timeMs,
-        cpuMs: res.metrics.cpuMs,
-        memMb: res.metrics.memMb,
-      });
+      // // TODO: Re-enable analytics using platform.analytics.track()
 
       // Stop profiler and add profile data to result
       let profileData: any;
@@ -604,15 +557,7 @@ export async function execute(
       error // Pass original error for root cause analysis
     );
 
-    await emitAnalyticsEvent('plugin.exec.failed', {
-      pluginId: ctx.pluginId,
-      pluginVersion: ctx.pluginVersion,
-      routeOrCommand: ctx.routeOrCommand,
-      reason: 'execution_error',
-      requestId: ctx.requestId,
-      timeMs,
-      error: error instanceof Error ? error.message : String(error),
-    });
+    // // TODO: Re-enable analytics using platform.analytics.track()
 
     // Auto-save snapshot on error (for debugging)
     try {

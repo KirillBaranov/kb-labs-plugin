@@ -11,7 +11,6 @@ import type {
   EventEnvelope,
   EventScope,
 } from './events/index';
-import type { AnalyticsEmitter } from './analytics/emitter';
 import type { OperationTracker } from './operations/operation-tracker';
 import type { TelemetryEvent, TelemetryEmitResult } from '@kb-labs/core-types';
 

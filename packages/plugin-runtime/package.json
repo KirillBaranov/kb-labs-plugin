@@ -32,6 +32,8 @@
     "test:watch": "vitest -c ../../vitest.config.ts"
   },
   "dependencies": {
+    "@kb-labs/core-platform": "link:../../../kb-labs-core/packages/core-platform",
+    "@kb-labs/core-runtime": "link:../../../kb-labs-core/packages/core-runtime",
     "@kb-labs/rest-api-contracts": "link:../../../kb-labs-rest-api/packages/rest-api-contracts",
     "@kb-labs/core-sandbox": "link:../../../kb-labs-core/packages/core-sandbox",
     "@kb-labs/core-state-broker": "link:../../../kb-labs-core/packages/core-state-broker",

@@ -10,7 +10,7 @@ import type { PermissionSpec } from '@kb-labs/plugin-manifest';
 import type { FSLike, ExecutionContext } from '../types';
 import type { OperationTracker } from '../operations/operation-tracker';
 import { minimatch } from 'minimatch';
-import { emitAnalyticsEvent } from '../analytics';
+import { emitAnalyticsEvent } from '../analytics-stub';
 
 const MAX_INLINE_CONTENT_LENGTH = 4096;
 const MAX_TRACKED_CONTENT_BYTES = 5 * 1024 * 1024; // 5MB safety cap
@@ -164,14 +164,8 @@ async function checkFsPermission(
   if (isArtifactPath(normalized, baseDir)) {
     // Log bypass attempt
     if (ctx) {
-      await emitAnalyticsEvent('plugin.fs.bypass.attempt', {
-        caller: ctx.pluginId,
-        path: filePath,
-        operation: isWrite ? 'write' : 'read',
-        traceId: ctx.traceId,
-        spanId: ctx.spanId,
-        requestId: ctx.requestId,
-      });
+      // TODO: Re-enable analytics using platform.analytics.track()
+      // await emitAnalyticsEvent('plugin.fs.bypass.attempt', { ... });
     }
 
     throw new Error(

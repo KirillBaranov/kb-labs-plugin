@@ -116,3 +116,197 @@ export function createNoopPresenter(): PresenterFacade {
   return noopPresenterInstance;
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// UI FACADE TYPES (extended presenter with rich formatting)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** Color function type */
+export type ColorFn = (text: string) => string;
+
+/** Available color palette */
+export interface UIColors {
+  // Semantic colors
+  success: ColorFn;
+  error: ColorFn;
+  warning: ColorFn;
+  info: ColorFn;
+  // Accent palette
+  primary: ColorFn;
+  accent: ColorFn;
+  highlight: ColorFn;
+  secondary: ColorFn;
+  emphasis: ColorFn;
+  muted: ColorFn;
+  foreground: ColorFn;
+  // Formatting
+  dim: ColorFn;
+  bold: ColorFn;
+  underline: ColorFn;
+  inverse: ColorFn;
+}
+
+/** Available symbols */
+export interface UISymbols {
+  success: string;
+  error: string;
+  warning: string;
+  info: string;
+  bullet: string;
+  pointer: string;
+  separator: string;
+  border: string;
+}
+
+/** Box options */
+export interface BoxOptions {
+  maxWidth?: number;
+}
+
+/** Table row type */
+export type TableRow = (string | number)[];
+
+/** Key-value pair options */
+export interface KeyValueOptions {
+  padKeys?: boolean;
+  indent?: number;
+}
+
+/**
+ * UI facade for plugin output.
+ * Extends PresenterFacade with rich formatting capabilities.
+ */
+export interface UIFacade extends PresenterFacade {
+  // Semantic output
+  success?(text: string): void;
+  warning?(text: string): void;
+  info?(text: string): void;
+
+  // Formatted output
+  headline?(text: string): void;
+  box?(title: string, content?: string[], options?: BoxOptions): void;
+  section?(header: string, content: string[]): void;
+  table?(rows: TableRow[], headers?: string[]): void;
+  keyValue?(pairs: Record<string, string | number>, options?: KeyValueOptions): void;
+  list?(items: string[]): void;
+
+  // Styling utilities
+  readonly colors: UIColors;
+  readonly symbols: UISymbols;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// NO-OP UI IMPLEMENTATION
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** Identity function for pass-through colors */
+const identity: ColorFn = (text: string) => text;
+
+/** Default colors (no-op, pass-through) */
+const noopColors: UIColors = {
+  // Semantic
+  success: identity,
+  error: identity,
+  warning: identity,
+  info: identity,
+  // Accent
+  primary: identity,
+  accent: identity,
+  highlight: identity,
+  secondary: identity,
+  emphasis: identity,
+  muted: identity,
+  foreground: identity,
+  // Formatting
+  dim: identity,
+  bold: identity,
+  underline: identity,
+  inverse: identity,
+};
+
+/** Default symbols (ASCII fallback) */
+const noopSymbols: UISymbols = {
+  success: '✓',
+  error: '✗',
+  warning: '⚠',
+  info: 'ℹ',
+  bullet: '•',
+  pointer: '›',
+  separator: '─',
+  border: '│',
+};
+
+/**
+ * No-op UI facade with default colors and symbols.
+ * Used when the host does not provide rich UI capabilities.
+ */
+class NoopUI implements UIFacade {
+  readonly colors = noopColors;
+  readonly symbols = noopSymbols;
+
+  message(): void {
+    // intentionally empty
+  }
+
+  progress(): void {
+    // intentionally empty
+  }
+
+  json(): void {
+    // intentionally empty
+  }
+
+  error(): void {
+    // intentionally empty
+  }
+
+  async confirm(_message: string, options?: ConfirmOptions): Promise<boolean> {
+    return options?.default ?? false;
+  }
+
+  success(): void {
+    // intentionally empty
+  }
+
+  warning(): void {
+    // intentionally empty
+  }
+
+  info(): void {
+    // intentionally empty
+  }
+
+  headline(): void {
+    // intentionally empty
+  }
+
+  box(): void {
+    // intentionally empty
+  }
+
+  section(): void {
+    // intentionally empty
+  }
+
+  table(): void {
+    // intentionally empty
+  }
+
+  keyValue(): void {
+    // intentionally empty
+  }
+
+  list(): void {
+    // intentionally empty
+  }
+}
+
+const noopUIInstance = new NoopUI();
+
+/**
+ * Create a no-op UI facade with default colors and symbols.
+ * Use this when creating PluginContext without a real presenter.
+ */
+export function createNoopUI(): UIFacade {
+  return noopUIInstance;
+}
+

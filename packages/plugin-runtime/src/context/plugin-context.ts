@@ -3,133 +3,223 @@
  * Unified PluginContext factory and supporting types.
  */
 
-import type { ArtifactBroker } from '../artifacts/broker';
-import type { InvokeBroker } from '../invoke/broker';
-import type { JobBroker } from '../jobs/broker';
 import {
-  createNoopPresenter,
+  createNoopUI,
   type PresenterFacade,
   type PresenterProgressPayload,
+  type UIFacade,
+  type UIColors,
+  type UISymbols,
+  type ColorFn,
+  type BoxOptions,
+  type TableRow,
+  type KeyValueOptions,
 } from '../presenter/presenter-facade';
-import {
-  createNoopAnalyticsEmitter,
-  type AnalyticsEmitter,
-  type AnalyticsEmitOptions,
-} from '../analytics/emitter';
-import {
-  createNoopEventBridge,
-  type PluginEventBridge,
-} from './plugin-events';
-import {
-  CapabilityFlag,
-  createCapabilitySet,
-  type CapabilitySet,
-} from './capabilities';
-import type {
-  PluginEventDefinition,
-  PluginEventEnvelope,
-  PluginEventSchemaRegistry,
-} from './event-types';
 import type { PluginHostType } from './host';
-import type { OperationWithMetadata } from '@kb-labs/setup-engine-operations';
 
+// Platform abstractions
+import type {
+  IVectorStore,
+  ILLM,
+  IEmbeddings,
+  ICache,
+  IStorage,
+  ILogger,
+  IEventBus,
+  IInvoke,
+  IArtifacts,
+  IWorkflowEngine,
+  IJobScheduler,
+  ICronManager,
+  IResourceManager,
+  IAnalytics,
+} from '@kb-labs/core-platform';
+
+// Re-export UI types for convenience
+export type { UIFacade, UIColors, UISymbols, ColorFn, BoxOptions, TableRow, KeyValueOptions };
+
+/**
+ * Platform services available through PluginContext.
+ *
+ * All platform services are declared in manifest.platform.requires/optional.
+ * If a service is in `requires`, it's guaranteed to be available (non-null).
+ * If a service is in `optional`, it may be undefined.
+ *
+ * @example
+ * ```json
+ * {
+ *   "platform": {
+ *     "requires": ["embeddings", "vectorStore"],
+ *     "optional": ["llm"]
+ *   }
+ * }
+ * ```
+ *
+ * ```typescript
+ * // Required services - guaranteed available
+ * const embedding = await ctx.platform.embeddings.embed(text);
+ * await ctx.platform.vectorStore.upsert([...]);
+ *
+ * // Optional services - need check
+ * if (ctx.platform.llm) {
+ *   await ctx.platform.llm.complete(prompt);
+ * }
+ * ```
+ */
+export interface PlatformServices {
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ADAPTER SERVICES (replaceable via kb.config.json)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /** Vector store for semantic search (e.g., Qdrant, Pinecone) */
+  vectorStore?: IVectorStore;
+  /** LLM for text generation (e.g., OpenAI, Anthropic) */
+  llm?: ILLM;
+  /** Embeddings for vector generation */
+  embeddings?: IEmbeddings;
+  /** Cache for fast key-value storage */
+  cache?: ICache;
+  /** Storage for file operations */
+  storage?: IStorage;
+  /** Structured logger */
+  logger?: ILogger;
+  /** Analytics for tracking events */
+  analytics?: IAnalytics;
+  /** Event bus for pub/sub */
+  events?: IEventBus;
+  /** Inter-plugin invocation */
+  invoke?: IInvoke;
+  /** Artifact storage for plugin outputs */
+  artifacts?: IArtifacts;
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CORE FEATURES (built-in, not replaceable)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /** Workflow engine for multi-step orchestration */
+  workflows?: IWorkflowEngine;
+  /** Job scheduler for background tasks */
+  jobs?: IJobScheduler;
+  /** Cron manager for scheduled tasks */
+  cron?: ICronManager;
+  /** Resource manager for quota enforcement */
+  resources?: IResourceManager;
+
+  /**
+   * Check if a service is explicitly configured (not using fallback).
+   * @param service - Service name (e.g., 'llm', 'vectorStore', 'workflows')
+   * @returns true if service is configured, false if using NoOp/fallback
+   */
+  isConfigured(service: string): boolean;
+}
+
+/**
+ * Plugin context metadata.
+ * Contains environment and execution context information.
+ */
 export interface PluginContextMetadata {
-  /**
-    * Optional workflow run identifier (when executed via workflow host).
-    */
+  /** Current working directory */
+  cwd?: string;
+  /** Output directory for generated files */
+  outdir?: string;
+  /** Workflow run identifier (when executed via workflow host) */
   runId?: string;
-  /**
-    * Optional workflow step identifier.
-    */
+  /** Workflow step identifier */
   stepId?: string;
-  /**
-    * Additional host-specific metadata.
-    */
+  /** Additional host-specific metadata */
   [key: string]: unknown;
 }
 
 /**
- * Context for plugin commands (sandbox, restricted)
+ * Context for plugin commands.
  *
  * Used by:
  * - defineCommand() handlers (CLI adapter)
  * - definePluginHandler() handlers (REST adapter)
  *
- * SAME context for CLI and REST! The execution path is identical:
- * Both run through runtime.execute() → sandbox (child process) → handler.
+ * The context provides:
+ * - Plugin identity (pluginId, version, requestId)
+ * - UI output abstraction (ctx.ui)
+ * - Platform services (ctx.platform)
+ * - Execution metadata (ctx.metadata)
  *
- * The ONLY difference:
- * - CLI: presenter is CliPresenter (terminal output)
- * - REST: presenter is HttpPresenter (buffering only, no terminal)
- *
- * @example CLI handler
+ * @example
  * ```typescript
  * import { defineCommand, type PluginContext } from '@kb-labs/plugin-runtime';
  *
  * export const run = defineCommand({
- *   name: 'devlink:plan',
+ *   name: 'mind:rag-index',
  *   async handler(ctx: PluginContext, argv, flags) {
- *     // Sandbox - restricted access via brokers
- *     ctx.presenter.message('Planning...');
- *     await ctx.invoke?.({ pluginId: 'other', command: 'run' });
- *     await ctx.artifacts?.write({ key: 'plan', data: plan });
- *   }
- * });
- * ```
+ *     ctx.ui.message('Starting indexing...');
  *
- * @example REST handler
- * ```typescript
- * import { definePluginHandler, type PluginContext } from '@kb-labs/plugin-runtime';
+ *     // Platform services (declared in manifest.platform.requires)
+ *     const embedding = await ctx.platform.embeddings.embed(text);
+ *     await ctx.platform.vectorStore.upsert([{ id: 'doc', vector: embedding }]);
  *
- * export const handlePlan = definePluginHandler({
- *   async handle(input, ctx: PluginContext) {
- *     // SAME APIs as CLI!
- *     ctx.presenter.message('Planning...');  // Buffered, no terminal
- *     await ctx.invoke?.({ pluginId: 'other', command: 'run' });
- *     await ctx.artifacts?.write({ key: 'plan', data: plan });
- *     return plan;
+ *     // Optional services (declared in manifest.platform.optional)
+ *     if (ctx.platform.llm) {
+ *       const summary = await ctx.platform.llm.complete('Summarize...');
+ *     }
+ *
+ *     ctx.ui.message('Done!');
  *   }
  * });
  * ```
  */
 export interface PluginContext {
-  host: PluginHostType;
-  requestId: string;
-  pluginId: string;
-  pluginVersion: string;
-  tenantId?: string;
-  presenter: PresenterFacade;
-  events: PluginEventBridge;
-  analytics: AnalyticsEmitter;
-  artifacts?: ArtifactBroker;
-  invoke?: InvokeBroker;
-  jobs?: JobBroker;
-  capabilities: CapabilitySet;
-  metadata?: PluginContextMetadata;
-  getTrackedOperations?: () => OperationWithMetadata[];
+  /** Execution host type (cli, rest, workflow, daemon) */
+  readonly host: PluginHostType;
+  /** Unique request identifier */
+  readonly requestId: string;
+  /** Plugin identifier */
+  readonly pluginId: string;
+  /** Plugin version */
+  readonly pluginVersion: string;
+  /** Tenant identifier (for multi-tenancy) */
+  readonly tenantId?: string;
+
+  /**
+   * UI output facade.
+   * Use for all user-facing output.
+   */
+  readonly ui: UIFacade;
+
+  /**
+   * Platform services.
+   * Access infrastructure through this object.
+   */
+  readonly platform: PlatformServices;
+
+  /**
+   * Execution metadata.
+   * Contains cwd, outdir, runId, stepId, etc.
+   */
+  readonly metadata: PluginContextMetadata;
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DEPRECATED - for backward compatibility only
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * @deprecated Use ctx.ui instead. Will be removed in v1.0.
+   */
+  readonly presenter: PresenterFacade;
 }
 
+/**
+ * Options for creating PluginContext.
+ */
 export interface PluginContextOptions {
   requestId: string;
   pluginId: string;
   pluginVersion: string;
   tenantId?: string;
-  presenter?: PresenterFacade;
-  events?: PluginEventBridge;
-  analytics?: AnalyticsEmitter;
-  artifacts?: ArtifactBroker;
-  invoke?: InvokeBroker;
-  jobs?: JobBroker;
-  capabilities?: Iterable<CapabilityFlag>;
+  /** UI facade (presenter) */
+  ui?: UIFacade;
+  /** Platform services */
+  platform?: Partial<PlatformServices>;
+  /** Execution metadata */
   metadata?: PluginContextMetadata;
-  /**
-   * Hook to expose tracked operations captured by the runtime.
-   */
-  getTrackedOperations?: () => OperationWithMetadata[];
-  /**
-   * Event definitions to pre-register on the bridge.
-   */
-  eventDefinitions?: PluginEventDefinition[];
 }
 
 /**
@@ -137,68 +227,17 @@ export interface PluginContextOptions {
  */
 export function createPluginContext(
   host: PluginHostType,
-  options: PluginContextOptions,
+  options: PluginContextOptions
 ): PluginContext {
-  const presenter = options.presenter ?? createNoopPresenter();
-  const events = options.events ?? createNoopEventBridge();
-  const analytics = options.analytics ?? createNoopAnalyticsEmitter();
+  const ui = options.ui ?? createNoopUI();
+  const metadata: PluginContextMetadata = options.metadata ?? {};
 
-  if (options.eventDefinitions) {
-    for (const definition of options.eventDefinitions) {
-      events.register(definition);
-    }
-  }
-
-  const capabilitySet = createCapabilitySet(options.capabilities);
-  const presenterProvided = options.presenter !== undefined;
-  const eventsProvided = options.events !== undefined;
-  const analyticsProvided = options.analytics !== undefined;
-  const artifactsProvided = options.artifacts !== undefined;
-  const invokeProvided = options.invoke !== undefined;
-  const jobsProvided = options.jobs !== undefined;
-  const getTrackedOperationsFn = options.getTrackedOperations;
-
-  if (presenterProvided) {
-    capabilitySet.extend([
-      CapabilityFlag.PresenterMessage,
-      CapabilityFlag.PresenterProgress,
-      CapabilityFlag.PresenterJson,
-      CapabilityFlag.PresenterError,
-    ]);
-  }
-
-  if (eventsProvided) {
-    capabilitySet.extend([
-      CapabilityFlag.EventsEmit,
-      CapabilityFlag.EventsSchemaRegistration,
-    ]);
-  }
-
-  if (analyticsProvided) {
-    capabilitySet.extend([CapabilityFlag.AnalyticsEmit]);
-    if (typeof analytics.flush === 'function') {
-      capabilitySet.extend([CapabilityFlag.AnalyticsFlush]);
-    }
-  }
-
-  if (artifactsProvided) {
-    capabilitySet.extend([
-      CapabilityFlag.ArtifactsRead,
-      CapabilityFlag.ArtifactsWrite,
-    ]);
-  }
-
-  if (invokeProvided) {
-    capabilitySet.extend([CapabilityFlag.Invoke]);
-  }
-
-  if (jobsProvided) {
-    capabilitySet.extend([CapabilityFlag.JobsSubmit, CapabilityFlag.JobsSchedule]);
-  }
-
-  if (options.tenantId) {
-    capabilitySet.extend([CapabilityFlag.MultiTenant]);
-  }
+  // Merge provided platform services with default isConfigured implementation
+  const platform: PlatformServices = {
+    ...options.platform,
+    // Default isConfigured implementation
+    isConfigured: options.platform?.isConfigured ?? (() => false),
+  };
 
   return Object.freeze({
     host,
@@ -206,28 +245,34 @@ export function createPluginContext(
     pluginId: options.pluginId,
     pluginVersion: options.pluginVersion,
     tenantId: options.tenantId,
-    presenter,
-    events,
-    analytics,
-    artifacts: options.artifacts,
-    invoke: options.invoke,
-    jobs: options.jobs,
-    capabilities: capabilitySet,
-    metadata: options.metadata,
-    getTrackedOperations: getTrackedOperationsFn,
+    ui,
+    platform,
+    metadata,
+    // Backward compatibility
+    presenter: ui,
   }) satisfies PluginContext;
 }
 
+// Re-export types
 export type {
-  PluginEventDefinition,
-  PluginEventEnvelope,
-  PluginEventSchemaRegistry,
   PresenterFacade,
   PresenterProgressPayload,
-  AnalyticsEmitter,
-  AnalyticsEmitOptions,
-  PluginEventBridge,
 };
 
-
-
+// Re-export platform types for convenience
+export type {
+  IVectorStore,
+  ILLM,
+  IEmbeddings,
+  ICache,
+  IStorage,
+  ILogger,
+  IEventBus,
+  IInvoke,
+  IArtifacts,
+  IAnalytics,
+  IWorkflowEngine,
+  IJobScheduler,
+  ICronManager,
+  IResourceManager,
+} from '@kb-labs/core-platform';

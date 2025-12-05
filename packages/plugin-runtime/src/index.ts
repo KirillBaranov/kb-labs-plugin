@@ -92,10 +92,6 @@ export {
   type ArtifactWriteContext,
 } from './artifacts';
 
-// Analytics
-export { emitAnalyticsEvent, setTelemetryEmitter, getTelemetryEmitter } from './analytics';
-export { createNoopAnalyticsEmitter } from './analytics/emitter';
-
 // Utils
 export { createId, hashManifest } from './utils';
 
@@ -209,6 +205,7 @@ export type {
 // Unified Plugin Context
 export {
   createPluginContext,
+  createPluginContextWithPlatform,
   createCapabilitySet,
   createEventSchemaRegistry,
   createNoopEventBridge,
@@ -220,6 +217,7 @@ export type {
   PluginContext,
   PluginContextOptions,
   PluginContextMetadata,
+  CreatePluginContextWithPlatformOptions,
   CapabilitySet,
   PluginEventDefinition,
   PluginEventEnvelope,
@@ -229,8 +227,8 @@ export type {
   KnownPluginHost,
   PresenterFacade,
   PresenterProgressPayload,
-  AnalyticsEmitter,
-  AnalyticsEmitOptions,
+  PlatformServices,
+  UIFacade,
 } from './context/index';
 export { CapabilityFlag } from './context/index';
 

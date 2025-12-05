@@ -19,12 +19,21 @@ export {
 } from './http-presenter';
 export {
   createNoopPresenter,
+  createNoopUI,
   type PresenterFacade,
   type PresenterMessageLevel,
   type PresenterMessageOptions,
   type PresenterProgressPayload,
   type PresenterEventPayload,
   type ConfirmOptions,
+  // UI Facade types
+  type UIFacade,
+  type UIColors,
+  type UISymbols,
+  type ColorFn,
+  type BoxOptions,
+  type TableRow,
+  type KeyValueOptions,
 } from './presenter-facade';
 
 

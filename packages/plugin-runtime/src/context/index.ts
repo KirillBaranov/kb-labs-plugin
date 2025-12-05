@@ -14,21 +14,28 @@ export {
   createInvokeBroker,
   createShellBroker,
 } from './broker-factory';
-export { createAnalyticsEmitter } from './analytics-factory';
 export {
   createPluginContext,
   type PluginContext,
   type PluginContextOptions,
   type PluginContextMetadata,
-  type PluginEventDefinition,
-  type PluginEventEnvelope,
-  type PluginEventSchemaRegistry,
-  type PluginEventBridge,
+  type PlatformServices,
+  type UIFacade,
   type PresenterFacade,
   type PresenterProgressPayload,
-  type AnalyticsEmitter,
-  type AnalyticsEmitOptions,
 } from './plugin-context';
+export {
+  createPluginContextWithPlatform,
+  type CreatePluginContextWithPlatformOptions,
+} from './plugin-context-factory';
+// Event types are now exported from event-types.ts
+export type {
+  PluginEventDefinition,
+  PluginEventEnvelope,
+  PluginEventSchemaRegistry,
+} from './event-types';
+// Plugin event bridge from plugin-events.ts
+export type { PluginEventBridge } from './plugin-events';
 export {
   KNOWN_PLUGIN_HOSTS,
   isKnownPluginHost,

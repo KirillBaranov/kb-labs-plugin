@@ -3,9 +3,14 @@
  * Manifest validation on startup
  */
 
-import type { ManifestV2, RestRouteDecl, CliCommandDecl } from '@kb-labs/plugin-manifest';
+import type { ManifestV2 } from '@kb-labs/plugin-manifest';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import {
+  validatePlatformRequirements,
+  formatPlatformValidationError,
+  formatPlatformValidationWarning,
+} from './validation/platform-requirements';
 
 /**
  * Validation result
@@ -17,18 +22,32 @@ export interface ValidationResult {
 }
 
 /**
+ * Options for manifest validation
+ */
+export interface ValidateManifestOptions {
+  /** Path to manifest file (for resolving handlers) */
+  manifestPath: string;
+  /** Set of configured platform services (from platform.getConfiguredServices()) */
+  configuredServices?: Set<string>;
+}
+
+/**
  * Validate manifest on startup
  * @param manifest - Plugin manifest
- * @param manifestPath - Path to manifest file (for resolving handlers)
+ * @param options - Validation options
  * @returns Validation result
  */
 export async function validateManifestOnStartup(
   manifest: ManifestV2,
-  manifestPath: string
+  options: ValidateManifestOptions | string
 ): Promise<ValidationResult> {
+  // Support legacy signature: (manifest, manifestPath)
+  const opts: ValidateManifestOptions =
+    typeof options === 'string' ? { manifestPath: options } : options;
+
   const errors: string[] = [];
   const warnings: string[] = [];
-  const manifestDir = path.dirname(manifestPath);
+  const manifestDir = path.dirname(opts.manifestPath);
 
   // 1. Check handler paths exist
   if (manifest.rest?.routes) {
@@ -154,6 +173,26 @@ export async function validateManifestOnStartup(
           `Artifact ${artifact.id}: pathTemplate should include {runId} or {ts} for uniqueness`
         );
       }
+    }
+  }
+
+  // 5. Check platform requirements
+  if (manifest.platform && opts.configuredServices) {
+    const platformResult = validatePlatformRequirements(
+      manifest.platform,
+      opts.configuredServices
+    );
+
+    if (!platformResult.valid) {
+      errors.push(
+        formatPlatformValidationError(manifest.id, platformResult.missingRequired)
+      );
+    }
+
+    if (platformResult.missingOptional.length > 0) {
+      warnings.push(
+        formatPlatformValidationWarning(manifest.id, platformResult.missingOptional)
+      );
     }
   }
 

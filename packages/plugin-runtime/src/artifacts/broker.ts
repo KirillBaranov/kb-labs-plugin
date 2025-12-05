@@ -16,12 +16,12 @@ import type {
 } from '@kb-labs/plugin-contracts';
 import { ErrorCode } from '@kb-labs/rest-api-contracts';
 import { toErrorEnvelope, createErrorContext } from '../errors';
-import { emitAnalyticsEvent } from '../analytics';
 import { createRuntimeLogger } from '../logging';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as crypto from 'node:crypto';
 import { minimatch } from 'minimatch';
+import { emitAnalyticsEvent } from '../analytics-stub';
 
 /**
  * Artifact lifecycle status
@@ -199,14 +199,8 @@ export class ArtifactBroker {
       // 2. Validate read permissions
       const permissionCheck = this.checkReadPermission(request);
       if (!permissionCheck.allow) {
-        await emitAnalyticsEvent('artifact.read.denied', {
-          caller: this.callerCtx.pluginId,
-          uri: request.uri,
-          reason: permissionCheck.reason,
-          traceId: this.callerCtx.traceId,
-          spanId: this.callerCtx.spanId,
-          requestId: this.callerCtx.requestId,
-        });
+        // TODO: Re-enable analytics using platform.analytics.track()
+        // await emitAnalyticsEvent('artifact.read.denied', { ... });
 
         const error = toErrorEnvelope(
           ErrorCode.ARTIFACT_READ_DENIED,
@@ -329,15 +323,7 @@ export class ArtifactBroker {
       }
 
       // 10. Emit read event
-      await emitAnalyticsEvent('artifact.read', {
-        caller: this.callerCtx.pluginId,
-        uri: request.uri,
-        size: Buffer.byteLength(data),
-        sha256: meta?.sha256,
-        traceId: this.callerCtx.traceId,
-        spanId: this.callerCtx.spanId,
-        requestId: this.callerCtx.requestId,
-      });
+      // TODO: Re-enable analytics using platform.analytics.track()
 
       return Buffer.from(data, 'utf8');
     } catch (error) {
@@ -400,14 +386,7 @@ export class ArtifactBroker {
         reason: permissionCheck.reason,
       });
       if (!permissionCheck.allow) {
-        await emitAnalyticsEvent('artifact.write.denied', {
-          caller: this.callerCtx.pluginId,
-          uri: request.uri,
-          reason: permissionCheck.reason,
-          traceId: this.callerCtx.traceId,
-          spanId: this.callerCtx.spanId,
-          requestId: this.callerCtx.requestId,
-        });
+        // TODO: Re-enable analytics using platform.analytics.track()
 
         const error = toErrorEnvelope(
           ErrorCode.ARTIFACT_WRITE_DENIED,
@@ -569,16 +548,7 @@ export class ArtifactBroker {
       });
 
       // 8. Emit write event
-      await emitAnalyticsEvent('artifact.write', {
-        caller: this.callerCtx.pluginId,
-        uri: request.uri,
-        size,
-        sha256,
-        contentType,
-        traceId: this.callerCtx.traceId,
-        spanId: this.callerCtx.spanId,
-        requestId: this.callerCtx.requestId,
-      });
+      // TODO: Re-enable analytics using platform.analytics.track()
 
       return {
         path: physicalPath,

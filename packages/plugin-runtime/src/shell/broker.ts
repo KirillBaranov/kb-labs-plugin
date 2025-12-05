@@ -16,13 +16,13 @@ import type {
 import { resolveShellDecision } from './permissions';
 import { checkDangerousCommand, formatConfirmationMessage } from './dangerous';
 import { toErrorEnvelope, createErrorContext } from '../errors';
-import { emitAnalyticsEvent } from '../analytics';
 import { createRuntimeLogger } from '../logging';
 import { ErrorCode } from '@kb-labs/rest-api-contracts';
 import { execa } from 'execa';
 import { spawn as nodeSpawn } from 'node:child_process';
 import type { ChildProcess } from 'node:child_process';
 import { pickEnv } from '../io/env';
+import { emitAnalyticsEvent } from '../analytics-stub';
 
 // Error codes for shell operations (using string constants for now)
 const SHELL_PERMISSION_DENIED = 'SHELL_PERMISSION_DENIED';
@@ -62,16 +62,8 @@ export class ShellBroker {
   ): Promise<boolean> {
     const message = formatConfirmationMessage(spec, reason);
 
-    // Emit analytics event
-    await emitAnalyticsEvent('shell.dangerous.prompted', {
-      caller: this.callerCtx.pluginId,
-      command: spec.command,
-      args: spec.args,
-      reason,
-      traceId: this.callerCtx.traceId,
-      spanId: this.callerCtx.spanId,
-      requestId: this.callerCtx.requestId,
-    });
+    // TODO: Re-enable analytics using platform.analytics.track()
+    // await emitAnalyticsEvent('shell.dangerous.prompted', { ... });
 
     // Try presenter first (CLI mode)
     if (this.presenter?.confirm) {
@@ -82,23 +74,9 @@ export class ShellBroker {
         });
 
         if (confirmed) {
-          await emitAnalyticsEvent('shell.dangerous.confirmed', {
-            caller: this.callerCtx.pluginId,
-            command: spec.command,
-            args: spec.args,
-            traceId: this.callerCtx.traceId,
-            spanId: this.callerCtx.spanId,
-            requestId: this.callerCtx.requestId,
-          });
+          // TODO: Re-enable analytics using platform.analytics.track()
         } else {
-          await emitAnalyticsEvent('shell.dangerous.denied', {
-            caller: this.callerCtx.pluginId,
-            command: spec.command,
-            args: spec.args,
-            traceId: this.callerCtx.traceId,
-            spanId: this.callerCtx.spanId,
-            requestId: this.callerCtx.requestId,
-          });
+          // TODO: Re-enable analytics using platform.analytics.track()
         }
 
         return confirmed;
@@ -126,17 +104,11 @@ export class ShellBroker {
             process.removeListener('message', handler);
             const confirmed = msg.payload.confirmed === true;
             if (confirmed) {
-              emitAnalyticsEvent('shell.dangerous.confirmed', {
-                caller: this.callerCtx.pluginId,
-                command: spec.command,
-                args: spec.args,
-              }).catch(() => {});
+              // TODO: Re-enable analytics using platform.analytics.track()
+              // emitAnalyticsEvent('shell.dangerous.confirmed', { ... });
             } else {
-              emitAnalyticsEvent('shell.dangerous.denied', {
-                caller: this.callerCtx.pluginId,
-                command: spec.command,
-                args: spec.args,
-              }).catch(() => {});
+              // TODO: Re-enable analytics using platform.analytics.track()
+              // emitAnalyticsEvent('shell.dangerous.denied', { ... });
             }
             resolve(confirmed);
           }
@@ -161,12 +133,7 @@ export class ShellBroker {
     }
 
     // No presenter and no IPC - default deny
-    await emitAnalyticsEvent('shell.dangerous.denied', {
-      caller: this.callerCtx.pluginId,
-      command: spec.command,
-      args: spec.args,
-      reason: 'no presenter available',
-    });
+    // TODO: Re-enable analytics using platform.analytics.track()
 
     return false;
   }
@@ -186,12 +153,7 @@ export class ShellBroker {
       // Check dry-run mode
       if (this.callerCtx.dryRun) {
         logger.info('DRY RUN: would execute', { command, args });
-        await emitAnalyticsEvent('shell.exec.started', {
-          caller: this.callerCtx.pluginId,
-          command,
-          args,
-          dryRun: true,
-        });
+        // TODO: Re-enable analytics using platform.analytics.track()
 
         return {
           ok: true,
@@ -213,15 +175,7 @@ export class ShellBroker {
       const permissionCheck = resolveShellDecision(shellPerms, spec);
 
       if (!permissionCheck.allow) {
-        await emitAnalyticsEvent('shell.exec.denied', {
-          caller: this.callerCtx.pluginId,
-          command,
-          args,
-          reason: permissionCheck.reason,
-          traceId: this.callerCtx.traceId,
-          spanId: this.callerCtx.spanId,
-          requestId: this.callerCtx.requestId,
-        });
+        // TODO: Re-enable analytics using platform.analytics.track()
 
         const error = toErrorEnvelope(
           SHELL_PERMISSION_DENIED,
@@ -264,15 +218,7 @@ export class ShellBroker {
       if (dangerousCheck.requireConfirmation) {
         const confirmed = await this.requestConfirmation(spec, dangerousCheck.reason || 'dangerous command');
         if (!confirmed) {
-          await emitAnalyticsEvent('shell.exec.denied', {
-            caller: this.callerCtx.pluginId,
-            command,
-            args,
-            reason: 'dangerous command denied by user',
-            traceId: this.callerCtx.traceId,
-            spanId: this.callerCtx.spanId,
-            requestId: this.callerCtx.requestId,
-          });
+          // TODO: Re-enable analytics using platform.analytics.track()
 
           const error = toErrorEnvelope(
             SHELL_DANGEROUS_DENIED,
@@ -329,14 +275,7 @@ export class ShellBroker {
       }
 
       // 4. Emit started event
-      await emitAnalyticsEvent('shell.exec.started', {
-        caller: this.callerCtx.pluginId,
-        command,
-        args,
-        traceId: this.callerCtx.traceId,
-        spanId: this.callerCtx.spanId,
-        requestId: this.callerCtx.requestId,
-      });
+      // TODO: Re-enable analytics using platform.analytics.track()
 
       // 5. Prepare execution options
       const timeoutMs =
@@ -373,16 +312,7 @@ export class ShellBroker {
 
         const timingMs = Date.now() - startTime;
 
-        await emitAnalyticsEvent('shell.exec.finished', {
-          caller: this.callerCtx.pluginId,
-          command,
-          args,
-          exitCode: result.exitCode,
-          timingMs,
-          traceId: this.callerCtx.traceId,
-          spanId: this.callerCtx.spanId,
-          requestId: this.callerCtx.requestId,
-        });
+        // TODO: Re-enable analytics using platform.analytics.track()
 
         return {
           ok: result.exitCode === 0,
@@ -400,16 +330,7 @@ export class ShellBroker {
 
         // Check if it's a timeout
         if (error && typeof error === 'object' && 'timedOut' in error && error.timedOut) {
-          await emitAnalyticsEvent('shell.exec.failed', {
-            caller: this.callerCtx.pluginId,
-            command,
-            args,
-            reason: 'timeout',
-            timingMs,
-            traceId: this.callerCtx.traceId,
-            spanId: this.callerCtx.spanId,
-            requestId: this.callerCtx.requestId,
-          });
+          // TODO: Re-enable analytics using platform.analytics.track()
 
           const errorEnv = toErrorEnvelope(
             SHELL_TIMEOUT,
@@ -439,18 +360,7 @@ export class ShellBroker {
         const errorMessage = error instanceof Error ? error.message : String(error);
         const exitCode = error && typeof error === 'object' && 'exitCode' in error ? (error.exitCode as number) : 1;
 
-        await emitAnalyticsEvent('shell.exec.failed', {
-          caller: this.callerCtx.pluginId,
-          command,
-          args,
-          reason: 'execution_failed',
-          error: errorMessage,
-          exitCode,
-          timingMs,
-          traceId: this.callerCtx.traceId,
-          spanId: this.callerCtx.spanId,
-          requestId: this.callerCtx.requestId,
-        });
+        // TODO: Re-enable analytics using platform.analytics.track()
 
         const errorEnv = toErrorEnvelope(
           SHELL_EXECUTION_FAILED,
@@ -737,13 +647,7 @@ export class ShellBroker {
         const finalExitCode = exitCode ?? (signal ? 128 : 1);
 
         if (exitCode === 0) {
-          await emitAnalyticsEvent('shell.exec.finished', {
-            caller: this.callerCtx.pluginId,
-            command,
-            args,
-            exitCode: finalExitCode,
-            timingMs,
-          });
+          // TODO: Re-enable analytics using platform.analytics.track()
 
           resolve({
             ok: true,
@@ -753,14 +657,7 @@ export class ShellBroker {
             timingMs,
           });
         } else {
-          await emitAnalyticsEvent('shell.exec.failed', {
-            caller: this.callerCtx.pluginId,
-            command,
-            args,
-            reason: signal ? 'killed' : 'execution_failed',
-            exitCode: finalExitCode,
-            timingMs,
-          });
+          // TODO: Re-enable analytics using platform.analytics.track()
 
           const errorEnv = toErrorEnvelope(
             SHELL_EXECUTION_FAILED,
@@ -795,14 +692,7 @@ export class ShellBroker {
 
         const timingMs = Date.now() - startTime;
 
-        await emitAnalyticsEvent('shell.exec.failed', {
-          caller: this.callerCtx.pluginId,
-          command,
-          args,
-          reason: 'execution_failed',
-          error: error.message,
-          timingMs,
-        });
+        // TODO: Re-enable analytics using platform.analytics.track()
 
         const errorEnv = toErrorEnvelope(
           SHELL_EXECUTION_FAILED,
