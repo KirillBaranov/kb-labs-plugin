@@ -422,6 +422,9 @@ export interface ExecutionContext {
   headers?: HeaderContext;
   /** Tracker that collects file/config operations executed imperatively */
   operationTracker?: OperationTracker;
+
+  /** Platform configuration for worker initialization (NEW) */
+  platformConfig?: any; // PlatformConfig from @kb-labs/core-runtime (avoiding type import to prevent circular dep)
 }
 
 /**

@@ -429,6 +429,11 @@ export async function executeCommand(
 
   // Add traceId to context
   execCtx.traceId = traceId;
+
+  // Add platformConfig from global (set by CLI bootstrap)
+  if ((globalThis as any).__KB_PLATFORM_CONFIG__) {
+    execCtx.platformConfig = (globalThis as any).__KB_PLATFORM_CONFIG__;
+  }
   
   // Set context version
   execCtx.version = CURRENT_CONTEXT_VERSION;
