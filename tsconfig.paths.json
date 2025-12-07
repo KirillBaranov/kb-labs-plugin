@@ -24,6 +24,12 @@
       "@kb-labs/core": [
         "../kb-labs-core/src/index.ts"
       ],
+      "@kb-labs/core-bundle": [
+        "../kb-labs-core/packages/core-bundle/src/index.ts"
+      ],
+      "@kb-labs/core-bundle/*": [
+        "../kb-labs-core/packages/core-bundle/src/*"
+      ],
       "@kb-labs/core-platform": [
         "../kb-labs-core/packages/core-platform/src/index.ts"
       ],
@@ -70,10 +76,10 @@
         "../kb-labs-core/src/*"
       ],
       "@kb-labs/plugin-adapter-rest": [
-        "packages/adapters/rest/src/index.ts"
+        "packages/plugin-adapters/rest/src/index.ts"
       ],
       "@kb-labs/plugin-adapter-rest/*": [
-        "packages/adapters/rest/src/*"
+        "packages/plugin-adapters/rest/src/*"
       ],
       "@kb-labs/plugin-contracts": [
         "packages/plugin-contracts/src/index.ts"

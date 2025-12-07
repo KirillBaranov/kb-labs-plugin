@@ -1,0 +1,20 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": "../../..",
+    "outDir": "./dist",
+    "types": ["node"],
+    "skipLibCheck": true,
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "paths": {
+      "@kb-labs/plugin-manifest": ["packages/manifest/dist"],
+      "@kb-labs/plugin-adapter-rest": ["packages/plugin-adapters/rest/dist"],
+      "@kb-labs/plugin-adapter-rest/header-policy": ["packages/plugin-adapters/rest/src/header-policy.js"],
+      "@kb-labs/rest-api-contracts": ["../kb-labs-rest-api/packages/api-contracts/dist"]
+    }
+  },
+  "include": [
+    "src"
+  ]
+}

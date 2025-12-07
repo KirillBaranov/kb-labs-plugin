@@ -1,4 +1,4 @@
 packages:
   - 'packages/*'
-  - 'packages/adapters/*'
+  - 'packages/plugin-adapters/*'
   - '../kb-labs-devkit'

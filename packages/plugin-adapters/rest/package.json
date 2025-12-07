@@ -1,0 +1,59 @@
+{
+  "name": "@kb-labs/plugin-adapter-rest",
+  "version": "0.1.0",
+  "description": "REST API adapter for KB Labs plugins, providing HTTP endpoints for plugin functionality",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./header-policy": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "clean": "rimraf dist",
+    "build": "pnpm clean && tsup --config tsup.config.ts",
+    "dev": "tsup --config tsup.config.ts --watch",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint . --ignore-pattern 'dist/**'",
+    "lint:fix": "eslint . --fix --ignore-pattern 'dist/**'",
+    "test": "vitest run -c ../../vitest.config.ts",
+    "test:watch": "vitest -c ../../vitest.config.ts"
+  },
+  "dependencies": {
+    "@kb-labs/analytics-sdk-node": "link:../../../../kb-labs-analytics/packages/analytics-sdk-node",
+    "@kb-labs/plugin-manifest": "link:../../plugin-manifest",
+    "@kb-labs/plugin-runtime": "link:../../plugin-runtime",
+    "@kb-labs/core-workspace": "link:../../../../kb-labs-core/packages/core-workspace",
+    "@kb-labs/core-sys": "link:../../../../kb-labs-core/packages/core-sys",
+    "@kb-labs/core-sandbox": "link:../../../../kb-labs-core/packages/core-sandbox",
+    "@kb-labs/rest-api-contracts": "link:../../../../kb-labs-rest-api/packages/rest-api-contracts",
+    "fastify": "^4.28.1",
+    "zod": "^4.1.5",
+    "zod-to-openapi": "^0.2.1",
+    "minimatch": "^10.0.1"
+  },
+  "devDependencies": {
+    "@kb-labs/devkit": "link:../../../../kb-labs-devkit",
+    "@types/node": "^24.3.3",
+    "@typescript-eslint/eslint-plugin": "^8",
+    "@typescript-eslint/parser": "^8",
+    "eslint": "^9",
+    "rimraf": "^6.0.1",
+    "tsup": "^8.5.0",
+    "typescript": "^5.6.3",
+    "vitest": "^3.2.4",
+    "zod": "^4.1.5"
+  }
+}

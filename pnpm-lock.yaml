@@ -86,7 +86,7 @@ importers:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@24.10.0)(jsdom@27.1.0)
 
-  packages/adapters/cli:
+  packages/plugin-adapters/cli:
     dependencies:
       '@aws-sdk/client-s3':
         specifier: ^3.929.0
@@ -174,7 +174,7 @@ importers:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@24.10.0)(jsdom@27.1.0)
 
-  packages/adapters/rest:
+  packages/plugin-adapters/rest:
     dependencies:
       '@kb-labs/analytics-sdk-node':
         specifier: link:../../../../kb-labs-analytics/packages/analytics-sdk-node
@@ -238,7 +238,7 @@ importers:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@24.10.0)(jsdom@27.1.0)
 
-  packages/adapters/studio:
+  packages/plugin-adapters/studio:
     dependencies:
       '@kb-labs/plugin-adapter-rest':
         specifier: link:../rest
