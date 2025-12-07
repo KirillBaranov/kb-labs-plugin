@@ -65,7 +65,9 @@ export function buildExecutionContext(
   invokeBroker: any,
   artifactBroker: any,
   shellBroker?: any,
-  stateAPI?: any
+  stateAPI?: any,
+  manifest?: any,
+  perms?: any
 ): ExecutionContext {
   // Ensure pluginRoot is preserved in updatedCtx (required)
   if (!ctx.pluginRoot) {
@@ -99,6 +101,9 @@ export function buildExecutionContext(
       shell: shellBroker,
       state: stateAPI,
       events: ctx.extensions?.events,
+      // Add manifest and perms for inprocess-runner to build runtime
+      manifest,
+      perms,
     },
     headers: ctx.headers
       ? {

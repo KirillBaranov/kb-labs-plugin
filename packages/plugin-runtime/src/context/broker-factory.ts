@@ -70,13 +70,15 @@ export function createShellBroker(
   manifest: ManifestV2,
   ctx: ExecutionContext,
   presenter?: PresenterFacade,
-  grantedCapabilities?: string[]
+  grantedCapabilities?: string[],
+  overrideShellPerms?: any // Allow passing job-specific shell permissions
 ): ShellBroker | undefined {
-  const shellPerms = manifest.permissions?.shell;
+  // Use override permissions if provided (for jobs), otherwise use manifest permissions
+  const shellPerms = overrideShellPerms ?? manifest.permissions?.shell;
   if (!shellPerms) {
     return undefined;
   }
-  
+
   // Check capability (deny-by-default)
   if (grantedCapabilities) {
     const hasShellCapability = grantedCapabilities.includes(CapabilityFlag.ShellExec);
@@ -84,7 +86,7 @@ export function createShellBroker(
       return undefined;
     }
   }
-  
+
   return new ShellBrokerImpl(manifest, ctx, presenter);
 }
 

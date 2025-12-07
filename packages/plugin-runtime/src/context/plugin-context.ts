@@ -142,6 +142,7 @@ export interface PluginContextMetadata {
  * - UI output abstraction (ctx.ui)
  * - Platform services (ctx.platform)
  * - Execution metadata (ctx.metadata)
+ * - Auto-loaded product configuration (ctx.config)
  *
  * @example
  * ```typescript
@@ -166,7 +167,7 @@ export interface PluginContextMetadata {
  * });
  * ```
  */
-export interface PluginContext {
+export interface PluginContext<TConfig = any> {
   /** Execution host type (cli, rest, workflow, daemon) */
   readonly host: PluginHostType;
   /** Unique request identifier */
@@ -177,6 +178,31 @@ export interface PluginContext {
   readonly pluginVersion: string;
   /** Tenant identifier (for multi-tenancy) */
   readonly tenantId?: string;
+
+  /**
+   * Resolved product configuration.
+   *
+   * Automatically loaded with:
+   * - Profile selection (--profile flag or KB_PROFILE env var)
+   * - Scope selection (based on cwd/executionPath)
+   * - All merge layers (runtime → profile → profile-scope → workspace → CLI)
+   *
+   * @example
+   * ```typescript
+   * interface MyProductConfig {
+   *   engine: 'openai' | 'anthropic';
+   *   maxComments: number;
+   * }
+   *
+   * export const run = defineCommand({
+   *   async handler(ctx: PluginContext<MyProductConfig>) {
+   *     const engine = ctx.config.engine; // typed!
+   *     const maxComments = ctx.config.maxComments;
+   *   }
+   * });
+   * ```
+   */
+  readonly config?: TConfig;
 
   /**
    * UI output facade.
@@ -209,7 +235,7 @@ export interface PluginContext {
 /**
  * Options for creating PluginContext.
  */
-export interface PluginContextOptions {
+export interface PluginContextOptions<TConfig = any> {
   requestId: string;
   pluginId: string;
   pluginVersion: string;
@@ -220,15 +246,17 @@ export interface PluginContextOptions {
   platform?: Partial<PlatformServices>;
   /** Execution metadata */
   metadata?: PluginContextMetadata;
+  /** Resolved product configuration */
+  config?: TConfig;
 }
 
 /**
  * Create a unified `PluginContext` for the specified host.
  */
-export function createPluginContext(
+export function createPluginContext<TConfig = any>(
   host: PluginHostType,
-  options: PluginContextOptions
-): PluginContext {
+  options: PluginContextOptions<TConfig>
+): PluginContext<TConfig> {
   const ui = options.ui ?? createNoopUI();
   const metadata: PluginContextMetadata = options.metadata ?? {};
 
@@ -245,12 +273,13 @@ export function createPluginContext(
     pluginId: options.pluginId,
     pluginVersion: options.pluginVersion,
     tenantId: options.tenantId,
+    config: options.config,
     ui,
     platform,
     metadata,
     // Backward compatibility
     presenter: ui,
-  }) satisfies PluginContext;
+  }) satisfies PluginContext<TConfig>;
 }
 
 // Re-export types

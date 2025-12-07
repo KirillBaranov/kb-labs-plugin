@@ -11,7 +11,7 @@ import type { UIFacade } from './plugin-context';
 /**
  * Options for creating PluginContext with platform integration
  */
-export interface CreatePluginContextWithPlatformOptions {
+export interface CreatePluginContextWithPlatformOptions<TConfig = any> {
   /** Execution host type */
   host: PluginHostType;
   /** Unique request identifier */
@@ -24,6 +24,8 @@ export interface CreatePluginContextWithPlatformOptions {
   tenantId?: string;
   /** UI facade (if not provided, creates appropriate one for host) */
   ui?: UIFacade;
+  /** Resolved product configuration */
+  config?: TConfig;
   /** Additional metadata */
   metadata?: Record<string, unknown>;
 }
@@ -62,9 +64,9 @@ export interface CreatePluginContextWithPlatformOptions {
  * const embedding = await ctx.platform.embeddings?.embed('text');
  * ```
  */
-export function createPluginContextWithPlatform(
-  options: CreatePluginContextWithPlatformOptions
-): PluginContext {
+export function createPluginContextWithPlatform<TConfig = any>(
+  options: CreatePluginContextWithPlatformOptions<TConfig>
+): PluginContext<TConfig> {
   const {
     host,
     requestId,
@@ -72,6 +74,7 @@ export function createPluginContextWithPlatform(
     pluginVersion,
     tenantId,
     ui,
+    config,
     metadata,
   } = options;
 
@@ -103,12 +106,13 @@ export function createPluginContextWithPlatform(
   };
 
   // Create base options
-  const contextOptions: PluginContextOptions = {
+  const contextOptions: PluginContextOptions<TConfig> = {
     requestId,
     pluginId,
     pluginVersion,
     tenantId,
     ui,
+    config,
     platform: platformServices,
     metadata,
   };

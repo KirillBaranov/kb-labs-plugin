@@ -8,6 +8,9 @@ import {
   type PresenterMessageOptions,
   type PresenterProgressPayload,
   type PresenterEventPayload,
+  type UIFacade,
+  type UIColors,
+  type UISymbols,
 } from './presenter-facade';
 
 export type JobRunnerPresenterEvent = PresenterEventPayload & {
@@ -35,13 +38,46 @@ function defaultTimestamp(): string {
   return new Date().toISOString();
 }
 
-export class JobRunnerPresenter implements PresenterFacade {
+export class JobRunnerPresenter implements UIFacade {
   private readonly events: JobRunnerPresenterEvent[] = [];
   private readonly runId?: string;
   private readonly stepId?: string;
   private readonly onEvent?: (event: JobRunnerPresenterEvent) => void | Promise<void>;
   private readonly timestamp: () => string;
   private readonly buffer: boolean;
+
+  // UIFacade properties - no-op implementations for workflow job context
+  readonly colors: UIColors = {
+    // Semantic colors (pass-through)
+    success: (s: string) => s,
+    error: (s: string) => s,
+    warning: (s: string) => s,
+    info: (s: string) => s,
+    // Accent palette (pass-through)
+    primary: (s: string) => s,
+    accent: (s: string) => s,
+    highlight: (s: string) => s,
+    secondary: (s: string) => s,
+    emphasis: (s: string) => s,
+    muted: (s: string) => s,
+    foreground: (s: string) => s,
+    // Formatting (pass-through)
+    dim: (s: string) => s,
+    bold: (s: string) => s,
+    underline: (s: string) => s,
+    inverse: (s: string) => s,
+  };
+
+  readonly symbols: UISymbols = {
+    success: '✓',
+    error: '✗',
+    warning: '⚠',
+    info: 'ℹ',
+    bullet: '•',
+    pointer: '▸',
+    separator: '│',
+    border: '─',
+  };
 
   constructor(options: JobRunnerPresenterOptions = {}) {
     this.runId = options.runId;

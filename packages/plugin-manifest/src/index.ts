@@ -31,6 +31,7 @@ export type {
   StudioMenuDecl,
   StudioLayoutDecl,
   DisplayMetadata,
+  JobDecl,
   // Platform requirements
   PlatformRequirements,
   PlatformServiceId,

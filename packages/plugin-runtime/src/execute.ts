@@ -97,7 +97,8 @@ export async function execute(
     args.manifest,
     ctx,
     ctx.pluginContext?.presenter,
-    args.perms.capabilities
+    args.perms.capabilities,
+    args.perms.shell // Pass job-specific shell permissions
   );
 
   // Create state broker with graceful fallback
@@ -123,7 +124,9 @@ export async function execute(
     invokeBroker,
     artifactBroker,
     shellBroker,
-    stateAPI
+    stateAPI,
+    args.manifest,
+    args.perms
   );
   
   // Validate context version
