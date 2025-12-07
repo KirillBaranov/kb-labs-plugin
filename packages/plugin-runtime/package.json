@@ -1,6 +1,6 @@
 {
   "name": "@kb-labs/plugin-runtime",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Runtime environment for KB Labs plugins, handling execution, permissions, and sandboxing",
   "type": "module",
   "main": "./dist/index.js",

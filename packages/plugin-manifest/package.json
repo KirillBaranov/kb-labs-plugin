@@ -1,6 +1,6 @@
 {
   "name": "@kb-labs/plugin-manifest",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Type definitions and validation schemas for KB Labs plugin manifests (ManifestV2)",
   "type": "module",
   "main": "./dist/index.js",

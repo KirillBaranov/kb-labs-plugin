@@ -1,6 +1,6 @@
 {
   "name": "@kb-labs/plugin-adapter-rest",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "REST API adapter for KB Labs plugins, providing HTTP endpoints for plugin functionality",
   "type": "module",
   "main": "./dist/index.js",
