@@ -1,6 +1,6 @@
 {
   "name": "@kb-labs/plugin-adapter-cli",
-  "version": "0.1.1",
+  "version": "0.1.3",
   "description": "CLI adapter for KB Labs plugins, handling command execution and discovery",
   "type": "module",
   "main": "./dist/index.js",
