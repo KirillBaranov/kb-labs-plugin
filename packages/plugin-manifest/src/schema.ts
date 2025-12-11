@@ -590,6 +590,7 @@ export const manifestV2Schema = z.object({
   schema: z.literal('kb.plugin/2'),
   id: z.string().min(1),
   version: z.string().min(1),
+  configSection: z.string().min(1).optional(),
   display: z
     .object({
       name: z.string().min(1),

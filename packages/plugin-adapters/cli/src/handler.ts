@@ -235,6 +235,7 @@ function createExecutionContext(
     requestId,
     pluginId: manifest.id,
     pluginVersion: manifest.version,
+    configSection: manifest.configSection, // For useConfig() auto-detection
     routeOrCommand: command.id,
     workdir,
     outdir: outdir || path.join(workdir, 'out'),
@@ -242,7 +243,7 @@ function createExecutionContext(
     debug: process.env.KB_PLUGIN_DEV_MODE === 'true',
     tmpFiles: [],
   };
-  
+
   return execCtx;
 }
 
@@ -426,6 +427,12 @@ export async function executeCommand(
         });
       }
     }
+  }
+
+  // Set __KB_CONFIG_SECTION__ for useConfig() auto-detection
+  // This allows plugins to call useConfig() without parameters
+  if (manifest.configSection) {
+    (globalThis as any).__KB_CONFIG_SECTION__ = manifest.configSection;
   }
 
   const pluginContext = createPluginContextWithPlatform({

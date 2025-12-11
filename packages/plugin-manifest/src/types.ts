@@ -708,6 +708,12 @@ export interface ManifestV2 {
   id: string;
   /** Plugin version (semver) */
   version: string;
+  /**
+   * Config section identifier in kb.config.json
+   * Used by useConfig() to automatically load the correct config section
+   * @example 'mind' for @kb-labs/mind → kb.config.json profiles[].products.mind
+   */
+  configSection?: string;
   /** Display metadata */
   display?: DisplayMetadata;
   /** Required capabilities (e.g., ['kv.read', 'blob.write']) */

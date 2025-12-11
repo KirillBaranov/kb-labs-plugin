@@ -353,6 +353,8 @@ export interface ExecutionContext {
   pluginId: string;
   /** Plugin version */
   pluginVersion: string;
+  /** Config section identifier (for useConfig() auto-detection) */
+  configSection?: string;
   /** Optional tenant identifier (multi-tenant workloads) */
   tenantId?: string;
   /** Route or command identifier */
