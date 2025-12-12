@@ -4,7 +4,12 @@
  */
 
 import { platform } from '@kb-labs/core-runtime';
-import { createPluginContext, type PluginContext, type PluginContextOptions } from './plugin-context';
+import {
+  createPluginContext,
+  type PluginContext,
+  type PluginContextOptions,
+} from './plugin-context';
+import type { PluginContextV2 } from './plugin-context-v2';
 import type { PluginHostType } from './host';
 import type { UIFacade } from './plugin-context';
 
@@ -22,11 +27,15 @@ export interface CreatePluginContextWithPlatformOptions<TConfig = any> {
   pluginVersion: string;
   /** Tenant identifier (for multi-tenancy) */
   tenantId?: string;
+  /** Current working directory (V2: promoted to top-level) */
+  cwd?: string;
+  /** Output directory for generated files (V2: promoted to top-level) */
+  outdir?: string;
   /** UI facade (if not provided, creates appropriate one for host) */
   ui?: UIFacade;
   /** Resolved product configuration */
   config?: TConfig;
-  /** Additional metadata */
+  /** Additional metadata (host-specific fields only) */
   metadata?: Record<string, unknown>;
 }
 
@@ -66,13 +75,15 @@ export interface CreatePluginContextWithPlatformOptions<TConfig = any> {
  */
 export function createPluginContextWithPlatform<TConfig = any>(
   options: CreatePluginContextWithPlatformOptions<TConfig>
-): PluginContext<TConfig> {
+): PluginContextV2<TConfig> {
   const {
     host,
     requestId,
     pluginId,
     pluginVersion,
     tenantId,
+    cwd,      // V2: promoted to top-level
+    outdir,   // V2: promoted to top-level
     ui,
     config,
     metadata,
@@ -111,6 +122,8 @@ export function createPluginContextWithPlatform<TConfig = any>(
     pluginId,
     pluginVersion,
     tenantId,
+    cwd,      // V2: promoted to top-level
+    outdir,   // V2: promoted to top-level
     ui,
     config,
     platform: platformServices,

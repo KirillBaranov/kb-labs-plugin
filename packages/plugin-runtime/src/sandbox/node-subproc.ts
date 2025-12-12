@@ -643,7 +643,7 @@ export function nodeSubprocRunner(devMode: boolean = false): SandboxRunner {
             if (!opId) return;
 
             // Get presenter from context (if available)
-            const presenter = (ctx as any).pluginContext?.presenter;
+            const presenter = 'pluginContext' in ctx ? (ctx as ExecutionContext).pluginContext?.presenter : undefined;
             let confirmed = false;
 
             if (presenter?.confirm) {

@@ -8,6 +8,7 @@ import type { ExecutionContext, ErrorEnvelope, ExecMetrics, PermissionSpecSummar
 import type { PermissionSpec } from '@kb-labs/plugin-manifest';
 import { analyzeRootCauseSync } from './errors/root-cause';
 import { validateExecutionContext } from './context/context-validator';
+import type { PluginContextV2 } from './context/plugin-context-v2';
 
 // Re-export root cause types
 export type { RootCauseAnalysis, RootCauseType } from './errors/root-cause';
@@ -94,14 +95,49 @@ function sanitizeDetails(details: Record<string, unknown>): Record<string, unkno
 }
 
 /**
+ * Helper to determine if context is PluginContextV2
+ */
+function isPluginContextV2(ctx: ExecutionContext | PluginContextV2): ctx is PluginContextV2 {
+  // PluginContextV2 has 'host' field, ExecutionContext has 'workdir' field
+  return 'host' in ctx && !('workdir' in ctx);
+}
+
+/**
+ * Helper to extract fields from either ExecutionContext or PluginContextV2
+ */
+function extractContextFields(ctx: ExecutionContext | PluginContextV2) {
+  if (isPluginContextV2(ctx)) {
+    return {
+      requestId: ctx.requestId,
+      pluginId: ctx.pluginId,
+      pluginVersion: ctx.pluginVersion,
+      routeOrCommand: (ctx.metadata?.routeOrCommand as string | undefined) || 'unknown',
+      debug: (ctx.metadata?.debug as boolean | undefined) || false,
+      debugLevel: (ctx.metadata?.debugLevel as 'verbose' | 'inspect' | 'profile' | undefined),
+    };
+  } else {
+    return {
+      requestId: ctx.requestId,
+      pluginId: ctx.pluginId,
+      pluginVersion: ctx.pluginVersion,
+      routeOrCommand: ctx.routeOrCommand,
+      debug: ctx.debug || false,
+      debugLevel: ctx.debugLevel,
+    };
+  }
+}
+
+/**
  * Extract error context from execution context
  */
 function extractErrorContext(
-  ctx: ExecutionContext,
+  ctx: ExecutionContext | PluginContextV2,
   error?: Error | unknown
 ): ErrorContext | undefined {
-  // Get validation result to find missing properties
-  const validation = validateExecutionContext(ctx);
+  // Get validation result to find missing properties (only for ExecutionContext)
+  const validation = isPluginContextV2(ctx)
+    ? { errors: [] } // PluginContextV2 doesn't need validation here
+    : validateExecutionContext(ctx);
   const missingProperties = validation.errors.map((e) => e.field);
   const availableProperties = Object.keys(ctx as unknown as Record<string, unknown>).filter(
     (key) => (ctx as unknown as Record<string, unknown>)[key] !== undefined
@@ -134,18 +170,32 @@ function extractErrorContext(
     }
   }
 
+  // Extract fields using helper (handles both context types)
+  const fields = extractContextFields(ctx);
+
   // Create context snapshot (safe, no functions)
   const contextSnapshot: Record<string, unknown> = {
-    pluginId: ctx.pluginId,
-    pluginVersion: ctx.pluginVersion,
-    routeOrCommand: ctx.routeOrCommand,
-    workdir: ctx.workdir,
-    pluginRoot: ctx.pluginRoot,
-    debug: ctx.debug,
-    debugLevel: ctx.debugLevel,
-    jsonMode: ctx.jsonMode,
-    traceId: ctx.traceId,
-    spanId: ctx.spanId,
+    pluginId: fields.pluginId,
+    pluginVersion: fields.pluginVersion,
+    routeOrCommand: fields.routeOrCommand,
+    // Add metadata fields if available
+    ...(isPluginContextV2(ctx) ? {
+      host: ctx.host,
+      cwd: ctx.cwd,
+      outdir: ctx.outdir,
+      debug: fields.debug,
+      debugLevel: fields.debugLevel,
+      traceId: (ctx.metadata?.traceId as string | undefined),
+      spanId: (ctx.metadata?.spanId as string | undefined),
+    } : {
+      workdir: (ctx as ExecutionContext).workdir,
+      pluginRoot: (ctx as ExecutionContext).pluginRoot,
+      debug: (ctx as ExecutionContext).debug,
+      debugLevel: (ctx as ExecutionContext).debugLevel,
+      jsonMode: (ctx as ExecutionContext).jsonMode,
+      traceId: (ctx as ExecutionContext).traceId,
+      spanId: (ctx as ExecutionContext).spanId,
+    }),
   };
 
   return {
@@ -178,7 +228,7 @@ function getDocumentationUrl(code: string): string | undefined {
  * @param code - Error code
  * @param http - HTTP status code (auto-mapped if not provided)
  * @param details - Error details (will be sanitized)
- * @param ctx - Execution context
+ * @param ctx - Execution context (ExecutionContext or PluginContextV2)
  * @param metrics - Execution metrics
  * @param perms - Permissions (optional, for summary)
  * @param originalError - Original error object (optional, for root cause analysis)
@@ -188,7 +238,7 @@ export function toErrorEnvelope(
   code: string,
   http: number | undefined,
   details: Record<string, unknown>,
-  ctx: ExecutionContext,
+  ctx: ExecutionContext | PluginContextV2,
   metrics: ExecMetrics,
   perms?: PermissionSpec,
   originalError?: Error | unknown
@@ -233,11 +283,14 @@ export function toErrorEnvelope(
       ? originalError.stack
       : sanitizedDetails.trace as string | undefined;
 
+  // Extract fields from context (handles both ExecutionContext and PluginContextV2)
+  const fields = extractContextFields(ctx);
+
   // Analyze root cause if error is available and debug mode is enabled
   // Use sync version to avoid making toErrorEnvelope async
   // History will be loaded separately if needed via async analyzeRootCause
   const rootCause =
-    (ctx.debug || ctx.debugLevel) && originalError
+    (fields.debug || fields.debugLevel) && originalError
       ? analyzeRootCauseSync(
           originalError,
           ctx as unknown as Record<string, unknown>,
@@ -276,10 +329,10 @@ export function toErrorEnvelope(
     fixes,
     documentation,
     meta: {
-      requestId: ctx.requestId,
-      pluginId: ctx.pluginId,
-      pluginVersion: ctx.pluginVersion,
-      routeOrCommand: ctx.routeOrCommand,
+      requestId: fields.requestId,
+      pluginId: fields.pluginId,
+      pluginVersion: fields.pluginVersion,
+      routeOrCommand: fields.routeOrCommand,
       timeMs: metrics.timeMs,
       cpuMs: metrics.cpuMs,
       memMb: metrics.memMb,

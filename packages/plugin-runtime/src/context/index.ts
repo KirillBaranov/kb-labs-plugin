@@ -4,18 +4,8 @@
  */
 
 export {
-  initializeChainLimits,
-  initializeChainState,
-  createRemainingMsCalculator,
-  buildExecutionContext,
-} from './context-builder';
-export {
-  createArtifactBroker,
-  createInvokeBroker,
-  createShellBroker,
-} from './broker-factory';
-export {
   createPluginContext,
+  // V1 compatibility (deprecated - use V2 for new code)
   type PluginContext,
   type PluginContextOptions,
   type PluginContextMetadata,
@@ -24,6 +14,12 @@ export {
   type PresenterFacade,
   type PresenterProgressPayload,
 } from './plugin-context';
+
+// V2 types (primary - recommended for new code) - import from v2 file
+export type {
+  PluginContextV2,
+  RuntimeAdapter,
+} from './plugin-context-v2';
 export {
   createPluginContextWithPlatform,
   type CreatePluginContextWithPlatformOptions,

@@ -24,8 +24,8 @@
  * - src/invoke/broker.ts (this file - type usage)
  */
 import type { ManifestV2 } from '@kb-labs/plugin-manifest';
-import type { ExecutionContext } from '../types';
 import type { PluginRegistry } from '../registry';
+import type { PluginContextV2 } from '../context/plugin-context-v2';
 import type {
   InvokeContext,
   InvokeRequest,
@@ -38,7 +38,9 @@ import { toErrorEnvelope } from '../errors';
 import { ErrorCode } from '@kb-labs/rest-api-contracts';
 import { saveTrace, rotateTraces, type TraceData, type TraceSpan } from '../trace';
 import { resolveRouteHeaderPolicy, matchesRule, type ResolvedHeaderPolicy } from './header-policy';
-import { execute as runtimeExecute } from '../execute';
+import { executePlugin } from '../execute-plugin';
+import type { ExecutePluginResult } from '../execute-plugin/types';
+import { createPluginContextWithPlatform } from '../context';
 import * as nodePath from 'node:path';
 import { applyHeaderTransforms } from './header-transforms';
 import { loadCustomHeaderTransform } from './transform-loader';
@@ -123,7 +125,7 @@ export class InvokeBroker {
   constructor(
     private registry: PluginRegistry,
     private callerManifest: ManifestV2,
-    private ctx: ExecutionContext,
+    private ctx: PluginContextV2,
     private chainLimits: ChainLimits,
     private chainState?: InvokeContext
   ) {
@@ -150,12 +152,12 @@ export class InvokeBroker {
   ): Promise<InvokeResult<unknown>> {
     const startTime = Date.now();
     const spanId = createId();
-    const parentSpanId = request.session?.parentSpanId || this.ctx.spanId;
+    const parentSpanId = request.session?.parentSpanId || (this.ctx.metadata?.spanId as string | undefined);
 
     // Create span for tracking
     const span: TraceSpan = {
       id: spanId,
-      traceId: this.ctx.traceId || createId(),
+      traceId: (this.ctx.metadata?.traceId as string | undefined) || createId(),
       parentSpanId,
       pluginId: '',
       routeOrCommand: '',
@@ -199,8 +201,9 @@ export class InvokeBroker {
       const elapsedTime = Date.now() - this.chainStartTime;
       const remainingMs =
         context?.remainingMs ??
-        this.ctx.remainingMs?.() ??
-        this.ctx.chainState?.remainingMs ??
+        (typeof (this.ctx.metadata?.remainingMs) === 'function'
+          ? (this.ctx.metadata.remainingMs as () => number)()
+          : 0) ??
         0;
 
       if (currentDepth > this.chainLimits.maxDepth) {
@@ -315,7 +318,7 @@ export class InvokeBroker {
       }
 
       const headerMode = request.headerPolicy ?? 'none';
-      const inheritedHeaders = this.ctx.headers?.inbound ?? {};
+      const inheritedHeaders = (this.ctx.metadata?.headers as { inbound?: Record<string, string> } | undefined)?.inbound ?? {};
       const explicitHeaders = request.headers ?? {};
       // 6. Resolve route
       const resolvedRoute = await this.registry.resolveRoute(pluginId, method, path);
@@ -399,55 +402,52 @@ export class InvokeBroker {
 
       const workdir = resolvedRoute.workdir || resolvedRoute.pluginRoot;
       const outdir = resolvedRoute.outdir || nodePath.join(workdir, 'out');
-      const traceId = request.session?.traceId || this.ctx.traceId || span.traceId;
+      const traceId = request.session?.traceId || (this.ctx.metadata?.traceId as string | undefined) || span.traceId;
       const targetRequestId = createId();
 
       const headersInbound = Object.keys(headerPreparation.forwarded).length
         ? { ...headerPreparation.forwarded }
         : undefined;
 
-      const targetCtx: ExecutionContext = {
-        version: this.ctx.version,
+      // Create PluginContextV2 for target plugin
+      const targetContext = createPluginContextWithPlatform({
+        host: this.ctx.host || 'invoke',
         requestId: targetRequestId,
         pluginId: resolvedRoute.manifest.id,
         pluginVersion: resolvedRoute.manifest.version,
-        routeOrCommand: span.routeOrCommand,
-        workdir,
-        outdir,
-        pluginRoot: resolvedRoute.pluginRoot,
-        traceId,
-        spanId,
-        parentSpanId,
-        user: this.ctx.user,
-        debug: this.ctx.debug,
-        debugLevel: this.ctx.debugLevel,
-        debugFormat: this.ctx.debugFormat,
-        jsonMode: this.ctx.jsonMode,
-        tmpFiles: [],
-        chainLimits: this.chainLimits,
-        chainState: nextInvokeContext,
-        remainingMs: () => Math.max(0, deadline - Date.now()),
-        headers: headersInbound
-          ? {
-              inbound: headersInbound,
-            }
-          : undefined,
-        extensions: this.ctx.extensions,
-        analytics: this.ctx.analytics,
-        hooks: this.ctx.hooks,
-        signal: this.ctx.signal,
-      };
-
-      const executeResult = await runtimeExecute(
-        {
-          handler: resolvedRoute.handler,
-          input: request.input,
-          manifest: resolvedRoute.manifest,
-          perms: resolvedRoute.manifest.permissions || {},
+        cwd: workdir,      // V2: promoted to top-level
+        outdir: outdir,     // V2: promoted to top-level
+        config: {},
+        ui: this.ctx.ui,    // Propagate UI from caller
+        metadata: {
+          // Invoke-specific fields
+          traceId,
+          spanId,
+          parentSpanId,
+          chainDepth: nextInvokeContext.depth,
+          chainFanOut: nextInvokeContext.fanOut,
+          remainingMs: () => Math.max(0, deadline - Date.now()),
+          headers: headersInbound
+            ? {
+                inbound: headersInbound,
+              }
+            : undefined,
+          routeOrCommand: span.routeOrCommand,
         },
-        targetCtx,
-        this.registry
-      );
+      });
+
+      // Execute target plugin using new architecture
+      const executeResult = await executePlugin({
+        context: targetContext,
+        handlerRef: resolvedRoute.handler,
+        argv: [], // Invoke doesn't use argv
+        flags: (request.input as Record<string, unknown>) || ({} as Record<string, unknown>),
+        manifest: resolvedRoute.manifest,
+        permissions: resolvedRoute.manifest.permissions || {},
+        grantedCapabilities: resolvedRoute.manifest.capabilities || [],
+        pluginRoot: nodePath.join(resolvedRoute.pluginRoot, 'dist'),
+        registry: this.registry,
+      });
 
       const endTime = Date.now();
       const timeMs = executeResult.metrics.timeMs ?? endTime - startTime;
@@ -496,15 +496,29 @@ export class InvokeBroker {
 
       span.status = 'error';
       span.error = {
-        code: executeResult.error.code,
-        message: executeResult.error.message,
+        code: executeResult.error?.code || 'PLUGIN_ERROR',
+        message: executeResult.error?.message || 'Plugin execution failed',
       };
       this.traceSpans.push(span);
       this.traceErrors++;
 
       return {
         ok: false,
-        error: executeResult.error,
+        error: (executeResult.error
+          ? toErrorEnvelope(
+              executeResult.error.code,
+              500,
+              executeResult.error.details || { message: executeResult.error.message },
+              this.ctx,
+              { timeMs: executeResult.metrics.timeMs }
+            )
+          : toErrorEnvelope(
+              'PLUGIN_ERROR',
+              500,
+              { message: 'Plugin execution failed' },
+              this.ctx,
+              { timeMs: executeResult.metrics.timeMs }
+            )),
       };
     } catch (error) {
       const timeMs = Date.now() - startTime;
@@ -545,7 +559,7 @@ export class InvokeBroker {
       return null;
     }
 
-    const traceId = this.ctx.traceId || createId();
+    const traceId = (this.ctx.metadata?.traceId as string | undefined) || createId();
     const rootSpanId = this.traceSpans[0]?.id || createId();
     const endTime = Date.now();
     const totalDuration = endTime - this.chainStartTime;
@@ -562,16 +576,16 @@ export class InvokeBroker {
       errors: this.traceErrors,
       metadata: {
         callerPluginId: this.ctx.pluginId,
-        callerCommand: this.ctx.routeOrCommand,
+        callerCommand: (this.ctx.metadata?.routeOrCommand as string | undefined) || '',
         chainDepth: this.chainDepth,
         chainFanOut: this.chainFanOut,
       },
     };
 
-    const tracePath = await saveTrace(trace, this.ctx.workdir);
-    
+    const tracePath = await saveTrace(trace, this.ctx.cwd);
+
     // Rotate traces (keep last 50)
-    await rotateTraces(50, this.ctx.workdir).catch(() => {
+    await rotateTraces(50, this.ctx.cwd).catch(() => {
       // Ignore rotation errors
     });
 

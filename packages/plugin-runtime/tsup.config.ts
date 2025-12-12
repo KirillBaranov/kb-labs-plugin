@@ -4,9 +4,7 @@ import nodePreset from '@kb-labs/devkit/tsup/node.js'
 export default defineConfig({
   ...nodePreset,
   tsconfig: "tsconfig.build.json", // Use build-specific tsconfig without paths
-  // TODO: Re-enable DTS generation after fixing InvokeRequest/InvokeContext types
-  // See: src/invoke/broker.ts for details on type errors
-  dts: true, // Temporarily disabled due to type errors in invoke/broker.ts
+  dts: true, // Re-enabled - circular dependency fixed
   entry: {
     index: 'src/index.ts',
     'sandbox/child/bootstrap': 'src/sandbox/child/bootstrap.ts',

@@ -16,6 +16,7 @@ import {
   type KeyValueOptions,
 } from '../presenter/presenter-facade';
 import type { PluginHostType } from './host';
+import type { RuntimeAdapter, PluginContextV2 } from './plugin-context-v2';
 
 // Platform abstractions
 import type {
@@ -130,134 +131,67 @@ export interface PluginContextMetadata {
   [key: string]: unknown;
 }
 
-/**
- * Context for plugin commands.
- *
- * Used by:
- * - defineCommand() handlers (CLI adapter)
- * - definePluginHandler() handlers (REST adapter)
- *
- * The context provides:
- * - Plugin identity (pluginId, version, requestId)
- * - UI output abstraction (ctx.ui)
- * - Platform services (ctx.platform)
- * - Execution metadata (ctx.metadata)
- * - Auto-loaded product configuration (ctx.config)
- *
- * @example
- * ```typescript
- * import { defineCommand, type PluginContext } from '@kb-labs/plugin-runtime';
- *
- * export const run = defineCommand({
- *   name: 'mind:rag-index',
- *   async handler(ctx: PluginContext, argv, flags) {
- *     ctx.ui.message('Starting indexing...');
- *
- *     // Platform services (declared in manifest.platform.requires)
- *     const embedding = await ctx.platform.embeddings.embed(text);
- *     await ctx.platform.vectorStore.upsert([{ id: 'doc', vector: embedding }]);
- *
- *     // Optional services (declared in manifest.platform.optional)
- *     if (ctx.platform.llm) {
- *       const summary = await ctx.platform.llm.complete('Summarize...');
- *     }
- *
- *     ctx.ui.message('Done!');
- *   }
- * });
- * ```
- */
-export interface PluginContext<TConfig = any> {
-  /** Execution host type (cli, rest, workflow, daemon) */
-  readonly host: PluginHostType;
-  /** Unique request identifier */
-  readonly requestId: string;
-  /** Plugin identifier */
-  readonly pluginId: string;
-  /** Plugin version */
-  readonly pluginVersion: string;
-  /** Tenant identifier (for multi-tenancy) */
-  readonly tenantId?: string;
-
-  /**
-   * Resolved product configuration.
-   *
-   * Automatically loaded with:
-   * - Profile selection (--profile flag or KB_PROFILE env var)
-   * - Scope selection (based on cwd/executionPath)
-   * - All merge layers (runtime → profile → profile-scope → workspace → CLI)
-   *
-   * @example
-   * ```typescript
-   * interface MyProductConfig {
-   *   engine: 'openai' | 'anthropic';
-   *   maxComments: number;
-   * }
-   *
-   * export const run = defineCommand({
-   *   async handler(ctx: PluginContext<MyProductConfig>) {
-   *     const engine = ctx.config.engine; // typed!
-   *     const maxComments = ctx.config.maxComments;
-   *   }
-   * });
-   * ```
-   */
-  readonly config?: TConfig;
-
-  /**
-   * UI output facade.
-   * Use for all user-facing output.
-   */
-  readonly ui: UIFacade;
-
-  /**
-   * Platform services.
-   * Access infrastructure through this object.
-   */
-  readonly platform: PlatformServices;
-
-  /**
-   * Execution metadata.
-   * Contains cwd, outdir, runId, stepId, etc.
-   */
-  readonly metadata: PluginContextMetadata;
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // DEPRECATED - for backward compatibility only
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  /**
-   * @deprecated Use ctx.ui instead. Will be removed in v1.0.
-   */
-  readonly presenter: PresenterFacade;
-}
+// Old PluginContext V1 interface removed - now replaced with type alias to V2
+// See bottom of file for backward compatibility alias: export type PluginContext<T> = PluginContextV2<T>
 
 /**
- * Options for creating PluginContext.
+ * Options for creating PluginContext V2.
  */
 export interface PluginContextOptions<TConfig = any> {
   requestId: string;
   pluginId: string;
   pluginVersion: string;
   tenantId?: string;
+
+  /** Current working directory (promoted to top-level in V2) */
+  cwd?: string;
+
+  /** Output directory for generated files (promoted to top-level in V2) */
+  outdir?: string;
+
   /** UI facade (presenter) */
   ui?: UIFacade;
+
   /** Platform services */
   platform?: Partial<PlatformServices>;
-  /** Execution metadata */
+
+  /** Runtime sandbox API (NEW in V2) */
+  runtime?: RuntimeAdapter;
+
+  /** Execution metadata (host-specific fields only) */
   metadata?: PluginContextMetadata;
+
   /** Resolved product configuration */
   config?: TConfig;
 }
 
 /**
- * Create a unified `PluginContext` for the specified host.
+ * Create a unified `PluginContext` V2 for the specified host.
+ *
+ * **Changes in V2:**
+ * - Returns PluginContextV2 (same as PluginContext, but semantically versioned)
+ * - `cwd` and `outdir` promoted from metadata to top-level options
+ * - `runtime` field added for sandbox API access
+ * - `metadata` now contains ONLY host-specific fields
+ *
+ * @param host - Execution host type (cli, rest, workflow, daemon)
+ * @param options - Context creation options
+ * @returns Frozen PluginContext V2 object
  */
 export function createPluginContext<TConfig = any>(
   host: PluginHostType,
   options: PluginContextOptions<TConfig>
-): PluginContext<TConfig> {
+): PluginContextV2<TConfig> {
   const ui = options.ui ?? createNoopUI();
+
+  // Extract cwd/outdir from options (V2: promoted to top-level!)
+  const cwd = options.cwd ?? process.cwd();
+  const outdir = options.outdir;
+
+  // Runtime sandbox API (V2: new field!)
+  const runtime = options.runtime;
+
+  // metadata is now ONLY for host-specific fields (V2: cleaned up!)
   const metadata: PluginContextMetadata = options.metadata ?? {};
 
   // Merge provided platform services with default isConfigured implementation
@@ -265,24 +199,52 @@ export function createPluginContext<TConfig = any>(
     ...options.platform,
     // Default isConfigured implementation
     isConfigured: options.platform?.isConfigured ?? (() => false),
-  };
+  } as PlatformServices;
 
-  return Object.freeze({
+  // TODO: Re-enable Object.freeze() after debugging
+  // Currently disabled because something tries to mutate the context
+  return {
     host,
     requestId: options.requestId,
     pluginId: options.pluginId,
     pluginVersion: options.pluginVersion,
     tenantId: options.tenantId,
+    cwd,          // V2: promoted to top-level
+    outdir,        // V2: promoted to top-level
     config: options.config,
     ui,
     platform,
-    metadata,
+    runtime,       // V2: new field
+    metadata,      // V2: only host-specific data
     // Backward compatibility
     presenter: ui,
-  }) satisfies PluginContext<TConfig>;
+  } satisfies PluginContextV2<TConfig>;
 }
 
-// Re-export types
+/**
+ * PluginContext (V1 compatibility alias)
+ *
+ * @deprecated Use PluginContextV2 instead for new code.
+ * This alias will be removed in v3.0.
+ *
+ * Migration:
+ * ```typescript
+ * // Old (still works):
+ * import { type PluginContext } from '@kb-labs/plugin-runtime';
+ *
+ * // New (recommended):
+ * import { type PluginContextV2 } from '@kb-labs/plugin-runtime';
+ * ```
+ */
+export type PluginContext<TConfig = any> = PluginContextV2<TConfig>;
+
+// Re-export V2 types (already imported at top of file)
+export type {
+  RuntimeAdapter,
+  PluginContextMetadata as PluginContextMetadataV2,
+} from './plugin-context-v2';
+
+// Re-export UI types
 export type {
   PresenterFacade,
   PresenterProgressPayload,

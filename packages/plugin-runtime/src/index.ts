@@ -23,10 +23,17 @@ export {
   type PermissionCheckAllResult,
 } from './permissions';
 
-// Execution
+// Execution (unified architecture)
 export {
-  execute,
-} from './execute';
+  executePlugin,
+  // Legacy alias for backward compatibility (deprecated - use executePlugin)
+  executePlugin as execute,
+} from './execute-plugin';
+
+export type {
+  ExecutePluginOptions,
+  ExecutePluginResult,
+} from './execute-plugin/types';
 
 // Types
 export type {
@@ -214,6 +221,10 @@ export {
   KNOWN_PLUGIN_HOSTS,
 } from './context/index';
 export type {
+  // V2 types (primary - recommended for new code)
+  PluginContextV2,
+  RuntimeAdapter,
+  // V1 compatibility (deprecated - use V2 for new code)
   PluginContext,
   PluginContextOptions,
   PluginContextMetadata,
@@ -238,6 +249,7 @@ export {
   JobRunnerPresenter,
   HttpPresenter,
   createNoopPresenter,
+  createNoopUI,
 } from './presenter/index';
 export type {
   TTYPresenterOptions,
