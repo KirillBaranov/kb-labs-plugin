@@ -5,6 +5,7 @@
 
 import type { ManifestV2 } from '@kb-labs/plugin-manifest';
 import type { CliCommand, CliContext } from '@kb-labs/cli-contracts';
+import type { PluginContextV2 } from '@kb-labs/plugin-runtime';
 import { registerFlags, type FlagBuilder } from './flags';
 import { executeCommand } from './handler';
 import type { ExecutionContext } from '@kb-labs/plugin-runtime';
@@ -34,8 +35,8 @@ export interface RegisterOptions {
   exitPolicy?: 'none' | 'major' | 'critical';
   /** Debug mode */
   debug?: boolean;
-  /** CLI context provider */
-  getContext: () => import('@kb-labs/cli-core').CliContext;
+  /** CLI context provider (returns PluginContextV2 now) */
+  getContext: () => PluginContextV2;
   /** Plugin root directory (for module resolution) */
   pluginRoot?: string;
   /** Working directory */
