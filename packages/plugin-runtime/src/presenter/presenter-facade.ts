@@ -171,27 +171,294 @@ export interface KeyValueOptions {
   indent?: number;
 }
 
+/** SideBox section */
+export interface SideBoxSection {
+  header?: string;
+  items: string[];
+}
+
+/** SideBox options */
+export interface SideBoxOptions {
+  title: string;
+  sections: SideBoxSection[];
+  status?: 'success' | 'error' | 'info' | 'warning';
+  timing?: number;
+}
+
+/** Spinner interface for progress indicators */
+export interface Spinner {
+  start(): void;
+  stop(): void;
+  update(options: { text?: string }): void;
+  succeed(message?: string): void;
+  fail(message?: string): void;
+}
+
 /**
  * UI facade for plugin output.
  * Extends PresenterFacade with rich formatting capabilities.
+ *
+ * **Architecture**: Unified API for all output (replaces ctx.output from core-sys)
+ * - High-level methods: auto-format + auto-log (success, error, warning, info)
+ * - Low-level methods: format only, returns strings (sideBox, box, table, etc.)
+ * - Styling utilities: colors, symbols
+ * - Progress indicators: spinner, progress
+ * - Output modes: json, write
  */
 export interface UIFacade extends PresenterFacade {
-  // Semantic output
-  success?(text: string): void;
-  warning?(text: string): void;
-  info?(text: string): void;
+  // ============================================================
+  // HIGH-LEVEL API (auto-format + auto-log)
+  // ============================================================
 
-  // Formatted output
+  /**
+   * Display success message with formatting
+   * Respects --quiet flag, always shown unless silenced
+   *
+   * @param title - Main title for the success message
+   * @param data - Optional data (summary, sections, timing)
+   *
+   * @example
+   * ```typescript
+   * ctx.ui.success('Build Complete', {
+   *   summary: { 'Files': 42, 'Duration': '1.2s' },
+   *   sections: [{ header: 'Output', items: ['dist/index.js'] }],
+   *   timing: 1200
+   * });
+   * ```
+   */
+  success?(title: string, data?: {
+    summary?: Record<string, string | number>;
+    sections?: Array<{ header?: string; items: string[] }>;
+    timing?: number;
+  }): void;
+
+  /**
+   * Display error message with formatting
+   * Always shown (errors ignore --quiet)
+   *
+   * Note: Named showError() to avoid conflict with PresenterFacade.error()
+   *
+   * @param title - Main title for the error
+   * @param error - Error object or string
+   * @param options - Optional suggestions and timing
+   *
+   * @example
+   * ```typescript
+   * ctx.ui.showError('Build Failed', new Error('TypeScript errors'), {
+   *   suggestions: ['Run tsc --noEmit', 'Check tsconfig.json'],
+   *   timing: 500
+   * });
+   * ```
+   */
+  showError?(title: string, error: Error | string, options?: {
+    suggestions?: string[];
+    timing?: number;
+  }): void;
+
+  /**
+   * Display warning message with formatting
+   * Shown in normal/verbose modes
+   *
+   * @param title - Main title for the warning
+   * @param warnings - Array of warning messages
+   * @param options - Optional summary and timing
+   *
+   * @example
+   * ```typescript
+   * ctx.ui.warning('Deprecated APIs', [
+   *   'Using old config format',
+   *   'Migrate to new format soon'
+   * ], { timing: 100 });
+   * ```
+   */
+  warning?(title: string, warnings: string[], options?: {
+    summary?: Record<string, string | number>;
+    timing?: number;
+  }): void;
+
+  /**
+   * Display info message with formatting
+   * Only shown in --verbose mode
+   *
+   * @param title - Main title for the info
+   * @param data - Optional data (summary, sections)
+   *
+   * @example
+   * ```typescript
+   * ctx.ui.info('Debug Info', {
+   *   summary: { 'Cache hits': 95 }
+   * });
+   * ```
+   */
+  info?(title: string, data?: {
+    summary?: Record<string, string | number>;
+    sections?: Array<{ header?: string; items: string[] }>;
+  }): void;
+
+  // ============================================================
+  // LOW-LEVEL API (format only, returns string)
+  // ============================================================
+
+  /**
+   * Format a rich side box (returns string, doesn't log)
+   * Use this when you need manual control over output
+   *
+   * @param options - SideBox configuration
+   * @returns Formatted string ready to print
+   *
+   * @example
+   * ```typescript
+   * const box = ctx.ui.sideBox({
+   *   title: 'Custom Output',
+   *   sections: [{ items: ['Line 1', 'Line 2'] }],
+   *   status: 'info'
+   * });
+   * console.log(box); // Manual output control
+   * ```
+   */
+  sideBox?(options: SideBoxOptions): string;
+
+  /**
+   * Format a simple box (returns string)
+   *
+   * @param title - Box title
+   * @param content - Array of content lines
+   * @param options - Box formatting options
+   * @returns Formatted box string
+   */
+  box?(title: string, content?: string[], options?: BoxOptions): string;
+
+  /**
+   * Format a table (returns string[])
+   *
+   * @param rows - Table rows (array of arrays)
+   * @param headers - Optional header row
+   * @returns Array of formatted table lines
+   */
+  table?(rows: TableRow[], headers?: string[]): string[];
+
+  /**
+   * Format key-value pairs (returns string[])
+   *
+   * @param pairs - Object with key-value pairs
+   * @param options - Formatting options (padKeys, indent)
+   * @returns Array of formatted lines
+   */
+  keyValue?(pairs: Record<string, string | number>, options?: KeyValueOptions): string[];
+
+  /**
+   * Format a list (returns string[])
+   *
+   * @param items - Array of list items
+   * @returns Array of formatted list lines
+   */
+  list?(items: string[]): string[];
+
+  /**
+   * Format a headline (used for section headers)
+   *
+   * @param text - Headline text
+   */
   headline?(text: string): void;
-  box?(title: string, content?: string[], options?: BoxOptions): void;
-  section?(header: string, content: string[]): void;
-  table?(rows: TableRow[], headers?: string[]): void;
-  keyValue?(pairs: Record<string, string | number>, options?: KeyValueOptions): void;
-  list?(items: string[]): void;
 
-  // Styling utilities
+  /**
+   * Format a section (header + content)
+   *
+   * @param header - Section header
+   * @param content - Section content lines
+   */
+  section?(header: string, content: string[]): void;
+
+  // ============================================================
+  // STYLING UTILITIES
+  // ============================================================
+
+  /**
+   * Color functions for text styling
+   *
+   * @example
+   * ```typescript
+   * const greenText = ctx.ui.colors.success('All good!');
+   * const redText = ctx.ui.colors.error('Failed');
+   * ```
+   */
   readonly colors: UIColors;
+
+  /**
+   * Unicode symbols for visual indicators
+   *
+   * @example
+   * ```typescript
+   * const icon = ctx.ui.symbols.success; // '✓'
+   * console.log(`${icon} Done!`);
+   * ```
+   */
   readonly symbols: UISymbols;
+
+  // ============================================================
+  // PROGRESS INDICATORS
+  // ============================================================
+
+  /**
+   * Create a spinner for long-running tasks
+   *
+   * @param text - Initial spinner text
+   * @returns Spinner instance with control methods
+   *
+   * @example
+   * ```typescript
+   * const spin = ctx.ui.spinner('Processing...');
+   * // ... work ...
+   * spin.succeed('Done!');
+   * ```
+   */
+  spinner?(text: string): Spinner;
+
+  /**
+   * Report progress for workflow stages
+   * Wrapper around PresenterFacade.progress()
+   *
+   * @param stage - Stage identifier
+   * @param message - Progress message
+   */
+  startProgress?(stage: string, message: string): void;
+
+  /**
+   * Update progress for a stage
+   *
+   * @param stage - Stage identifier
+   * @param message - Updated message
+   * @param percent - Optional completion percentage
+   */
+  updateProgress?(stage: string, message: string, percent?: number): void;
+
+  /**
+   * Mark progress stage as complete
+   *
+   * @param stage - Stage identifier
+   * @param message - Completion message
+   */
+  completeProgress?(stage: string, message: string): void;
+
+  /**
+   * Mark progress stage as failed
+   *
+   * @param stage - Stage identifier
+   * @param message - Failure message
+   */
+  failProgress?(stage: string, message: string): void;
+
+  // ============================================================
+  // OUTPUT MODES
+  // ============================================================
+
+  /**
+   * Write raw text to output (no formatting)
+   * Useful for piping or custom output
+   *
+   * @param text - Raw text to write
+   */
+  write?(text: string): void;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -243,6 +510,7 @@ class NoopUI implements UIFacade {
   readonly colors = noopColors;
   readonly symbols = noopSymbols;
 
+  // PresenterFacade methods
   message(): void {
     // intentionally empty
   }
@@ -263,7 +531,12 @@ class NoopUI implements UIFacade {
     return options?.default ?? false;
   }
 
+  // High-level output methods (NEW)
   success(): void {
+    // intentionally empty
+  }
+
+  showError(): void {
     // intentionally empty
   }
 
@@ -275,11 +548,29 @@ class NoopUI implements UIFacade {
     // intentionally empty
   }
 
-  headline(): void {
-    // intentionally empty
+  // Low-level formatting methods
+  sideBox(): string {
+    // intentionally empty - return empty string
+    return '';
   }
 
-  box(): void {
+  box(): string {
+    return '';
+  }
+
+  table(): string[] {
+    return [];
+  }
+
+  keyValue(): string[] {
+    return [];
+  }
+
+  list(): string[] {
+    return [];
+  }
+
+  headline(): void {
     // intentionally empty
   }
 
@@ -287,15 +578,36 @@ class NoopUI implements UIFacade {
     // intentionally empty
   }
 
-  table(): void {
+  // Progress methods
+  spinner(): Spinner {
+    // Return noop spinner
+    return {
+      start: () => {},
+      stop: () => {},
+      update: () => {},
+      succeed: () => {},
+      fail: () => {},
+    };
+  }
+
+  startProgress(): void {
     // intentionally empty
   }
 
-  keyValue(): void {
+  updateProgress(): void {
     // intentionally empty
   }
 
-  list(): void {
+  completeProgress(): void {
+    // intentionally empty
+  }
+
+  failProgress(): void {
+    // intentionally empty
+  }
+
+  // Output modes
+  write(): void {
     // intentionally empty
   }
 }

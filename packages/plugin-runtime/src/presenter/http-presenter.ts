@@ -109,6 +109,94 @@ export class HttpPresenter implements UIFacade {
     });
   }
 
+  async confirm(_message: string, options?: { default?: boolean }): Promise<boolean> {
+    // Non-interactive context - return default or false
+    return options?.default ?? false;
+  }
+
+  // High-level result methods - no-op in REST context
+  success(): void {
+    // REST doesn't show UI - no-op
+  }
+
+  showError(): void {
+    // REST doesn't show UI - no-op
+  }
+
+  warning(): void {
+    // REST doesn't show UI - no-op
+  }
+
+  info(): void {
+    // REST doesn't show UI - no-op
+  }
+
+  // Progress helpers - no-op in REST context
+  startProgress(): void {
+    // REST doesn't show UI - no-op
+  }
+
+  updateProgress(): void {
+    // REST doesn't show UI - no-op
+  }
+
+  completeProgress(): void {
+    // REST doesn't show UI - no-op
+  }
+
+  failProgress(): void {
+    // REST doesn't show UI - no-op
+  }
+
+  // Low-level formatting - no-op in REST context (return empty strings/arrays)
+  headline(): void {
+    // REST doesn't show UI - no-op
+  }
+
+  box(): string {
+    // REST doesn't show UI - return empty
+    return '';
+  }
+
+  sideBox(): string {
+    // REST doesn't show UI - return empty
+    return '';
+  }
+
+  section(): void {
+    // REST doesn't show UI - no-op
+  }
+
+  table(): string[] {
+    // REST doesn't show UI - return empty
+    return [];
+  }
+
+  keyValue(): string[] {
+    // REST doesn't show UI - return empty
+    return [];
+  }
+
+  list(): string[] {
+    // REST doesn't show UI - return empty
+    return [];
+  }
+
+  spinner(): import('./presenter-facade').Spinner {
+    // Return noop spinner for REST
+    return {
+      start: () => {},
+      stop: () => {},
+      update: () => {},
+      succeed: () => {},
+      fail: () => {},
+    };
+  }
+
+  write(): void {
+    // REST doesn't write raw text - no-op
+  }
+
   /**
    * Retrieve buffered events for inclusion in synchronous REST responses.
    */

@@ -121,6 +121,94 @@ export class JobRunnerPresenter implements UIFacade {
     });
   }
 
+  async confirm(_message: string, options?: { default?: boolean }): Promise<boolean> {
+    // Non-interactive context - return default or false
+    return options?.default ?? false;
+  }
+
+  // High-level result methods - no-op in workflow context
+  success(): void {
+    // Workflow doesn't show UI - no-op
+  }
+
+  showError(): void {
+    // Workflow doesn't show UI - no-op
+  }
+
+  warning(): void {
+    // Workflow doesn't show UI - no-op
+  }
+
+  info(): void {
+    // Workflow doesn't show UI - no-op
+  }
+
+  // Progress helpers - no-op in workflow context
+  startProgress(): void {
+    // Workflow doesn't show UI - no-op
+  }
+
+  updateProgress(): void {
+    // Workflow doesn't show UI - no-op
+  }
+
+  completeProgress(): void {
+    // Workflow doesn't show UI - no-op
+  }
+
+  failProgress(): void {
+    // Workflow doesn't show UI - no-op
+  }
+
+  // Low-level formatting - no-op in workflow context (return empty strings/arrays)
+  headline(): void {
+    // Workflow doesn't show UI - no-op
+  }
+
+  box(): string {
+    // Workflow doesn't show UI - return empty
+    return '';
+  }
+
+  sideBox(): string {
+    // Workflow doesn't show UI - return empty
+    return '';
+  }
+
+  section(): void {
+    // Workflow doesn't show UI - no-op
+  }
+
+  table(): string[] {
+    // Workflow doesn't show UI - return empty
+    return [];
+  }
+
+  keyValue(): string[] {
+    // Workflow doesn't show UI - return empty
+    return [];
+  }
+
+  list(): string[] {
+    // Workflow doesn't show UI - return empty
+    return [];
+  }
+
+  spinner(): import('./presenter-facade').Spinner {
+    // Return noop spinner for workflow
+    return {
+      start: () => {},
+      stop: () => {},
+      update: () => {},
+      succeed: () => {},
+      fail: () => {},
+    };
+  }
+
+  write(): void {
+    // Workflow doesn't write raw text - no-op
+  }
+
   /**
    * Return buffered events (if buffering is enabled).
    */

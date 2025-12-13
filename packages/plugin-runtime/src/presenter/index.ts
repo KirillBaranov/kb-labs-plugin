@@ -34,6 +34,13 @@ export {
   type BoxOptions,
   type TableRow,
   type KeyValueOptions,
+  type SideBoxOptions,
+  type Spinner,
 } from './presenter-facade';
+export {
+  CliUIFacade,
+  type CliUIFacadeOptions,
+} from './cli-ui-facade';
+// Note: IPC UI removed - use stdout piping instead (ADR-0013)
 
 
