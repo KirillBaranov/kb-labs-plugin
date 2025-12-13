@@ -355,10 +355,15 @@ export interface PluginContextV2<TConfig = any> {
 
   /**
    * Output interface (from @kb-labs/core-sys)
-   * For user-facing messages (recommended over presenter).
+   *
+   * @deprecated Use `ctx.ui` instead. Will be removed in v3.0.
+   *
+   * Migration:
+   * - `ctx.output.success()` → `ctx.ui.success()`
+   * - `ctx.output.error()` → `ctx.ui.showError()`
+   * - `ctx.output.ui.sideBox()` → `ctx.ui.sideBox()`
    *
    * Backward compatibility field from CliContextV1.
-   * In V2: Use `ctx.ui` instead (same API).
    */
   readonly output?: any;
 

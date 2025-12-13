@@ -33,6 +33,8 @@ export interface CreatePluginContextWithPlatformOptions<TConfig = any> {
   outdir?: string;
   /** UI facade (if not provided, creates appropriate one for host) */
   ui?: UIFacade;
+  /** Output adapter (for backward compatibility) */
+  output?: any;
   /** Resolved product configuration */
   config?: TConfig;
   /** Additional metadata (host-specific fields only) */
@@ -85,6 +87,7 @@ export function createPluginContextWithPlatform<TConfig = any>(
     cwd,      // V2: promoted to top-level
     outdir,   // V2: promoted to top-level
     ui,
+    output,   // V2: backward compat
     config,
     metadata,
   } = options;
@@ -125,6 +128,7 @@ export function createPluginContextWithPlatform<TConfig = any>(
     cwd,      // V2: promoted to top-level
     outdir,   // V2: promoted to top-level
     ui,
+    output,   // V2: backward compat
     config,
     platform: platformServices,
     metadata,

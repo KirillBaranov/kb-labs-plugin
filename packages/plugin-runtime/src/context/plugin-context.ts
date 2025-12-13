@@ -8,13 +8,7 @@ import {
   type PresenterFacade,
   type PresenterProgressPayload,
   type UIFacade,
-  type UIColors,
-  type UISymbols,
-  type ColorFn,
-  type BoxOptions,
-  type TableRow,
-  type KeyValueOptions,
-} from '../presenter/presenter-facade';
+} from '../presenter';
 import type { PluginHostType } from './host';
 import type { RuntimeAdapter, PluginContextV2 } from './plugin-context-v2';
 
@@ -37,7 +31,17 @@ import type {
 } from '@kb-labs/core-platform';
 
 // Re-export UI types for convenience
-export type { UIFacade, UIColors, UISymbols, ColorFn, BoxOptions, TableRow, KeyValueOptions };
+export type {
+  UIFacade,
+  UIColors,
+  UISymbols,
+  ColorFn,
+  BoxOptions,
+  TableRow,
+  KeyValueOptions,
+  SideBoxOptions,
+  SideBoxSection,
+} from '../presenter/presenter-facade';
 
 /**
  * Platform services available through PluginContext.
@@ -152,6 +156,9 @@ export interface PluginContextOptions<TConfig = any> {
   /** UI facade (presenter) */
   ui?: UIFacade;
 
+  /** Output adapter (for backward compatibility) */
+  output?: any;
+
   /** Platform services */
   platform?: Partial<PlatformServices>;
 
@@ -182,6 +189,8 @@ export function createPluginContext<TConfig = any>(
   host: PluginHostType,
   options: PluginContextOptions<TConfig>
 ): PluginContextV2<TConfig> {
+  // No-op UI facade - stdout piping handles output (ADR-0013)
+  // Previously used IPC UI facade in sandbox, but stdout piping is simpler and works better
   const ui = options.ui ?? createNoopUI();
 
   // Extract cwd/outdir from options (V2: promoted to top-level!)
@@ -213,6 +222,7 @@ export function createPluginContext<TConfig = any>(
     outdir,        // V2: promoted to top-level
     config: options.config,
     ui,
+    output: options.output,  // Backward compatibility (from metadata.output)
     platform,
     runtime,       // V2: new field
     metadata,      // V2: only host-specific data

@@ -248,6 +248,7 @@ export {
   TTYPresenter,
   JobRunnerPresenter,
   HttpPresenter,
+  CliUIFacade,
   createNoopPresenter,
   createNoopUI,
 } from './presenter/index';
@@ -257,6 +258,7 @@ export type {
   JobRunnerPresenterOptions,
   JobRunnerPresenterEvent,
   HttpPresenterOptions,
+  CliUIFacadeOptions,
   PresenterMessageLevel,
   PresenterMessageOptions,
   PresenterEventPayload,
