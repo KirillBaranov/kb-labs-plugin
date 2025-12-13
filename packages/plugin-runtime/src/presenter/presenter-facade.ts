@@ -400,21 +400,6 @@ export interface UIFacade extends PresenterFacade {
   // ============================================================
 
   /**
-   * Create a spinner for long-running tasks
-   *
-   * @param text - Initial spinner text
-   * @returns Spinner instance with control methods
-   *
-   * @example
-   * ```typescript
-   * const spin = ctx.ui.spinner('Processing...');
-   * // ... work ...
-   * spin.succeed('Done!');
-   * ```
-   */
-  spinner?(text: string): Spinner;
-
-  /**
    * Report progress for workflow stages
    * Wrapper around PresenterFacade.progress()
    *
@@ -579,17 +564,6 @@ class NoopUI implements UIFacade {
   }
 
   // Progress methods
-  spinner(): Spinner {
-    // Return noop spinner
-    return {
-      start: () => {},
-      stop: () => {},
-      update: () => {},
-      succeed: () => {},
-      fail: () => {},
-    };
-  }
-
   startProgress(): void {
     // intentionally empty
   }

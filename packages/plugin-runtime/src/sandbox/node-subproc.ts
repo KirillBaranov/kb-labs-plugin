@@ -76,9 +76,16 @@ function setupLogPipes(
 ): RingBuffer {
   const ringBuffer = new RingBuffer(1024 * 1024); // 1MB limit
 
+  require('node:fs').appendFileSync('/tmp/loader-parent-debug.log', `[SETUP] setupLogPipes called! child.stdout exists: ${!!child.stdout}\n`);
+
+  let chunkCount = 0; // DEBUG: Track chunk count
+
   if (child.stdout) {
+    console.error(`\n[SETUP] Attaching stdout.on('data') listener\n`);
     child.stdout.setEncoding('utf8');
     child.stdout.on('data', (data: string) => {
+      chunkCount++; // DEBUG: Increment chunk counter
+
       // CRITICAL OOM FIX: Truncate data to 100KB before split() to avoid memory issues on huge output
       // V8's split('\n') creates massive arrays with millions of strings when data is multi-MB
       const MAX_DATA_LENGTH = 100000; // 100KB max per chunk
@@ -86,16 +93,20 @@ function setupLogPipes(
         ? data.substring(0, MAX_DATA_LENGTH) + '\n[TRUNCATED: output too large]'
         : data;
 
+      // Pipe to terminal if CLI && !json (give developers freedom to use console.log)
+      const isCLI = ctx.pluginContext?.host === 'cli';
+      const isNotJSON = !ctx.jsonMode;
+      if (isCLI && isNotJSON) {
+        // DEBUG: Log chunk info
+        console.error(`\n[PARENT] Chunk #${chunkCount}, ${data.length} bytes, first 50 chars: ${JSON.stringify(data.substring(0, 50))}\n`);
+
+        // Write raw data to preserve \r escape sequences for spinner animations
+        process.stdout.write(data);
+      }
+
       const lines = truncated.split('\n').filter((line) => line.trim());
       for (const line of lines) {
         ringBuffer.append(`[stdout] ${line}`);
-
-        // Pipe to terminal if CLI && !json (give developers freedom to use console.log)
-        const isCLI = ctx.pluginContext?.host === 'cli';
-        const isNotJSON = !ctx.jsonMode;
-        if (isCLI && isNotJSON) {
-          console.log(line);
-        }
       }
     });
   }
@@ -587,6 +598,11 @@ export function nodeSubprocRunner(devMode: boolean = false): SandboxRunner {
       env.START_TIME = String(startedAt);
       env.KB_SANDBOX = 'true'; // Mark as sandbox child for IPC UI detection
 
+      // DEBUG: Log before fork
+      require('node:fs').appendFileSync('/tmp/node-subproc-debug.log',
+        `[NODE-SUBPROC] About to fork child\n`
+      );
+
       // Fork bootstrap process
       const child = fork(getBootstrapPath(), [], {
         execArgv: [
@@ -599,10 +615,22 @@ export function nodeSubprocRunner(devMode: boolean = false): SandboxRunner {
         cwd: ctx.workdir,
       });
 
+      require('node:fs').appendFileSync('/tmp/node-subproc-debug.log',
+        `[NODE-SUBPROC] Child forked, PID: ${child.pid}\n`
+      );
+
       const eventBridge = setupEventBridge(child, ctx.extensions?.events as any);
+
+      require('node:fs').appendFileSync('/tmp/node-subproc-debug.log',
+        `[NODE-SUBPROC] About to call setupLogPipes\n`
+      );
 
       // Setup log collection
       const logBuffer = setupLogPipes(child, ctx);
+
+      require('node:fs').appendFileSync('/tmp/node-subproc-debug.log',
+        `[NODE-SUBPROC] setupLogPipes returned\n`
+      );
 
       // Start timeout watch
       const timeoutMs = perms.quotas?.timeoutMs ?? 60000;

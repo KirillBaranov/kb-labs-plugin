@@ -15,7 +15,6 @@ import type {
   UIFacade,
   UIColors,
   UISymbols,
-  Spinner,
   PresenterMessageOptions,
   PresenterProgressPayload,
   ConfirmOptions,
@@ -337,35 +336,6 @@ export class CliUIFacade implements UIFacade {
   // ============================================================
   // PROGRESS INDICATORS
   // ============================================================
-
-  spinner(text: string): Spinner {
-    // TODO: Integrate with ora or similar spinner library
-    // For now, return simple console-based spinner
-    let isRunning = false;
-
-    return {
-      start: () => {
-        isRunning = true;
-        console.log(`${safeSymbols.info} ${text}`);
-      },
-      stop: () => {
-        isRunning = false;
-      },
-      update: (options) => {
-        if (isRunning && options.text) {
-          console.log(`${safeSymbols.info} ${options.text}`);
-        }
-      },
-      succeed: (message) => {
-        isRunning = false;
-        console.log(`${safeSymbols.success} ${message ?? text}`);
-      },
-      fail: (message) => {
-        isRunning = false;
-        console.error(`${safeSymbols.error} ${message ?? text}`);
-      },
-    };
-  }
 
   startProgress(stage: string, message: string): void {
     this.progress({
