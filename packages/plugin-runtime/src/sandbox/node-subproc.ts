@@ -89,6 +89,13 @@ function setupLogPipes(
       const lines = truncated.split('\n').filter((line) => line.trim());
       for (const line of lines) {
         ringBuffer.append(`[stdout] ${line}`);
+
+        // Pipe to terminal if CLI && !json (give developers freedom to use console.log)
+        const isCLI = ctx.pluginContext?.host === 'cli';
+        const isNotJSON = !ctx.jsonMode;
+        if (isCLI && isNotJSON) {
+          console.log(line);
+        }
       }
     });
   }
@@ -106,6 +113,13 @@ function setupLogPipes(
       const lines = truncated.split('\n').filter((line) => line.trim());
       for (const line of lines) {
         ringBuffer.append(`[stderr] ${line}`);
+
+        // Pipe to terminal if CLI && !json (give developers freedom to use console.error)
+        const isCLI = ctx.pluginContext?.host === 'cli';
+        const isNotJSON = !ctx.jsonMode;
+        if (isCLI && isNotJSON) {
+          console.error(line);
+        }
       }
     });
   }
@@ -571,6 +585,7 @@ export function nodeSubprocRunner(devMode: boolean = false): SandboxRunner {
       const env = pickEnv(process.env, perms.env?.allow);
       env.PLUGIN_ROOT = ctx.pluginRoot;
       env.START_TIME = String(startedAt);
+      env.KB_SANDBOX = 'true'; // Mark as sandbox child for IPC UI detection
 
       // Fork bootstrap process
       const child = fork(getBootstrapPath(), [], {

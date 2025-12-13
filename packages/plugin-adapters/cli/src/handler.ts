@@ -5,7 +5,7 @@
 
 import type { ManifestV2, CliCommandDecl } from '@kb-labs/plugin-manifest';
 import type { PluginRegistry } from '@kb-labs/plugin-runtime';
-import { createPluginContextWithPlatform, executePlugin } from '@kb-labs/plugin-runtime';
+import { createPluginContextWithPlatform, executePlugin, CliUIFacade } from '@kb-labs/plugin-runtime';
 import { createId } from '@kb-labs/plugin-runtime';
 import { getLogger } from '@kb-labs/core-sys/logging';
 import { createOutput, type Output } from '@kb-labs/core-sys/output';
@@ -78,6 +78,9 @@ export async function executeCommand(
   });
 
   try {
+    // Determine verbosity from flags
+    const verbosity = flags.quiet ? 'quiet' : (flags.verbose ? 'verbose' : 'normal');
+
     // 1. Create PluginContextV2 (single source of truth)
     const pluginContext = createPluginContextWithPlatform({
       host: 'cli',
@@ -88,12 +91,10 @@ export async function executeCommand(
       cwd: defaultWorkdir,
       outdir: defaultOutdir,
       config: {}, // TODO: Load product config
-      ui: {
-        write: (msg: string) => output.info(msg),
-        info: (msg: string) => output.info(msg),
-        error: (msg: string) => output.error(msg),
-        json: (data: unknown) => cliContext.presenter.json(data),
-      } as any,
+      ui: new CliUIFacade({
+        verbosity: verbosity as 'quiet' | 'normal' | 'verbose',
+        jsonMode
+      }),
       metadata: {
         flags,
         jsonMode,

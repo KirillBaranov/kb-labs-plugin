@@ -42,6 +42,7 @@
     "@kb-labs/plugin-contracts": "link:../plugin-contracts",
     "@kb-labs/plugin-manifest": "link:../plugin-manifest",
     "@kb-labs/setup-engine-operations": "link:../../../kb-labs-setup-engine/packages/setup-engine-operations",
+    "@kb-labs/shared-cli-ui": "link:../../../kb-labs-shared/packages/shared-cli-ui",
     "@kb-labs/workflow-contracts": "link:../../../kb-labs-workflow/packages/workflow-contracts",
     "execa": "^8.0.0",
     "minimatch": "^9.0.4",
