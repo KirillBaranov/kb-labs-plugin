@@ -1,6 +1,6 @@
 {
   "name": "@kb-labs/plugin-contracts",
-  "version": "0.1.3",
+  "version": "0.1.5",
   "description": "Type definitions and contracts for KB Labs plugin runtime APIs (Shell, Artifacts, Invoke, etc.)",
   "type": "module",
   "main": "./dist/index.js",
