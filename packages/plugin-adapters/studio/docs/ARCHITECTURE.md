@@ -22,9 +22,11 @@
 ### 1.2 Key Responsibilities
 
 1. **Registry Generation**: Generate widget registry from manifest
-2. **Widget Mapping**: Map widget types to components
+2. **Data Source Extraction**: Extract data source configuration from widgets
 3. **Client Hooks**: Generate React hooks for data binding
-4. **Component Resolution**: Dynamic component loading
+4. **Custom Component Resolution**: Dynamic loading for custom components only
+
+> **Architecture Decision**: Standard widget kinds (table, chart, etc.) are resolved by Studio frontend via `WIDGET_COMPONENTS` map. This package only handles custom component resolution, keeping UI concerns in the frontend.
 
 ## 2. High-Level Architecture
 

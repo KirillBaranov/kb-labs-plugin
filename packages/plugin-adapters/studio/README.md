@@ -9,10 +9,11 @@ Studio adapter for KB Labs plugins, enabling widget rendering and UI integration
 ### Core Goals
 
 - **Widget Registry Generation**: Generate registry from manifest
-- **Widget Type Mapping**: Map widget types to components
 - **Client Hooks**: Generate React hooks for data binding
-- **Component Resolution**: Dynamic component loading
+- **Component Resolution**: Dynamic loading for custom components
 - **Menu & Layout Support**: Menu and layout configuration
+
+> **Note**: Standard widget kinds (table, chart, etc.) are resolved by Studio frontend via `WIDGET_COMPONENTS` map. This package only handles custom component resolution.
 
 ## Package Status
 
@@ -37,19 +38,20 @@ Studio Adapter
 ### Key Components
 
 1. **Registry** (`registry.ts`): Generates widget registry from manifest
-2. **Widgets** (`widgets.ts`): Widget type mapping and default components
+2. **Widgets** (`widgets.ts`): Data source extraction utilities
 3. **Client** (`client.ts`): React hooks generation for data binding
-4. **Components** (`components.ts`): Component resolution and dynamic imports
+4. **Components** (`components.ts`): Custom component resolution and dynamic imports
 
 ## ✨ Features
 
 - **Widget registry generation** from manifest
-- **Widget type mapping** (panel, card, table, chart, custom)
 - **Client hooks generator** for data binding
-- **Component resolution** with dynamic imports
+- **Custom component resolution** with dynamic imports
 - **Menu and layout support**
 - **Header hints** from manifest policies
 - **Polling support** for data refresh
+
+> **Architecture Note**: Widget kind → component mapping is handled by Studio frontend. This package passes `widget.kind` in registry, and Studio maps it to the appropriate React component.
 
 ## 📦 API Reference
 
@@ -62,8 +64,6 @@ Studio Adapter
 
 #### Widget Functions
 
-- `getDefaultComponent(kind)`: Get default component for widget kind
-- `resolveComponentPath(widget)`: Resolve component path for widget
 - `extractDataSource(widget)`: Extract data source configuration
 
 #### Client Functions
@@ -74,10 +74,12 @@ Studio Adapter
 
 #### Component Functions
 
-- `resolveComponent(widget)`: Resolve component for widget
+- `resolveComponent(widget)`: Resolve custom component for widget (throws if no component path)
 - `loadComponent(componentPath, baseUrl)`: Dynamic import component
 - `loadComponentCached(componentPath, baseUrl)`: Load component with caching
 - `clearComponentCache()`: Clear component cache
+
+> **Note**: `resolveComponent()` only works for widgets with explicit `component` path. Standard widget kinds are resolved by Studio frontend.
 
 ### Types & Interfaces
 
