@@ -4,6 +4,7 @@
 **Date**: 2025-12-13
 **Decision makers**: Architecture team
 **Related**: ADR-0013 (Sandbox stdout piping)
+**Tags:** `plugin-runtime`, `ui`, `output`, `cli`, `developer-experience`
 
 ## Context
 
