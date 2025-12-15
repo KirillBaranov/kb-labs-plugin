@@ -114,6 +114,10 @@ function setupLogPipes(
   if (child.stderr) {
     child.stderr.setEncoding('utf8');
     child.stderr.on('data', (data: string) => {
+      // DEBUG: Log stderr to file
+      require('node:fs').appendFileSync('/tmp/node-subproc-debug.log',
+        `[STDERR] ${data.substring(0, 2000)}\n`
+      );
       // CRITICAL OOM FIX: Truncate data to 100KB before split() to avoid memory issues on huge output
       // V8's split('\n') creates massive arrays with millions of strings when data is multi-MB
       const MAX_DATA_LENGTH = 100000; // 100KB max per chunk
@@ -371,7 +375,7 @@ function getBootstrapPath(): string {
   
   // 1. Try workspace root (most reliable for monorepo)
   if (workspaceRoot) {
-    const workspacePath = path.join(workspaceRoot, 'kb-labs-core', 'packages', 'sandbox', 'dist', 'runner', 'bootstrap.js');
+    const workspacePath = path.join(workspaceRoot, 'kb-labs-core', 'packages', 'core-sandbox', 'dist', 'runner', 'bootstrap.js');
     if (existsSync(workspacePath)) {
       return workspacePath;
     }
@@ -387,11 +391,11 @@ function getBootstrapPath(): string {
   // Traverse up from current file to find node_modules
   let currentDir = __dirname;
   for (let i = 0; i < 10; i++) {
-    const nodeModulesPath = path.join(currentDir, 'node_modules', '@kb-labs', 'sandbox', 'dist', 'runner', 'bootstrap.js');
+    const nodeModulesPath = path.join(currentDir, 'node_modules', '@kb-labs', 'core-sandbox', 'dist', 'runner', 'bootstrap.js');
     if (existsSync(nodeModulesPath)) {
       return nodeModulesPath;
     }
-    
+
     const parentDir = path.dirname(currentDir);
     if (parentDir === currentDir) break;
     currentDir = parentDir;
@@ -399,15 +403,15 @@ function getBootstrapPath(): string {
   
   // If nothing found, throw clear error
   const workspacePath = workspaceRoot
-    ? path.join(workspaceRoot, 'kb-labs-core', 'packages', 'sandbox', 'dist', 'runner', 'bootstrap.js')
-    : path.join(cwd, 'kb-labs-core', 'packages', 'sandbox', 'dist', 'runner', 'bootstrap.js');
-  
+    ? path.join(workspaceRoot, 'kb-labs-core', 'packages', 'core-sandbox', 'dist', 'runner', 'bootstrap.js')
+    : path.join(cwd, 'kb-labs-core', 'packages', 'core-sandbox', 'dist', 'runner', 'bootstrap.js');
+
   throw new Error(
     `Bootstrap file not found. Tried:\n` +
     `  - ${workspacePath}\n` +
     `  - ${relativePath}\n` +
     `  - node_modules/@kb-labs/core-sandbox/dist/runner/bootstrap.js\n` +
-    `Make sure @kb-labs/core-sandbox is built: run 'pnpm build' in kb-labs-core/packages/sandbox`
+    `Make sure @kb-labs/core-sandbox is built: run 'pnpm build' in kb-labs-core/packages/core-sandbox`
   );
 }
 
@@ -584,7 +588,7 @@ export function nodeSubprocRunner(devMode: boolean = false): SandboxRunner {
 
   return {
     async run(args): Promise<ExecuteResult> {
-      const { ctx, perms, handler, input } = args;
+      const { ctx, perms, handler, input, manifest } = args;
       const startedAt = Date.now();
       const cpuStart = process.cpuUsage();
       const memStart = process.memoryUsage().rss;
@@ -660,6 +664,7 @@ export function nodeSubprocRunner(devMode: boolean = false): SandboxRunner {
           input,
           perms,
           ctx: ctxForChild,
+          manifest, // Required for buildRuntime() in child process
         },
       });
 
@@ -750,7 +755,10 @@ export function nodeSubprocRunner(devMode: boolean = false): SandboxRunner {
             resolve(result);
           } else if (msg?.type === 'ERR' && msg.payload) {
             cleanup();
-            const { error, metrics } = msg.payload;
+            // ERR payload can have either { error: {...} } or { code, message, stack } format
+            const errorInfo = msg.payload.error || msg.payload;
+            const errorMessage = errorInfo?.message || 'Unknown error';
+            const errorCode = errorInfo?.code || 'UNKNOWN_ERROR';
             const endTime = Date.now();
             const endCpu = process.cpuUsage(cpuStart);
             const cpuMs = (endCpu.user + endCpu.system) / 1000;
@@ -760,7 +768,8 @@ export function nodeSubprocRunner(devMode: boolean = false): SandboxRunner {
               ErrorCode.PLUGIN_HANDLER_NOT_FOUND,
               500,
               {
-                error: error.message,
+                error: errorMessage,
+                code: errorCode,
                 handlerRef: handler,
               },
               ctx,
@@ -835,6 +844,9 @@ export function nodeSubprocRunner(devMode: boolean = false): SandboxRunner {
         });
 
         child.on('exit', (code: number | null, signal: string | null) => {
+          require('node:fs').appendFileSync('/tmp/node-subproc-debug.log',
+            `[NODE-SUBPROC] Child exited: code=${code}, signal=${signal}\n`
+          );
           if (code !== 0 && signal !== 'SIGTERM' && signal !== 'SIGKILL') {
             cleanup();
             const endTime = Date.now();
