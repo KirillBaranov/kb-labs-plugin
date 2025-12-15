@@ -17,10 +17,7 @@ export {
 
 // Widgets
 export {
-  getDefaultComponent,
-  resolveComponentPath,
   extractDataSource,
-  DEFAULT_COMPONENTS,
 } from './widgets';
 
 // Client

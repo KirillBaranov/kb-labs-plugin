@@ -144,6 +144,8 @@ export async function executeRoute(
 
   const runtimePromise = (async () => {
     try {
+      // Execute via executePlugin with REST adapter
+      // @see ADR-0015: Execution Adapters Architecture
       const result = await executePlugin({
         context: pluginContext,
         handlerRef,
@@ -154,6 +156,7 @@ export async function executeRoute(
         grantedCapabilities,
         pluginRoot: distRoot,
         registry,
+        executionType: 'rest', // Use REST adapter for correct handler signature
       });
 
       // Convert ExecutePluginResult to RuntimeResult format

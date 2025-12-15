@@ -4,7 +4,6 @@
  */
 
 import type { StudioRegistryEntry } from './registry';
-import { resolveComponentPath } from './widgets';
 
 /**
  * Resolved component info
@@ -24,7 +23,12 @@ export interface ResolvedComponent {
 export async function resolveComponent(
   widget: StudioRegistryEntry
 ): Promise<ResolvedComponent> {
-  const path = resolveComponentPath(widget);
+  // Component path comes from manifest or is undefined for standard kinds
+  // Frontend resolves standard kinds via WIDGET_COMPONENTS map
+  const path = widget.component;
+  if (!path) {
+    throw new Error(`Widget ${widget.id} has no component path. Standard widget kinds are resolved by frontend.`);
+  }
   const isDefault = widget.kind !== 'custom';
 
   return {
