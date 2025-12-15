@@ -9,9 +9,11 @@ import {
   type PluginContext,
   type PluginContextOptions,
 } from './plugin-context';
-import type { PluginContextV2 } from './plugin-context-v2';
+import type { PluginContextV2, RuntimeAdapter } from './plugin-context-v2';
 import type { PluginHostType } from './host';
 import type { UIFacade } from './plugin-context';
+import * as fs from 'node:fs/promises';
+import * as nodePath from 'node:path';
 
 /**
  * Options for creating PluginContext with platform integration

@@ -1,6 +1,8 @@
 /**
  * @module @kb-labs/plugin-runtime/execute-plugin
  * Simplified plugin execution - all logic in one place
+ *
+ * @see ADR-0015: Execution Adapters Architecture
  */
 
 import type { ExecutePluginOptions, ExecutePluginResult } from './types';
@@ -8,6 +10,7 @@ import { checkCapabilities } from './capabilities';
 import { loadHandler } from './loader';
 import { validateInput, validateOutput } from './validation';
 import { writeArtifacts } from './artifacts';
+import { getAdapter } from './adapters/index.js';
 
 /**
  * Execute plugin command with full validation and error handling
@@ -99,12 +102,18 @@ export async function executePlugin(
     }
     const handlerFn = await loadHandler(handlerRef, pluginRoot);
 
-    // 4. Execute handler
-    // Handler signature: (context: PluginContextV2, argv: string[], flags: Record<string, unknown>) => Promise<unknown>
+    // 4. Execute handler via adapter
+    // Adapter pattern allows different handler signatures (CLI, Job, REST)
+    // @see ADR-0015: Execution Adapters Architecture
+    const executionType = options.executionType ?? 'cli';
+    const adapter = getAdapter(executionType);
+
     if (process.env.KB_LOG_LEVEL === 'debug' || process.env.DEBUG) {
-      console.error('[executePlugin] Executing handler');
+      console.error('[executePlugin] Executing handler', { executionType });
     }
-    const result = await handlerFn(context, argv, flags);
+
+    const adapterInput = adapter.prepareInput(options);
+    const result = await adapter.invoke(handlerFn, adapterInput, context);
 
     if (process.env.KB_LOG_LEVEL === 'debug' || process.env.DEBUG) {
       console.error('[executePlugin] Handler executed successfully', { hasResult: !!result });

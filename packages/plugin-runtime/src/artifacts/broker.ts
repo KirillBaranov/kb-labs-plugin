@@ -6,12 +6,12 @@
 import type { ManifestV2, ArtifactAccess } from '@kb-labs/plugin-manifest';
 import type { ExecutionContext, ErrorEnvelope } from '../types';
 import type {
-  ArtifactStatus as ArtifactStatusContract,
-  ArtifactCapability as ArtifactCapabilityContract,
-  ArtifactMeta as ArtifactMetaContract,
-  ArtifactReadRequest as ArtifactReadRequestContract,
-  ArtifactWriteRequest as ArtifactWriteRequestContract,
-  ArtifactListRequest as ArtifactListRequestContract,
+  ArtifactStatus,
+  ArtifactCapability,
+  ArtifactMeta,
+  ArtifactReadRequest,
+  ArtifactWriteRequest,
+  ArtifactListRequest,
   ArtifactInfo as ArtifactInfoContract,
 } from '@kb-labs/plugin-contracts';
 import { ErrorCode } from '@kb-labs/rest-api-contracts';
@@ -23,23 +23,8 @@ import * as crypto from 'node:crypto';
 import { minimatch } from 'minimatch';
 import { emitAnalyticsEvent } from '../analytics-stub';
 
-/**
- * Artifact lifecycle status
- * @deprecated Import from @kb-labs/plugin-contracts instead
- */
-export type ArtifactStatus = ArtifactStatusContract;
-
-/**
- * Artifact capabilities
- * @deprecated Import from @kb-labs/plugin-contracts instead
- */
-export type ArtifactCapability = ArtifactCapabilityContract;
-
-/**
- * Artifact metadata
- * @deprecated Import from @kb-labs/plugin-contracts instead
- */
-export interface ArtifactMeta extends ArtifactMetaContract {}
+// Re-export types from plugin-contracts for convenience
+export type { ArtifactStatus, ArtifactCapability, ArtifactMeta, ArtifactReadRequest, ArtifactWriteRequest, ArtifactListRequest } from '@kb-labs/plugin-contracts';
 
 /**
  * Parse artifact URI to plugin ID and path
@@ -136,26 +121,7 @@ export function parseArtifactUri(uri: string): { pluginId: string; path: string 
 }
 
 /**
- * Artifact read request
- * @deprecated Import from @kb-labs/plugin-contracts instead
- */
-export interface ArtifactReadRequest extends ArtifactReadRequestContract {}
-
-/**
- * Artifact write request
- * @deprecated Import from @kb-labs/plugin-contracts instead
- */
-export interface ArtifactWriteRequest extends ArtifactWriteRequestContract {}
-
-/**
- * Artifact list request
- * @deprecated Import from @kb-labs/plugin-contracts instead
- */
-export interface ArtifactListRequest extends ArtifactListRequestContract {}
-
-/**
- * Artifact information
- * @deprecated Import from @kb-labs/plugin-contracts instead
+ * Artifact information with runtime-specific path extension
  */
 export interface ArtifactInfo extends ArtifactInfoContract {
   /** Logical path (runtime-specific extension, always present in runtime) */

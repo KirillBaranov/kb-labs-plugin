@@ -7,6 +7,7 @@ import type { ManifestV2, PermissionSpec } from '@kb-labs/plugin-manifest';
 import type { PluginContextV2 } from '../context/plugin-context-v2';
 import type { PluginRegistry } from '../registry';
 import type { HandlerRef } from '../types';
+import type { ExecutionType } from './adapters/types';
 
 /**
  * Options for executing a plugin command
@@ -38,6 +39,18 @@ export interface ExecutePluginOptions {
 
   /** Granted capabilities */
   grantedCapabilities?: string[];
+
+  /**
+   * Execution type - determines handler signature
+   *
+   * - 'cli' (default): handler(ctx, argv, flags)
+   * - 'job': handler(input: JobInput, ctx)
+   * - 'rest': handler(request, ctx: RestHandlerContext)
+   * - 'event': handler(event, ctx) (future)
+   *
+   * @see ADR-0015: Execution Adapters Architecture
+   */
+  executionType?: ExecutionType;
 }
 
 /**

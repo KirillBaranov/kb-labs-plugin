@@ -180,11 +180,6 @@ export interface PluginAPI {
   /** Background and scheduled jobs (optional) */
   jobs?: import('./jobs/broker').JobBroker;
 
-  /** Config helper for ensuring config sections exist */
-  config: {
-    ensureSection: (section: string) => import('./config/config-helper').SmartConfigHelper;
-  };
-
   /** Analytics emitter for custom tracking (scoped to this execution) */
   analytics?: (event: Partial<TelemetryEvent>) => Promise<TelemetryEmitResult>;
 }
@@ -310,12 +305,6 @@ export type LegacyRuntimeAPI = {
       predicate?: (event: EventEnvelope<T>) => boolean,
       options?: import('./events/index').WaitForOptions<T>
     ): Promise<EventEnvelope<T>>;
-  };
-  /**
-   * @deprecated Use ctx.api.config instead
-   */
-  config: {
-    ensureSection: (section: string) => import('./config/config-helper').SmartConfigHelper;
   };
   /**
    * @deprecated Use ctx.api.state instead

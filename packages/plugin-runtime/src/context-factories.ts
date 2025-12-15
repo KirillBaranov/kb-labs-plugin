@@ -13,7 +13,6 @@ import type { ShellBroker } from './shell/broker';
 import type { JobBroker } from './jobs/broker';
 import type { EventBus } from './events/index';
 import type { StateRuntimeAPI } from './io/state';
-import type { SmartConfigHelper } from './config/config-helper';
 import type { PresenterFacade, PresenterProgressPayload } from './presenter/presenter-facade';
 import type { TelemetryEvent, TelemetryEmitResult } from '@kb-labs/core-types';
 
@@ -43,8 +42,6 @@ export interface CreatePluginAPIOptions {
   eventBus?: EventBus;
   /** Job broker for background jobs */
   jobBroker?: JobBroker;
-  /** Config helper factory */
-  configHelper?: (section: string) => SmartConfigHelper;
   /** Analytics emitter */
   analytics?: (event: Partial<TelemetryEvent>) => Promise<TelemetryEmitResult>;
 }
@@ -94,7 +91,6 @@ export function createPluginAPI(options: CreatePluginAPIOptions): PluginAPI {
     shellBroker,
     eventBus,
     jobBroker,
-    configHelper,
     analytics,
   } = options;
 
@@ -171,17 +167,6 @@ export function createPluginAPI(options: CreatePluginAPIOptions): PluginAPI {
 
     // Jobs - background and scheduled jobs
     jobs: jobBroker,
-
-    // Config - configuration helpers
-    config: configHelper
-      ? {
-          ensureSection: (section) => configHelper(section),
-        }
-      : {
-          ensureSection: () => {
-            throw new Error('Config helper not available');
-          },
-        },
 
     // Analytics - telemetry
     analytics,
