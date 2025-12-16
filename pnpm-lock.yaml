@@ -312,6 +312,10 @@ importers:
         version: 3.2.4(@types/node@24.10.0)(@vitest/ui@3.2.4)(jsdom@27.1.0)
 
   packages/plugin-contracts-v3:
+    dependencies:
+      '@kb-labs/core-platform':
+        specifier: link:../../../kb-labs-core/packages/core-platform
+        version: link:../../../kb-labs-core/packages/core-platform
     devDependencies:
       '@kb-labs/devkit':
         specifier: link:../../../kb-labs-devkit
