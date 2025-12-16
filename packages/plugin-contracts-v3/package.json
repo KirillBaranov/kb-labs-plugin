@@ -21,7 +21,9 @@
     "dev": "tsup --config tsup.config.ts --watch",
     "type-check": "tsc --noEmit"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@kb-labs/core-platform": "link:../../../kb-labs-core/packages/core-platform"
+  },
   "devDependencies": {
     "@kb-labs/devkit": "link:../../../kb-labs-devkit",
     "@types/node": "^24.3.3",

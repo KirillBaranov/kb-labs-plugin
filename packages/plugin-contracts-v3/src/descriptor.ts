@@ -40,6 +40,12 @@ export interface PluginContextDescriptor {
   readonly parentRequestId?: string;
 
   /**
+   * Invocation depth (prevents fork bomb via recursive plugin invocation)
+   * Default: 0. Max: 3.
+   */
+  readonly invocationDepth?: number;
+
+  /**
    * Current working directory
    */
   readonly cwd: string;
