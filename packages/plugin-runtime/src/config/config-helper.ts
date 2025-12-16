@@ -38,7 +38,7 @@ export class SmartConfigHelper {
   private readonly tracker?: OperationTracker;
   private readonly defaultConfigPath: string;
 
-  constructor({ workdir, fs, tracker, defaultConfigPath = '.kb/kb-labs.config.json' }: ConfigHelperDeps) {
+  constructor({ workdir, fs, tracker, defaultConfigPath = '.kb/kb.config.json' }: ConfigHelperDeps) {
     this.workdir = workdir;
     this.fs = fs;
     this.tracker = tracker;

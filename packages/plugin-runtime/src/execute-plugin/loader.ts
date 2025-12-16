@@ -35,8 +35,19 @@ export async function loadHandler(
   const handlerFn = module[handlerRef.export];
 
   if (typeof handlerFn !== 'function') {
+    console.log('[loader] handlerFn type:', typeof handlerFn, 'has handler?', handlerFn?.handler);
+
+    // Check if this is a V3 command (object with handler.execute)
+    if (handlerFn && typeof handlerFn === 'object' && handlerFn.handler && typeof handlerFn.handler.execute === 'function') {
+      console.log('[loader] Detected V3 command, returning stub');
+      // V3 command - return a stub that will be intercepted by V3 adapter
+      return async () => {
+        throw new Error('[V3] This command should be executed via V3 adapter, not V2 runtime');
+      };
+    }
+
     throw new Error(
-      `Handler export "${handlerRef.export}" is not a function in ${handlerRef.file}`
+      `[LOADER_V2] Handler export "${handlerRef.export}" is not a function in ${handlerRef.file}`
     );
   }
 
