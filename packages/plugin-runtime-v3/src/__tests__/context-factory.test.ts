@@ -50,6 +50,35 @@ describe('createPluginContextV3', () => {
     analytics: {} as any,
   };
 
+  it('should pass platform services directly without wrapping', () => {
+    const descriptor: PluginContextDescriptor = {
+      host: 'cli',
+      pluginId: '@kb-labs/test',
+      pluginVersion: '1.0.0',
+      cwd: '/test',
+      permissions: {},
+      hostContext: { host: 'cli', argv: [], flags: {} },
+      parentRequestId: undefined,
+    };
+
+    const { context } = createPluginContextV3({
+      descriptor,
+      platform: mockPlatform,
+      ui: mockUI,
+    });
+
+    // CRITICAL: Platform services MUST be passed through directly
+    // No wrappers, no adapters, no child logger creation
+    expect(context.platform).toBe(mockPlatform); // ← Direct reference
+    expect(context.platform.logger).toBe(mockLogger); // ← Same logger instance
+    expect(context.platform.llm).toBe(mockPlatform.llm);
+    expect(context.platform.embeddings).toBe(mockPlatform.embeddings);
+    expect(context.platform.vectorStore).toBe(mockPlatform.vectorStore);
+    expect(context.platform.cache).toBe(mockPlatform.cache);
+    expect(context.platform.storage).toBe(mockPlatform.storage);
+    expect(context.platform.analytics).toBe(mockPlatform.analytics);
+  });
+
   it('should create context with all required fields', () => {
     const descriptor: PluginContextDescriptor = {
       host: 'cli',
@@ -77,11 +106,7 @@ describe('createPluginContextV3', () => {
 
     // Services
     expect(context.ui).toBe(mockUI);
-    // Platform is wrapped with child logger, not same reference
     expect(context.platform).toBeDefined();
-    expect(context.platform.logger).toBeDefined();
-    expect(context.platform.llm).toBe(mockPlatform.llm);
-    expect(context.platform.embeddings).toBe(mockPlatform.embeddings);
     expect(context.runtime).toBeDefined();
     expect(context.api).toBeDefined();
     expect(context.trace).toBeDefined();

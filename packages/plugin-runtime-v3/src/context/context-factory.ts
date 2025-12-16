@@ -125,14 +125,8 @@ export function createPluginContextV3<TConfig = unknown>(
     cleanupStack,
   });
 
-  // 6. Create child logger with plugin context
-  const logger = platform.logger.child({
-    plugin: descriptor.pluginId,
-    requestId,
-    traceId,
-  });
-
-  // 7. Assemble full context
+  // 6. Assemble full context
+  // Platform services passed through directly - no wrappers, no adapters
   const context: PluginContextV3<TConfig> = {
     // Metadata
     host: descriptor.host,
@@ -155,15 +149,7 @@ export function createPluginContextV3<TConfig = unknown>(
 
     // Services
     ui,
-    platform: {
-      logger,
-      llm: platform.llm,
-      embeddings: platform.embeddings,
-      vectorStore: platform.vectorStore,
-      cache: platform.cache,
-      storage: platform.storage,
-      analytics: platform.analytics,
-    },
+    platform, // ← Direct passthrough of platform services
     runtime,
     api,
   };

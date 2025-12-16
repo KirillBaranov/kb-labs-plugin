@@ -1,14 +1,14 @@
 /**
  * Platform RPC client for subprocess
  *
- * Connects to parent process's UnitSocketServer to access platform services.
- * This is a placeholder implementation - actual RPC will be implemented when needed.
+ * Connects to parent process's UnixSocketServer to access platform services via RPC.
  */
 
 import type { PlatformServices, Logger } from '@kb-labs/plugin-contracts-v3';
+import { UnixSocketClient } from './unix-socket-client.js';
 
 /**
- * Create a mock logger for subprocess
+ * Create a subprocess logger that writes to console
  */
 function createSubprocessLogger(): Logger {
   const log = (level: string, msg: string, meta?: Record<string, unknown>) => {
@@ -29,56 +29,82 @@ function createSubprocessLogger(): Logger {
   };
 }
 
+let rpcClient: UnixSocketClient | null = null;
+
 /**
- * Connect to parent process platform services
+ * Connect to parent process platform services via Unix socket RPC
  *
- * TODO: Implement actual RPC via UnitSocketServer when Phase 6 integration happens.
- * For now, returns mock implementations since subprocess can work without platform services
- * for basic file/network operations.
- *
- * @param socketPath Path to UnitSocketServer socket (future use)
+ * @param socketPath Path to UnixSocketServer socket
  */
 export async function connectToPlatform(socketPath?: string): Promise<PlatformServices> {
-  const asyncNoop = async () => {};
+  if (!socketPath) {
+    throw new Error('Socket path is required for platform RPC connection');
+  }
 
-  // Mock platform services for now
-  // In Phase 6, this will connect to parent's UnitSocketServer via socketPath
+  // Create and connect RPC client
+  rpcClient = new UnixSocketClient({ socketPath });
+  await rpcClient.connect();
+
+  // Create platform services using RPC client
   const platform: PlatformServices = {
+    // Logger runs in subprocess - doesn't need RPC
     logger: createSubprocessLogger(),
 
+    // LLM service via RPC
     llm: {
-      chat: async () => {
-        throw new Error('LLM not available in subprocess (requires RPC connection)');
+      chat: async (request) => {
+        return rpcClient!.call('llm', 'chat', [request]);
       },
     },
 
+    // Embeddings service via RPC
     embeddings: {
-      embed: async () => {
-        throw new Error('Embeddings not available in subprocess (requires RPC connection)');
+      embed: async (request) => {
+        return rpcClient!.call('embeddings', 'embed', [request]);
       },
     },
 
+    // VectorStore service via RPC
     vectorStore: {
-      search: async () => {
-        throw new Error('VectorStore not available in subprocess (requires RPC connection)');
+      search: async (request) => {
+        return rpcClient!.call('vectorStore', 'search', [request]);
       },
     },
 
+    // Cache service via RPC
     cache: {
-      get: async () => undefined,
-      set: asyncNoop,
-      delete: asyncNoop,
+      get: async (key) => {
+        return rpcClient!.call('cache', 'get', [key]);
+      },
+      set: async (key, value, ttl) => {
+        return rpcClient!.call('cache', 'set', [key, value, ttl]);
+      },
+      delete: async (key) => {
+        return rpcClient!.call('cache', 'delete', [key]);
+      },
     },
 
+    // Storage service via RPC
     storage: {
-      read: async () => new Uint8Array(),
-      write: asyncNoop,
-      delete: asyncNoop,
-      exists: async () => false,
+      read: async (path) => {
+        return rpcClient!.call('storage', 'read', [path]);
+      },
+      write: async (path, data) => {
+        return rpcClient!.call('storage', 'write', [path, data]);
+      },
+      delete: async (path) => {
+        return rpcClient!.call('storage', 'delete', [path]);
+      },
+      exists: async (path) => {
+        return rpcClient!.call('storage', 'exists', [path]);
+      },
     },
 
+    // Analytics service via RPC
     analytics: {
-      track: asyncNoop,
+      track: async (event) => {
+        return rpcClient!.call('analytics', 'track', [event]);
+      },
     },
   };
 
@@ -87,9 +113,10 @@ export async function connectToPlatform(socketPath?: string): Promise<PlatformSe
 
 /**
  * Disconnect from platform services
- *
- * Placeholder for cleanup when RPC is implemented.
  */
 export async function disconnectFromPlatform(): Promise<void> {
-  // No-op for now
+  if (rpcClient) {
+    await rpcClient.close();
+    rpcClient = null;
+  }
 }
