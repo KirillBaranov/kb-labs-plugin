@@ -23,7 +23,7 @@ importers:
         version: 4.0.2
       '@vitest/coverage-v8':
         specifier: ^3.2.4
-        version: 3.2.4(vitest@3.2.4(@types/node@24.10.0)(jsdom@27.1.0))
+        version: 3.2.4(vitest@3.2.4(@types/node@24.10.0)(@vitest/ui@3.2.4)(jsdom@27.1.0))
       rimraf:
         specifier: ^6.0.1
         version: 6.1.0
@@ -38,7 +38,7 @@ importers:
         version: 5.4.21(@types/node@24.10.0)
       vitest:
         specifier: ^3.2.4
-        version: 3.2.4(@types/node@24.10.0)(jsdom@27.1.0)
+        version: 3.2.4(@types/node@24.10.0)(@vitest/ui@3.2.4)(jsdom@27.1.0)
 
   ../kb-labs-devkit:
     dependencies:
@@ -60,7 +60,7 @@ importers:
     devDependencies:
       '@vitest/coverage-v8':
         specifier: ^3.2.4
-        version: 3.2.4(vitest@3.2.4(@types/node@24.10.0)(jsdom@27.1.0))
+        version: 3.2.4(vitest@3.2.4(@types/node@24.10.0)(@vitest/ui@3.2.4)(jsdom@27.1.0))
       eslint:
         specifier: ^9.35.0
         version: 9.39.1
@@ -84,7 +84,7 @@ importers:
         version: 8.46.3(eslint@9.39.1)(typescript@5.9.3)
       vitest:
         specifier: ^3.2.4
-        version: 3.2.4(@types/node@24.10.0)(jsdom@27.1.0)
+        version: 3.2.4(@types/node@24.10.0)(@vitest/ui@3.2.4)(jsdom@27.1.0)
 
   packages/plugin-adapters/cli:
     dependencies:
@@ -100,6 +100,9 @@ importers:
       '@kb-labs/core':
         specifier: link:../../../../kb-labs-core
         version: link:../../../../kb-labs-core
+      '@kb-labs/core-bundle':
+        specifier: link:../../../../kb-labs-core/packages/core-bundle
+        version: link:../../../../kb-labs-core/packages/core-bundle
       '@kb-labs/core-sandbox':
         specifier: link:../../../../kb-labs-core/packages/core-sandbox
         version: link:../../../../kb-labs-core/packages/core-sandbox
@@ -172,7 +175,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^3.2.4
-        version: 3.2.4(@types/node@24.10.0)(jsdom@27.1.0)
+        version: 3.2.4(@types/node@24.10.0)(@vitest/ui@3.2.4)(jsdom@27.1.0)
 
   packages/plugin-adapters/rest:
     dependencies:
@@ -236,7 +239,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^3.2.4
-        version: 3.2.4(@types/node@24.10.0)(jsdom@27.1.0)
+        version: 3.2.4(@types/node@24.10.0)(@vitest/ui@3.2.4)(jsdom@27.1.0)
 
   packages/plugin-adapters/studio:
     dependencies:
@@ -276,7 +279,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^3.2.4
-        version: 3.2.4(@types/node@24.10.0)(jsdom@27.1.0)
+        version: 3.2.4(@types/node@24.10.0)(@vitest/ui@3.2.4)(jsdom@27.1.0)
 
   packages/plugin-contracts:
     devDependencies:
@@ -306,7 +309,25 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^3.2.4
-        version: 3.2.4(@types/node@24.10.0)(jsdom@27.1.0)
+        version: 3.2.4(@types/node@24.10.0)(@vitest/ui@3.2.4)(jsdom@27.1.0)
+
+  packages/plugin-contracts-v3:
+    devDependencies:
+      '@kb-labs/devkit':
+        specifier: link:../../../kb-labs-devkit
+        version: link:../../../kb-labs-devkit
+      '@types/node':
+        specifier: ^24.3.3
+        version: 24.10.0
+      rimraf:
+        specifier: ^6.0.1
+        version: 6.1.0
+      tsup:
+        specifier: ^8.5.0
+        version: 8.5.0(postcss@8.5.6)(typescript@5.9.3)(yaml@2.8.2)
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
 
   packages/plugin-manifest:
     dependencies:
@@ -340,7 +361,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^3.2.4
-        version: 3.2.4(@types/node@24.10.0)(jsdom@27.1.0)
+        version: 3.2.4(@types/node@24.10.0)(@vitest/ui@3.2.4)(jsdom@27.1.0)
 
   packages/plugin-runtime:
     dependencies:
@@ -374,6 +395,9 @@ importers:
       '@kb-labs/setup-engine-operations':
         specifier: link:../../../kb-labs-setup-engine/packages/setup-engine-operations
         version: link:../../../kb-labs-setup-engine/packages/setup-engine-operations
+      '@kb-labs/shared-cli-ui':
+        specifier: link:../../../kb-labs-shared/packages/shared-cli-ui
+        version: link:../../../kb-labs-shared/packages/shared-cli-ui
       '@kb-labs/workflow-contracts':
         specifier: link:../../../kb-labs-workflow/packages/workflow-contracts
         version: link:../../../kb-labs-workflow/packages/workflow-contracts
@@ -419,7 +443,35 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^3.2.4
-        version: 3.2.4(@types/node@24.10.0)(jsdom@27.1.0)
+        version: 3.2.4(@types/node@24.10.0)(@vitest/ui@3.2.4)(jsdom@27.1.0)
+
+  packages/plugin-runtime-v3:
+    dependencies:
+      '@kb-labs/plugin-contracts-v3':
+        specifier: workspace:*
+        version: link:../plugin-contracts-v3
+    devDependencies:
+      '@kb-labs/devkit':
+        specifier: link:../../../kb-labs-devkit
+        version: link:../../../kb-labs-devkit
+      '@types/node':
+        specifier: ^24.3.3
+        version: 24.10.0
+      '@vitest/ui':
+        specifier: ^3.0.0
+        version: 3.2.4(vitest@3.2.4)
+      rimraf:
+        specifier: ^6.0.1
+        version: 6.1.0
+      tsup:
+        specifier: ^8.5.0
+        version: 8.5.0(postcss@8.5.6)(typescript@5.9.3)(yaml@2.8.2)
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.4(@types/node@24.10.0)(@vitest/ui@3.2.4)(jsdom@27.1.0)
 
 packages:
 
@@ -1098,6 +1150,9 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
+  '@polka/url@1.0.0-next.29':
+    resolution: {integrity: sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww==}
+
   '@rollup/rollup-android-arm-eabi@4.52.5':
     resolution: {integrity: sha512-8c1vW4ocv3UOMp9K+gToY5zL2XiiVw3k7f1ksf4yO1FlDFQ1C2u72iACFnSOceJFsWskc2WZNqeRhFRPzv+wtQ==}
     cpu: [arm]
@@ -1654,6 +1709,11 @@ packages:
   '@vitest/spy@3.2.4':
     resolution: {integrity: sha512-vAfasCOe6AIK70iP5UD11Ac4siNUNJ9i/9PZ3NKx07sG6sUxeag1LWdNrMWeKKYBLlzuK+Gn65Yd5nyL6ds+nw==}
 
+  '@vitest/ui@3.2.4':
+    resolution: {integrity: sha512-hGISOaP18plkzbWEcP/QvtRW1xDXF2+96HbEX6byqQhAUbiS5oH6/9JwW+QsQCIYON2bI6QZBF+2PvOmrRZ9wA==}
+    peerDependencies:
+      vitest: 3.2.4
+
   '@vitest/utils@3.2.4':
     resolution: {integrity: sha512-fB2V0JFrQSMsCo9HiSq3Ezpdv4iYaXRG1Sx8edX3MwxfyNn83mKiGzOcH+Fkxt4MHxr3y42fQi1oeAInqgX2QA==}
 
@@ -2149,6 +2209,9 @@ packages:
     peerDependenciesMeta:
       picomatch:
         optional: true
+
+  fflate@0.8.2:
+    resolution: {integrity: sha512-cPJU47OaAoCbg0pBvzsgpTPhmhqI5eJjh/JIu8tPj5q+T7iLvW/JAYUqmE7KOB4R1ZyEhzBaIQpQpardBF5z8A==}
 
   figures@6.1.0:
     resolution: {integrity: sha512-d+l3qxjSesT4V7v2fh+QnmFnUWv9lSpjarhShNTgBOfA0ttejbQUAlHLitbjkoRiDulW0OPoQPYIGhIC8ohejg==}
@@ -2654,6 +2717,10 @@ packages:
   mlly@1.8.0:
     resolution: {integrity: sha512-l8D9ODSRWLe2KHJSifWGwBqpTZXIXTeo8mlKjY+E2HAakaTeNpqAyBZ8GSqLzHgw4XmHmC8whvpjJNMbFZN7/g==}
 
+  mrmime@2.0.1:
+    resolution: {integrity: sha512-Y3wQdFg2Va6etvQ5I82yUhGdsKrcYox6p7FfL1LbK2J4V01F9TGlepTIhnK24t7koZibmg82KGglhA1XK5IsLQ==}
+    engines: {node: '>=10'}
+
   ms@2.1.3:
     resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
 
@@ -3034,6 +3101,10 @@ packages:
     resolution: {integrity: sha512-bzyZ1e88w9O1iNJbKnOlvYTrWPDl46O1bG0D3XInv+9tkPrxrN8jUUTiFlDkkmKWgn1M6CfIA13SuGqOa9Korw==}
     engines: {node: '>=14'}
 
+  sirv@3.0.2:
+    resolution: {integrity: sha512-2wcC/oGxHis/BoHkkPwldgiPSYcpZK3JU28WoMVv55yHJgcZ8rlXvuG9iZggz+sU1d4bRgIGASwyWqjxu3FM0g==}
+    engines: {node: '>=18'}
+
   sonic-boom@4.2.0:
     resolution: {integrity: sha512-INb7TM37/mAcsGmc9hyyI6+QR3rR1zVRu36B0NeGXKnOOLiZOfER5SA+N7X7k3yUYRzLWafduTDvJAfDswwEww==}
 
@@ -3179,6 +3250,10 @@ packages:
   toad-cache@3.7.0:
     resolution: {integrity: sha512-/m8M+2BJUpoJdgAHoG+baCwBT+tf2VraSfkBgl0Y00qIWt41DJ8R5B8nsEw0I58YwF5IZH6z24/2TobDKnqSWw==}
     engines: {node: '>=12'}
+
+  totalist@3.0.1:
+    resolution: {integrity: sha512-sf4i37nQ2LBx4m3wB74y+ubopq6W/dIzXg0FDGjsYnZHVa1Da8FH853wlL2gtUhg+xJXjfk3kUZS3BRoQeoQBQ==}
+    engines: {node: '>=6'}
 
   tough-cookie@6.0.0:
     resolution: {integrity: sha512-kXuRi1mtaKMrsLUxz3sQYvVl37B0Ns6MzfrtV5DvJceE9bPyspOqk9xxv7XbZWcfLWbFmm997vl83qUWVJA64w==}
@@ -4329,6 +4404,8 @@ snapshots:
     dependencies:
       playwright: 1.56.1
 
+  '@polka/url@1.0.0-next.29': {}
+
   '@rollup/rollup-android-arm-eabi@4.52.5':
     optional: true
 
@@ -4921,7 +4998,7 @@ snapshots:
   '@unrs/resolver-binding-win32-x64-msvc@1.11.1':
     optional: true
 
-  '@vitest/coverage-v8@3.2.4(vitest@3.2.4(@types/node@24.10.0)(jsdom@27.1.0))':
+  '@vitest/coverage-v8@3.2.4(vitest@3.2.4(@types/node@24.10.0)(@vitest/ui@3.2.4)(jsdom@27.1.0))':
     dependencies:
       '@ampproject/remapping': 2.3.0
       '@bcoe/v8-coverage': 1.0.2
@@ -4936,7 +5013,7 @@ snapshots:
       std-env: 3.10.0
       test-exclude: 7.0.1
       tinyrainbow: 2.0.0
-      vitest: 3.2.4(@types/node@24.10.0)(jsdom@27.1.0)
+      vitest: 3.2.4(@types/node@24.10.0)(@vitest/ui@3.2.4)(jsdom@27.1.0)
     transitivePeerDependencies:
       - supports-color
 
@@ -4975,6 +5052,17 @@ snapshots:
   '@vitest/spy@3.2.4':
     dependencies:
       tinyspy: 4.0.4
+
+  '@vitest/ui@3.2.4(vitest@3.2.4)':
+    dependencies:
+      '@vitest/utils': 3.2.4
+      fflate: 0.8.2
+      flatted: 3.3.3
+      pathe: 2.0.3
+      sirv: 3.0.2
+      tinyglobby: 0.2.15
+      tinyrainbow: 2.0.0
+      vitest: 3.2.4(@types/node@24.10.0)(@vitest/ui@3.2.4)(jsdom@27.1.0)
 
   '@vitest/utils@3.2.4':
     dependencies:
@@ -5671,6 +5759,8 @@ snapshots:
     optionalDependencies:
       picomatch: 4.0.3
 
+  fflate@0.8.2: {}
+
   figures@6.1.0:
     dependencies:
       is-unicode-supported: 2.1.0
@@ -6197,6 +6287,8 @@ snapshots:
       pkg-types: 1.3.1
       ufo: 1.6.1
 
+  mrmime@2.0.1: {}
+
   ms@2.1.3: {}
 
   mz@2.7.0:
@@ -6592,6 +6684,12 @@ snapshots:
 
   signal-exit@4.1.0: {}
 
+  sirv@3.0.2:
+    dependencies:
+      '@polka/url': 1.0.0-next.29
+      mrmime: 2.0.1
+      totalist: 3.0.1
+
   sonic-boom@4.2.0:
     dependencies:
       atomic-sleep: 1.0.0
@@ -6734,6 +6832,8 @@ snapshots:
       is-number: 7.0.0
 
   toad-cache@3.7.0: {}
+
+  totalist@3.0.1: {}
 
   tough-cookie@6.0.0:
     dependencies:
@@ -6914,7 +7014,7 @@ snapshots:
       '@types/node': 24.10.0
       fsevents: 2.3.3
 
-  vitest@3.2.4(@types/node@24.10.0)(jsdom@27.1.0):
+  vitest@3.2.4(@types/node@24.10.0)(@vitest/ui@3.2.4)(jsdom@27.1.0):
     dependencies:
       '@types/chai': 5.2.3
       '@vitest/expect': 3.2.4
@@ -6941,6 +7041,7 @@ snapshots:
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 24.10.0
+      '@vitest/ui': 3.2.4(vitest@3.2.4)
       jsdom: 27.1.0
     transitivePeerDependencies:
       - less
