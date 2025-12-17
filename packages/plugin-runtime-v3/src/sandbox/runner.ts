@@ -110,8 +110,9 @@ export async function runInSubprocess<T = unknown>(
 
     const currentDir = path.dirname(new URL(import.meta.url).pathname);
     const possiblePaths = [
-      path.join(currentDir, 'bootstrap.js'),           // Production
-      path.join(currentDir, 'sandbox', 'bootstrap.js'), // Development
+      path.join(currentDir, 'bootstrap.js'),           // Production (same dir)
+      path.join(currentDir, 'sandbox', 'bootstrap.js'), // Nested sandbox dir
+      path.join(process.cwd(), 'dist', 'sandbox', 'bootstrap.js'), // Test/dev mode
       path.join(process.cwd(), 'dist', 'bootstrap.js'), // Fallback
     ];
 
