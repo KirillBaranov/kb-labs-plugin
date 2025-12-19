@@ -3,13 +3,10 @@ import nodePreset from '@kb-labs/devkit/tsup/node.js'
 
 export default defineConfig({
   ...nodePreset,
-  tsconfig: "tsconfig.build.json", // Use build-specific tsconfig without paths
+  format: ['esm', 'cjs'], // Add CJS for compatibility with bundled CLI
+  tsconfig: "tsconfig.build.json",
   entry: {
     index: 'src/index.ts',
-    shell: 'src/shell/index.ts',
-    artifacts: 'src/artifacts/index.ts',
-    invoke: 'src/invoke/index.ts',
   },
   external: [],
 })
-
