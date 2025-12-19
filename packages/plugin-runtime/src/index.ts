@@ -1,311 +1,73 @@
 /**
- * @module @kb-labs/plugin-runtime
- * Plugin runtime execution engine
+ * @kb-labs/plugin-runtime
+ *
+ * V3 Plugin System Runtime - Context factory, sandboxed shims, and APIs.
  */
 
-// Capabilities
+// Context
 export {
-  checkCapabilities,
-  validateCapabilityNames,
-  KNOWN_CAPABILITIES,
-  type CapabilityCheckResult,
-  type KnownCapability,
-} from './capabilities';
+  createPluginContextV3,
+  createTraceContext,
+  type CreateContextOptions,
+  type CreateContextResult,
+  type CreateTraceContextOptions,
+} from './context/index.js';
 
-// Permissions
+// Runtime (sandboxed shims)
 export {
-  checkFsPermission,
-  checkNetPermission,
-  checkEnvPermission,
-  checkStatePermission,
-  checkAllPermissions,
-  type PermissionCheckResult,
-  type PermissionCheckAllResult,
-} from './permissions';
+  createRuntimeAPI,
+  createFSShim,
+  createFetchShim,
+  createEnvShim,
+  type CreateFSShimOptions,
+  type CreateRuntimeAPIOptions,
+} from './runtime/index.js';
 
-// Execution (unified architecture)
+// API
 export {
-  executePlugin,
-  // Legacy alias for backward compatibility (deprecated - use executePlugin)
-  executePlugin as execute,
-} from './execute-plugin';
-
-export type {
-  ExecutePluginOptions,
-  ExecutePluginResult,
-} from './execute-plugin/types';
-
-// Types
-export type {
-  ExecutionContext,
-  RuntimeExtensions,
-  RuntimeAPI,
-  LegacyRuntimeAPI,
-  PluginAPI,
-  PluginOutput,
-  PluginHandlerContext,
-  ExecuteInput,
-  ExecuteResult,
-  ExecMetrics,
-  HandlerRef,
-  PluginHandler,
-  FSLike,
-  ErrorEnvelope,
-  PermissionSpecSummary,
-} from './types';
-
-// Plugin handler builder
-export {
-  definePluginHandler,
-  createTypedHandler,
-  type PluginHandlerConfig,
-  type InferInput,
-  type InferOutput,
-  type TypedPlugin,
-  type ZodSchema,
-} from './define-plugin-handler';
-
-// Sandbox
-export type { SandboxRunner } from './sandbox/runner';
-export { nodeSubprocRunner } from './sandbox/node-subproc';
-export { buildRuntime } from './sandbox/child/runtime';
-
-// Errors
-export {
-  toErrorEnvelope,
-  analyzeRootCause,
-  analyzeRootCauseSync,
-  type RootCauseAnalysis,
-  type RootCauseType,
-  createErrorContext,
-} from './errors';
-
-// Validation
-export {
-  validateManifestOnStartup,
-  type ValidationResult,
-} from './validation';
-
-// IO
-export { pickEnv, createEnvAccessor } from './io/env';
-export { createWhitelistedFetch, isHostAllowed } from './io/net';
-export { createFsShim } from './io/fs';
-export { createStateAPI, type StateRuntimeAPI } from './io/state';
-
-// Artifacts
-export {
-  writeArtifact,
-  substitutePathTemplate,
-  type ArtifactWriteContext,
-} from './artifacts';
+  createPluginAPI,
+  createLifecycleAPI,
+  createStateAPI,
+  createArtifactsAPI,
+  createShellAPI,
+  createEventsAPI,
+  createNoopEventsAPI,
+  createInvokeAPI,
+  createNoopInvokeAPI,
+  executeCleanup,
+  type CreatePluginAPIOptions,
+  type EventEmitterFn,
+  type PluginInvokerFn,
+} from './api/index.js';
 
 // Utils
-export { createId, hashManifest } from './utils';
-
-// Deprecation
 export {
-  deprecate,
-  deprecateFunction,
-  deprecateObject,
-  resetDeprecationWarnings,
-} from './deprecation';
+  createId,
+  createShortId,
+  extractTraceId,
+  createRequestId,
+} from './utils/index.js';
 
-// Registry
-export type { PluginRegistry, ResolvedRoute } from './registry';
+// Sandbox
+export {
+  runInProcess,
+  runInSubprocess,
+  type RunInProcessOptions,
+  type RunInSubprocessOptions,
+} from './sandbox/index.js';
 
-// Invoke
-export { InvokeBroker } from './invoke/broker';
-export { resolveInvokeDecision } from './invoke/permissions';
+// Re-export contracts for convenience
 export type {
-  InvokeRequest,
-  InvokeResult,
-  ChainLimits,
-  InvokeContext,
-  MountSpec,
-} from './invoke/types';
-export {
-  applyHeaderTransforms,
-  listHeaderTransforms,
-} from './invoke/header-transforms';
-export {
-  loadCustomHeaderTransform,
-  clearHeaderTransformCache,
-  type HeaderTransformFn,
-} from './invoke/transform-loader';
-
-// Artifacts
-export { ArtifactBroker, parseArtifactUri } from './artifacts/broker';
-export type {
-  ArtifactMeta,
-  ArtifactStatus,
-  ArtifactCapability,
-  ArtifactReadRequest,
-  ArtifactWriteRequest,
-  ArtifactListRequest,
-  ArtifactInfo,
-} from './artifacts/broker';
-
-// Snapshot
-export {
-  saveSnapshot,
-  loadSnapshot,
-  listSnapshots,
-  rotateSnapshots,
-  diffSnapshots,
-  searchSnapshots,
-  getDebugDir,
-  getSnapshotsDir,
-  type SnapshotData,
-} from './snapshot';
-
-// Suggestions
-export {
-  getSuggestions,
-  formatSuggestions,
-  type ErrorSuggestion,
-} from './suggestions';
-
-// Profiler utilities (re-export from sandbox)
-export { formatTimeline, exportChromeFormat as exportProfileChromeFormat } from '@kb-labs/core-sandbox';
-export type { ProfileData, ProfilePhase } from '@kb-labs/core-sandbox';
-
-// Trace utilities
-export {
-  saveTrace,
-  loadTrace,
-  listTraces,
-  rotateTraces,
-  formatFlamegraph,
-  exportChromeFormat,
-  buildSpanTree,
-  getTracesDir,
-  type TraceData,
-  type TraceSpan,
-} from './trace';
-
-// Mock utilities (for testing)
-export {
-  createMockFs,
-  type MockFsOperation,
-  type MockFsRecord,
-} from './mocks/fs-mock';
-
-// Events
-export {
-  createEventBus,
-  acquirePluginBus,
-  releasePluginBus,
-  getPluginBusRefs,
-  DEFAULT_CONFIG as DEFAULT_EVENT_BUS_CONFIG,
-} from './events/index';
-export type {
-  EventBus,
-  EventEnvelope,
-  EventScope,
-  EmitOptions as EventEmitOptions,
-  SubscriptionOptions as EventSubscriptionOptions,
-  WaitForOptions as EventWaitForOptions,
-  EventBusConfig,
-  EventBusError,
-} from './events/index';
-
-// Unified Plugin Context
-export {
-  createPluginContext,
-  createPluginContextWithPlatform,
-  createCapabilitySet,
-  createEventSchemaRegistry,
-  createNoopEventBridge,
-  createIsolatedEventBridge,
-  isKnownPluginHost,
-  KNOWN_PLUGIN_HOSTS,
-} from './context/index';
-export type {
-  // V2 types (primary - recommended for new code)
-  PluginContextV2,
-  RuntimeAdapter,
-  // V1 compatibility (deprecated - use V2 for new code)
-  PluginContext,
-  PluginContextOptions,
-  PluginContextMetadata,
-  CreatePluginContextWithPlatformOptions,
-  CapabilitySet,
-  PluginEventDefinition,
-  PluginEventEnvelope,
-  PluginEventSchemaRegistry,
-  PluginEventBridge,
-  PluginHostType,
-  KnownPluginHost,
-  PresenterFacade,
-  PresenterProgressPayload,
-  PlatformServices,
+  PluginContextV3,
+  PluginContextDescriptor,
+  HostContext,
+  HostType,
+  PermissionSpec,
   UIFacade,
-} from './context/index';
-export { CapabilityFlag } from './context/index';
-
-// Presenters
-export {
-  TTYPresenter,
-  JobRunnerPresenter,
-  HttpPresenter,
-  CliUIFacade,
-  createNoopPresenter,
-  createNoopUI,
-} from './presenter/index';
-export type {
-  TTYPresenterOptions,
-  TTYPresenterFormatter,
-  JobRunnerPresenterOptions,
-  JobRunnerPresenterEvent,
-  HttpPresenterOptions,
-  CliUIFacadeOptions,
-  PresenterMessageLevel,
-  PresenterMessageOptions,
-  PresenterEventPayload,
-  ConfirmOptions,
-} from './presenter/index';
-
-export {
-  OperationTracker,
-  type TrackedOperation,
-  type TrackedOperationStatus,
-} from './operations/operation-tracker';
-export {
-  getTrackedOperations,
-  clearTrackedOperations,
-} from './operations/tracked-operations';
-
-export {
-  SmartConfigHelper,
-  type EnsureSectionOptions,
-  type EnsureSectionResult,
-} from './config/config-helper';
-
-// Logging
-export {
-  createRuntimeLogger,
-  createPluginLogger,
-  type RuntimeLogger,
-  type PluginLogger,
-} from './logging';
-
-// Jobs (background and scheduled jobs)
-export { JobBroker } from './jobs/broker';
-export {
-  checkSubmitPermission,
-  checkSchedulePermission,
-} from './jobs/permissions';
-export { QuotaTracker } from './jobs/quotas';
-export type {
-  BackgroundJobRequest,
-  ScheduledJobRequest,
-  JobHandle,
-  ScheduleHandle,
-  JobStatus,
-  ScheduleStatus,
-  JobInfo,
-  ScheduleInfo,
-  JobResult,
-  JobFilter,
-  LogEntry,
-} from './jobs/types';
+  Spinner,
+  TraceContext,
+  PlatformServices,
+  RuntimeAPI,
+  PluginAPI,
+  CleanupFn,
+} from '@kb-labs/plugin-contracts';

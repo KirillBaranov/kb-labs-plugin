@@ -1,7 +1,7 @@
 {
   "name": "@kb-labs/plugin-runtime",
-  "version": "0.1.5",
-  "description": "Runtime environment for KB Labs plugins, handling execution, permissions, and sandboxing",
+  "version": "0.1.0",
+  "description": "Plugin System Runtime - Context factory, sandboxed shims, and APIs",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -10,15 +10,17 @@
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
-    "./src/events/index.js": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+    "./sandbox": {
+      "import": "./dist/sandbox/index.js",
+      "types": "./dist/sandbox/index.d.ts"
+    },
+    "./sandbox/bootstrap": {
+      "import": "./dist/sandbox/bootstrap.js",
+      "types": "./dist/sandbox/bootstrap.d.ts"
     }
   },
   "files": [
-    "dist",
-    "README.md",
-    "LICENSE"
+    "dist"
   ],
   "sideEffects": false,
   "scripts": {
@@ -26,39 +28,28 @@
     "build": "pnpm clean && tsup --config tsup.config.ts",
     "dev": "tsup --config tsup.config.ts --watch",
     "type-check": "tsc --noEmit",
-    "lint": "eslint . --ignore-pattern 'dist/**'",
-    "lint:fix": "eslint . --fix --ignore-pattern 'dist/**'",
-    "test": "vitest run -c ../../vitest.config.ts",
-    "test:watch": "vitest -c ../../vitest.config.ts"
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
-    "@kb-labs/core-platform": "link:../../../kb-labs-core/packages/core-platform",
-    "@kb-labs/core-runtime": "link:../../../kb-labs-core/packages/core-runtime",
-    "@kb-labs/rest-api-contracts": "link:../../../kb-labs-rest-api/packages/rest-api-contracts",
-    "@kb-labs/core-sandbox": "link:../../../kb-labs-core/packages/core-sandbox",
-    "@kb-labs/core-state-broker": "link:../../../kb-labs-core/packages/core-state-broker",
-    "@kb-labs/core-sys": "link:../../../kb-labs-core/packages/core-sys",
-    "@kb-labs/core-types": "link:../../../kb-labs-core/packages/core-types",
-    "@kb-labs/plugin-contracts": "link:../plugin-contracts",
-    "@kb-labs/plugin-manifest": "link:../plugin-manifest",
-    "@kb-labs/setup-engine-operations": "link:../../../kb-labs-setup-engine/packages/setup-engine-operations",
+    "@kb-labs/plugin-contracts": "workspace:*",
     "@kb-labs/shared-cli-ui": "link:../../../kb-labs-shared/packages/shared-cli-ui",
-    "@kb-labs/workflow-contracts": "link:../../../kb-labs-workflow/packages/workflow-contracts",
-    "execa": "^8.0.0",
-    "minimatch": "^9.0.4",
-    "zod": "^3.23.8"
+    "@kb-labs/core-runtime": "link:../../../kb-labs-core/packages/core-runtime"
   },
   "devDependencies": {
     "@kb-labs/devkit": "link:../../../kb-labs-devkit",
-    "@types/minimatch": "^6.0.0",
     "@types/node": "^24.3.3",
-    "@types/semver": "^7.5.8",
-    "@typescript-eslint/eslint-plugin": "^8",
-    "@typescript-eslint/parser": "^8",
-    "eslint": "^9",
+    "@vitest/ui": "^3.0.0",
     "rimraf": "^6.0.1",
     "tsup": "^8.5.0",
     "typescript": "^5.6.3",
-    "vitest": "^3.2.4"
-  }
+    "vitest": "^3.0.0"
+  },
+  "keywords": [
+    "kb-labs",
+    "plugin",
+    "runtime",
+    "v3"
+  ],
+  "license": "MIT"
 }

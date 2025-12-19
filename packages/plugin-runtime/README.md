@@ -1,435 +1,276 @@
-# @kb-labs/plugin-runtime
+# @kb-labs/plugin-runtime-v3
 
-> **Runtime environment for KB Labs plugins, handling execution, permissions, and sandboxing.** Plugin runtime execution engine with capabilities, permissions, quota management, analytics integration, sandbox execution, and artifact management.
+V3 Plugin System Runtime - Context factory, sandboxed execution, and runtime APIs.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Node.js](https://img.shields.io/badge/Node.js-18.18.0+-green.svg)](https://nodejs.org/)
-[![pnpm](https://img.shields.io/badge/pnpm-9.0.0+-orange.svg)](https://pnpm.io/)
+## Features
 
-## 🎯 Vision & Purpose
+- **Context Factory**: Creates `PluginContextV3` with all services wired
+- **Sandbox Execution**: In-process and subprocess execution modes
+- **Runtime Shims**: Sandboxed fs, fetch, env with permission checks
+- **API Stability**: Integration tests prevent accidental API drift
 
-**@kb-labs/plugin-runtime** provides runtime environment for KB Labs plugins. It handles plugin execution, permissions, sandboxing, capabilities, quota management, analytics integration, artifact management, and event system.
-
-### What Problem Does This Solve?
-
-- **Plugin Execution**: Plugins need execution environment - runtime provides runtime
-- **Security**: Need secure plugin execution - runtime provides sandboxing and permissions
-- **Capabilities**: Need capability-based security - runtime provides capabilities
-- **Quota Management**: Need resource limits - runtime provides quota management
-- **Analytics**: Need analytics integration - runtime provides analytics
-
-### Why Does This Package Exist?
-
-- **Unified Runtime**: All plugins use the same runtime environment
-- **Security**: Centralized security controls
-- **Resource Management**: Centralized resource limits
-- **Analytics**: Unified analytics integration
-
-### What Makes This Package Unique?
-
-- **Sandbox Execution**: Fork-based and in-process sandboxing
-- **Capability-Based Security**: Fine-grained capability checks
-- **Permission System**: Comprehensive permission validation
-- **Artifact Management**: Artifact writing with path templating
-- **Event System**: Plugin event bus
-
-## 📊 Package Status
-
-### Development Stage
-
-- [x] **Experimental** - Early development, API may change
-- [x] **Alpha** - Core features implemented, testing phase
-- [x] **Beta** - Feature complete, API stable, production testing
-- [x] **Stable** - Production ready, API frozen
-- [ ] **Maintenance** - Bug fixes only, no new features
-- [ ] **Deprecated** - Will be removed in future version
-
-**Current Stage**: **Stable**
-
-**Target Stage**: **Stable** (maintained)
-
-### Maturity Indicators
-
-- **Test Coverage**: ~85% (target: 90%)
-- **TypeScript Coverage**: 100% (target: 100%)
-- **Documentation Coverage**: 70% (target: 100%)
-- **API Stability**: Stable
-- **Breaking Changes**: None in last 6 months
-- **Last Major Version**: 0.1.0
-- **Next Major Version**: 1.0.0
-
-### Production Readiness
-
-- [x] **API Stability**: API is stable
-- [x] **Error Handling**: Comprehensive error handling
-- [x] **Logging**: Structured logging
-- [x] **Testing**: Unit tests present
-- [x] **Performance**: Efficient execution
-- [x] **Security**: Sandboxing, permissions, capabilities
-- [x] **Documentation**: API documentation
-- [x] **Migration Guide**: N/A (no breaking changes)
-
-## 🏗️ Architecture
-
-### High-Level Architecture
-
-The plugin-runtime package provides runtime environment:
-
-```
-Plugin Runtime
-    │
-    ├──► Execution Engine (handler execution)
-    ├──► Sandbox System (fork, in-process)
-    ├──► Permission System (fs, net, env, quotas)
-    ├──► Capability System (capability checks)
-    ├──► Artifact Management (artifact writing)
-    ├──► Event System (event bus)
-    └──► Analytics Integration (analytics SDK)
-```
-
-### Core Components
-
-#### Execution Engine
-
-- **Purpose**: Execute plugin handlers
-- **Responsibilities**: Handler loading, execution, validation
-- **Dependencies**: sandbox, permissions, capabilities
-
-#### Sandbox System
-
-- **Purpose**: Isolate plugin execution
-- **Responsibilities**: Fork-based and in-process sandboxing
-- **Dependencies**: sandbox package
-
-#### Permission System
-
-- **Purpose**: Validate permissions
-- **Responsibilities**: FS, network, environment, quota validation
-- **Dependencies**: None
-
-### Design Patterns
-
-- **Sandbox Pattern**: Isolated execution
-- **Capability Pattern**: Capability-based security
-- **Event Bus Pattern**: Plugin events
-- **Facade Pattern**: Presenter facade
-
-### Data Flow
-
-```
-execute(handlerRef, input, context, manifest)
-    │
-    ├──► Validate permissions
-    ├──► Check capabilities
-    ├──► Create sandbox
-    ├──► Execute handler
-    ├──► Write artifacts
-    └──► return result
-```
-
-## 🚀 Quick Start
-
-### Installation
+## Installation
 
 ```bash
-pnpm add @kb-labs/plugin-runtime
+pnpm add @kb-labs/plugin-runtime-v3
 ```
 
-### Basic Usage
+## Usage
+
+### In-Process Execution (Dev Mode)
 
 ```typescript
-import { execute, createPluginContext } from '@kb-labs/plugin-runtime';
+import { runInProcess } from '@kb-labs/plugin-runtime-v3/sandbox';
+import type { PluginContextDescriptor } from '@kb-labs/plugin-contracts-v3';
 
-const context = createPluginContext({
-  capabilities: ['fs.read'],
-  permissions: { fs: { mode: 'read', allow: ['.'] } },
+const descriptor: PluginContextDescriptor = {
+  host: 'cli',
+  pluginId: '@kb-labs/my-plugin',
+  pluginVersion: '1.0.0',
+  cwd: process.cwd(),
+  permissions: { fs: { read: ['./'] } },
+  hostContext: { host: 'cli', argv: [], flags: {} },
+  parentRequestId: undefined,
+};
+
+const result = await runInProcess({
+  descriptor,
+  platform: platformServices,
+  ui: uiFacade,
+  handlerPath: '/path/to/handler.js',
+  input: { data: 'test' },
 });
 
-const result = await execute(
-  './handlers/review.js#handle',
-  input,
-  context,
-  manifest
-);
+console.log(result.exitCode); // 0
+console.log(result.meta);     // Auto-injected metadata
 ```
 
-## ✨ Features
+### Handler Return Values (V3)
 
-- **Capability-based security checks** - Fine-grained capability validation
-- **Permission validation** - FS, network, environment, quota validation
-- **Handler execution wrapper** - Validation, quotas, error handling
-- **Artifact writing** - Path templating and artifact management
-- **Analytics integration** - Via @kb-labs/analytics-sdk-node
-- **Sandbox execution** - Fork-based and in-process sandboxing
-- **Event system** - Plugin event bus
-- **Snapshot system** - Execution snapshots
-- **Trace system** - Execution tracing
-- **Background Jobs** - One-time asynchronous task execution via JobBroker
-- **Scheduled Jobs** - Recurring cron-based tasks via CronScheduler
-- **Adaptive Throttling** - Load-based job submission control with degradation states
-
-## 📦 API Reference
-
-### Main Exports
-
-#### Execution Functions
-
-- `execute(args, ctx, registry?)`: Execute plugin handler
-- `createPluginContext(options)`: Create plugin context
-
-#### Permission Functions
-
-- `checkFsPermission(path, permission)`: Check FS permission
-- `checkNetPermission(url, permission)`: Check network permission
-- `checkEnvPermission(key, permission)`: Check environment permission
-- `checkAllPermissions(checks)`: Check all permissions
-
-#### Capability Functions
-
-- `checkCapabilities(required, granted)`: Check capabilities
-- `validateCapabilityNames(names)`: Validate capability names
-
-#### Artifact Functions
-
-- `writeArtifact(context, data)`: Write artifact
-- `ArtifactBroker`: Artifact broker for artifact operations
-
-#### Event Functions
-
-- `createEventBus(config?)`: Create event bus
-- `acquirePluginBus(pluginId)`: Acquire plugin event bus
-
-#### Job Functions
-
-- `JobBroker`: Job broker for background and scheduled task execution
-  - `submit(request: BackgroundJobRequest): Promise<JobHandle>` - Submit one-time background job
-  - `schedule(request: ScheduledJobRequest): Promise<ScheduleHandle>` - Schedule recurring job
-  - `healthCheck(): Promise<HealthCheckResult>` - Get system health status
-- `CronScheduler`: Cron-based job scheduler
-  - `register(entry: ScheduleEntry): Promise<string>` - Register recurring schedule
-  - `cancel(scheduleId: string): Promise<void>` - Cancel schedule
-  - `pause/resume(scheduleId: string): Promise<void>` - Pause/resume schedule
-- `DegradationController`: Adaptive throttling controller
-  - `getState(): DegradationState` - Get current state (normal/degraded/critical)
-  - `healthCheck(): Promise<HealthCheckResult>` - Get detailed health metrics
-
-### Types & Interfaces
-
-See detailed API documentation in code comments and exports.
-
-**📖 For comprehensive JobBroker/CronScheduler documentation, see [docs/jobs-api.md](./docs/jobs-api.md)**
-
-## 🔧 Configuration
-
-### Configuration Options
-
-Runtime configuration via `ExecutionContext` and `PluginContextOptions`.
-
-### Environment Variables
-
-- `KB_LOG_LEVEL`: Logging level for runtime operations
-
-## 🔗 Dependencies
-
-### Runtime Dependencies
-
-- `@kb-labs/setup-operations` (`workspace:*`): Setup operations
-- `@kb-labs/analytics-sdk-node` (`workspace:*`): Analytics SDK
-- `@kb-labs/api-contracts` (`workspace:*`): API contracts
-- `@kb-labs/plugin-manifest` (`workspace:*`): Plugin manifest
-- `@kb-labs/sandbox` (`workspace:*`): Sandbox package
-- `minimatch` (`^10.0.1`): Pattern matching
-- `semver` (`^7.6.3`): Semantic versioning
-- `zod` (`^4.1.5`): Schema validation
-
-### Development Dependencies
-
-- `@kb-labs/devkit` (`workspace:*`): DevKit presets
-- `@types/node` (`^24.3.3`): Node.js types
-- `tsup` (`^8.5.0`): TypeScript bundler
-- `typescript` (`^5.6.3`): TypeScript compiler
-- `vitest` (`^3.2.4`): Test runner
-
-## 🧪 Testing
-
-### Test Structure
-
-```
-src/__tests__/
-├── capabilities.test.ts
-└── permissions.test.ts
-
-src/config/__tests__/
-└── config-helper.test.ts
-
-src/events/__tests__/
-└── event-bus.test.ts
-
-src/io/__tests__/
-└── fs.test.ts
-
-src/operations/__tests__/
-└── operation-tracker.test.ts
-
-src/registry/__tests__/
-└── runtime-events.test.ts
-```
-
-### Test Coverage
-
-- **Current Coverage**: ~85%
-- **Target Coverage**: 90%
-
-## 📈 Performance
-
-### Performance Characteristics
-
-- **Time Complexity**: O(n) for permission checks, O(1) for capability checks
-- **Space Complexity**: O(n) where n = number of operations
-- **Bottlenecks**: Sandbox creation for fork-based execution
-
-## 🔒 Security
-
-### Security Considerations
-
-- **Sandbox Isolation**: Fork-based and in-process sandboxing
-- **Permission Validation**: Comprehensive permission checks
-- **Capability Checks**: Fine-grained capability validation
-- **Input Validation**: All inputs validated
-- **Path Validation**: Path operations validated
-
-### Known Vulnerabilities
-
-- None
-
-## 🐛 Known Issues & Limitations
-
-### Known Issues
-
-- None currently
-
-### Limitations
-
-- **Sandbox Performance**: Fork-based sandboxing has overhead
-- **Permission Checks**: Multiple permission checks may be slow
-
-### Future Improvements
-
-- **Async Permission Checks**: Parallel permission validation
-- **Sandbox Optimization**: Optimize sandbox creation
-
-## 🔄 Migration & Breaking Changes
-
-### Migration from Previous Versions
-
-No breaking changes in current version (0.1.0).
-
-### Breaking Changes in Future Versions
-
-- None planned
-
-## 📚 Examples
-
-### Example 1: Basic Execution
+Handlers should return a `CommandResult<T>` with optional custom metadata:
 
 ```typescript
-import { execute, createPluginContext } from '@kb-labs/plugin-runtime';
+export default {
+  async execute(ctx, input) {
+    // Your handler logic
+    const data = { message: 'Hello, World!' };
 
-const context = createPluginContext({
-  capabilities: ['fs.read'],
-  permissions: { fs: { mode: 'read', allow: ['.'] } },
+    // Return result with optional custom metadata
+    return {
+      exitCode: 0,
+      result: data,
+      meta: {
+        customField: 'value',
+        timing: [{ checkpoint: 'start', elapsed: 0 }],
+      },
+    };
+  }
+};
+```
+
+**Automatic Metadata Injection**: The runtime automatically adds standard metadata fields:
+
+- `executedAt` - ISO timestamp when execution started
+- `duration` - Execution duration in milliseconds
+- `pluginId` - Plugin identifier
+- `pluginVersion` - Plugin version
+- `commandId` - Command identifier (if available)
+- `host` - Execution host ('cli' | 'rest' | 'workflow')
+- `tenantId` - Tenant identifier (if available)
+- `requestId` - Request tracking ID
+
+These fields are merged with your custom metadata automatically. If your custom metadata has the same key, your value will be overwritten by the standard field.
+
+### Subprocess Execution (Production)
+
+```typescript
+import { runInSubprocess } from '@kb-labs/plugin-runtime-v3/sandbox';
+
+const result = await runInSubprocess({
+  descriptor,
+  socketPath: '/path/to/unix.sock', // IPC socket
+  handlerPath: '/path/to/handler.js',
+  input: { data: 'test' },
+  timeoutMs: 30000,
+});
+```
+
+## Context Structure
+
+The `PluginContextV3` provided to handlers contains:
+
+```typescript
+{
+  // Metadata
+  host: 'cli' | 'rest' | 'workflow',
+  requestId: string,
+  pluginId: string,
+  pluginVersion: string,
+  cwd: string,
+
+  // Signal
+  signal?: AbortSignal,
+
+  // Services
+  ui: UIFacade,           // 13 methods
+  platform: PlatformServices,  // 7 services
+  runtime: RuntimeAPI,    // fs, fetch, env
+  api: PluginAPI,         // lifecycle, state, etc.
+
+  // Tracing
+  trace: TraceContext,
+}
+```
+
+### UI Facade (13 methods)
+
+```typescript
+ctx.ui.info('message');
+ctx.ui.success('message');
+ctx.ui.warn('message');
+ctx.ui.error('message');
+ctx.ui.debug('message');
+ctx.ui.spinner('loading...');
+ctx.ui.table(data);
+ctx.ui.json(data);
+ctx.ui.newline();
+ctx.ui.divider();
+ctx.ui.box('content');
+await ctx.ui.confirm('Are you sure?');
+await ctx.ui.prompt('Enter value:');
+```
+
+### Runtime API
+
+```typescript
+// Filesystem (17 methods)
+await ctx.runtime.fs.readFile('/path');
+await ctx.runtime.fs.writeFile('/path', 'content');
+await ctx.runtime.fs.exists('/path');
+await ctx.runtime.fs.readdir('/path');
+await ctx.runtime.fs.mkdir('/path');
+await ctx.runtime.fs.rm('/path');
+await ctx.runtime.fs.copy('/src', '/dest');
+await ctx.runtime.fs.move('/src', '/dest');
+
+// Network
+await ctx.runtime.fetch('https://api.example.com');
+
+// Environment
+const value = ctx.runtime.env('NODE_ENV');
+```
+
+### Plugin API
+
+```typescript
+// Lifecycle
+ctx.api.lifecycle.onCleanup(async () => {
+  // Cleanup logic
 });
 
-const result = await execute(
-  { handler: { file: './handlers/review.js', export: 'handle' }, input: {} },
-  context
-);
+// State (in-memory cache)
+await ctx.api.state.set('key', value, ttlMs);
+const cached = await ctx.api.state.get('key');
 ```
 
-### Example 2: Permission Checking
+### Platform Services
 
 ```typescript
-import { checkFsPermission, checkNetPermission } from '@kb-labs/plugin-runtime';
-
-const fsAllowed = checkFsPermission('/path/to/file', { mode: 'read', allow: ['.'] });
-const netAllowed = checkNetPermission('https://api.example.com', { allow: ['api.example.com'] });
+ctx.platform.logger.info('message');
+ctx.platform.llm.generate({ prompt: 'Hello' });
+ctx.platform.embeddings.embed('text');
+ctx.platform.vectorStore.search('query');
+ctx.platform.cache.get('key');
+ctx.platform.storage.read('key');
+ctx.platform.analytics.track('event');
 ```
 
-### Example 3: Capability Checking
+## Testing
+
+### Run Tests
+
+```bash
+# All tests
+pnpm test
+
+# Watch mode
+pnpm test:watch
+```
+
+### Context Structure Tests
+
+Integration tests verify the **actual runtime structure** of `PluginContextV3`:
+
+```bash
+pnpm test src/__tests__/context-structure.test.ts
+```
+
+These tests:
+- ✅ Prevent accidental API removals
+- ✅ Ensure type definitions match runtime
+- ✅ Document the exact API surface
+- ✅ Protect against regressions
+
+See [src/__tests__/README.md](./src/__tests__/README.md) for details.
+
+## Exports
 
 ```typescript
-import { checkCapabilities } from '@kb-labs/plugin-runtime';
+// Main export
+import { createPluginContextV3 } from '@kb-labs/plugin-runtime-v3';
 
-const result = checkCapabilities(['fs.read', 'net.fetch'], ['fs.read']);
-// result.granted: ['fs.read']
-// result.missing: ['net.fetch']
+// Sandbox runners
+import { runInProcess, runInSubprocess } from '@kb-labs/plugin-runtime-v3/sandbox';
+
+// Bootstrap (for subprocess execution)
+import '@kb-labs/plugin-runtime-v3/sandbox/bootstrap';
 ```
 
-### Example 4: Submit Background Job
+## Architecture
 
-```typescript
-// In your plugin handler
-export default async function handler(ctx: PluginContext, input: any) {
-  // Submit one-time background job
-  const job = await ctx.jobs.submit({
-    handler: 'handlers/process-data.ts',
-    input: { dataId: input.id },
-    priority: 8,        // 1-10, high priority
-    timeout: 60000,     // 1 minute timeout
-    retries: 3,         // Retry 3 times on failure
-    tags: ['data-processing']
-  });
-
-  // Wait for result
-  const result = await job.getResult();
-  return { jobId: job.id, result };
-}
+```
+┌─────────────────────────────────────────┐
+│ CLI / REST / Workflow Host              │
+└───────────────┬─────────────────────────┘
+                │
+                ├─ Dev Mode: runInProcess()
+                │    ├─ createPluginContextV3()
+                │    ├─ Import handler dynamically
+                │    └─ Execute in same process
+                │
+                └─ Production: runInSubprocess()
+                     ├─ fork(bootstrap.js)
+                     ├─ IPC communication
+                     ├─ Sandboxed execution
+                     └─ Return result via IPC
 ```
 
-### Example 5: Schedule Recurring Job
+### Bootstrap.js
 
-```typescript
-// In your plugin handler
-export default async function handler(ctx: PluginContext, input: any) {
-  // Schedule daily report at 9 AM
-  const schedule = await ctx.jobs.schedule({
-    handler: 'handlers/daily-report.ts',
-    schedule: '0 9 * * *',  // Cron: every day at 9 AM
-    // Or use interval syntax: '1h', '5m', '30s'
-    input: { reportType: 'sales' },
-    priority: 7,
-    timeout: 300000,    // 5 minutes
-    maxRuns: 30         // Stop after 30 executions
-  });
+The `bootstrap.js` file is a **standalone** entry point for forked subprocesses:
 
-  // Pause/resume schedule
-  await schedule.pause();
-  await schedule.resume();
+- **Bundled dependencies**: All `@kb-labs/plugin-contracts-v3` code is inlined
+- **No external imports**: Works without node_modules access
+- **Multi-location fallback**: Tries production, development, and fallback paths
 
-  return { scheduleId: schedule.id };
-}
+See [ADR-0016: Standalone Bootstrap](../../docs/adr/0016-standalone-bootstrap-for-subprocess-execution.md) for details.
+
+## Development
+
+```bash
+# Build
+pnpm build
+
+# Watch mode
+pnpm dev
+
+# Type check
+pnpm type-check
+
+# Run tests
+pnpm test
 ```
 
-### Example 6: Check System Health
+## License
 
-```typescript
-// Check health before submitting critical job
-const health = await ctx.jobs.healthCheck();
-
-if (health.state === 'critical') {
-  console.warn('System overloaded:', health.metrics);
-  console.warn('Recommendations:', health.recommendations);
-  // Wait or handle degradation
-} else {
-  // System healthy, submit job
-  await ctx.jobs.submit({ ... });
-}
-```
-
-## 🤝 Contributing
-
-See [CONTRIBUTING.md](../../CONTRIBUTING.md) for development guidelines.
-
-## 📄 License
-
-MIT © KB Labs
+MIT
