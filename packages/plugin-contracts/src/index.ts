@@ -31,6 +31,7 @@ export { DEFAULT_PERMISSIONS } from './permissions.js';
 export type {
   UIFacade,
   Colors,
+  Symbols,
   ColorFunction,
   Spinner,
   TableColumn,

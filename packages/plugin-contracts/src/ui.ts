@@ -79,6 +79,35 @@ export interface Colors {
 }
 
 /**
+ * Symbols API - visual indicators and box-drawing characters
+ */
+export interface Symbols {
+  // Status symbols
+  success: string;
+  error: string;
+  warning: string;
+  info: string;
+
+  // UI elements
+  bullet: string;
+  clock: string;
+  folder: string;
+  package: string;
+  pointer: string;
+  section: string;
+
+  // Box-drawing characters
+  separator: string;
+  border: string;
+  topLeft: string;
+  topRight: string;
+  bottomLeft: string;
+  bottomRight: string;
+  leftT: string;
+  rightT: string;
+}
+
+/**
  * UI Facade interface
  *
  * All output goes through this interface so plugins don't need to know
@@ -95,6 +124,17 @@ export interface UIFacade {
    * ```
    */
   colors: Colors;
+
+  /**
+   * Symbol characters for visual indicators and box-drawing
+   *
+   * Example:
+   * ```
+   * ctx.ui.write(ctx.ui.symbols.success + ' Done\n');
+   * ctx.ui.write(ctx.ui.symbols.pointer + ' Item\n');
+   * ```
+   */
+  symbols: Symbols;
 
   /**
    * Write raw text to output (without newline)
@@ -287,10 +327,35 @@ const noopColors: Colors = {
 };
 
 /**
+ * No-op symbols implementation (plain text fallback)
+ */
+const noopSymbols: Symbols = {
+  success: '✓',
+  error: '✗',
+  warning: '⚠',
+  info: '→',
+  bullet: '•',
+  clock: 'time',
+  folder: 'dir',
+  package: '›',
+  pointer: '>',
+  section: '|',
+  separator: '─',
+  border: '│',
+  topLeft: '┌',
+  topRight: '┐',
+  bottomLeft: '└',
+  bottomRight: '┘',
+  leftT: '├',
+  rightT: '┤',
+};
+
+/**
  * No-op UI implementation (for testing or silent mode)
  */
 export const noopUI: UIFacade = {
   colors: noopColors,
+  symbols: noopSymbols,
   write: () => {},
   info: () => {},
   success: () => {},
