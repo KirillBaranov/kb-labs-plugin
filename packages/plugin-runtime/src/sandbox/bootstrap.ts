@@ -8,11 +8,13 @@
 import type { ParentMessage, ChildMessage, ExecuteMessage } from './ipc-protocol.js';
 import type { UIFacade, MessageOptions } from '@kb-labs/plugin-contracts';
 import { PluginError, wrapError } from '@kb-labs/plugin-contracts';
-import { sideBorderBox, safeColors } from '@kb-labs/shared-cli-ui';
+import { sideBorderBox, safeColors, safeSymbols } from '@kb-labs/shared-cli-ui';
 import { createPluginContextV3 } from '../context/index.js';
 import { executeCleanup } from '../api/index.js';
 import { connectToPlatform } from './platform-client.js';
 import { initPlatform } from '@kb-labs/core-runtime';
+import { applySandboxPatches, type SandboxMode } from './harden.js';
+import { setGlobalContext, clearGlobalContext } from './context-holder.js';
 
 // Initialize platform with adapters from parent process config
 // This must happen BEFORE any handler execution so usePlatform() returns proxy adapters
@@ -39,6 +41,9 @@ function createStdoutUI(): UIFacade {
   return {
     // Colors API from shared-cli-ui
     colors: safeColors,
+
+    // Symbols API from shared-cli-ui
+    symbols: safeSymbols,
 
     // Write text with newline
     write: (text: string) => {
@@ -137,7 +142,6 @@ function createStdoutUI(): UIFacade {
   };
 }
 
-
 // Abort controller for cancellation
 const abortController = new AbortController();
 
@@ -152,6 +156,16 @@ process.on('message', async (msg: ParentMessage) => {
 
   const executeMsg = msg as ExecuteMessage;
   const { descriptor, handlerPath, input, socketPath } = executeMsg;
+
+  // Read sandbox mode from environment
+  const sandboxMode = (process.env.KB_SANDBOX_MODE || 'enforce') as SandboxMode;
+
+  // Apply sandbox patches BEFORE any plugin code runs
+  // This prevents plugins from bypassing permissions via direct module imports
+  const restoreSandbox = applySandboxPatches({
+    permissions: descriptor.permissions,
+    mode: sandboxMode, // Read from KB_SANDBOX_MODE env var
+  });
 
   // Wait for platform to be initialized
   await platformReady;
@@ -169,6 +183,9 @@ process.on('message', async (msg: ParentMessage) => {
     ui,
     signal: abortController.signal,
   });
+
+  // Set global context for sandbox proxying (used in compat mode)
+  setGlobalContext(context);
 
   try {
     // Import handler
@@ -209,8 +226,14 @@ process.on('message', async (msg: ParentMessage) => {
     };
     process.send?.(errorMsg);
   } finally {
+    // Clear global context (prevent memory leaks)
+    clearGlobalContext();
+
     // Execute cleanups
     await executeCleanup(cleanupStack, platform.logger);
+
+    // Restore original globals (cleanup sandbox patches)
+    restoreSandbox();
   }
 });
 

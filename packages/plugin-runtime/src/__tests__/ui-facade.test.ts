@@ -34,6 +34,28 @@ function createTestUI(): UIFacade {
       inverse: mockColor,
     },
 
+    // Symbols API
+    symbols: {
+      success: '✓',
+      error: '✗',
+      warning: '⚠',
+      info: '→',
+      bullet: '•',
+      clock: 'time',
+      folder: 'dir',
+      package: '›',
+      pointer: '>',
+      section: '|',
+      separator: '─',
+      border: '│',
+      topLeft: '┌',
+      topRight: '┐',
+      bottomLeft: '└',
+      bottomRight: '┘',
+      leftT: '├',
+      rightT: '┤',
+    },
+
     // Output methods
     write: vi.fn(),
     info: vi.fn(),
@@ -55,6 +77,7 @@ function createTestUI(): UIFacade {
     newline: vi.fn(),
     divider: vi.fn(),
     box: vi.fn(),
+    sideBox: vi.fn(),
 
     // Prompts
     confirm: vi.fn(async () => true),
@@ -104,6 +127,50 @@ describe('UIFacade', () => {
       expect(ui.colors.error('error')).toBe('error');
       expect(ui.colors.primary('primary')).toBe('primary');
       expect(ui.colors.bold('bold')).toBe('bold');
+    });
+  });
+
+  describe('symbols API', () => {
+    it('should have all status symbols', () => {
+      expect(typeof ui.symbols.success).toBe('string');
+      expect(typeof ui.symbols.error).toBe('string');
+      expect(typeof ui.symbols.warning).toBe('string');
+      expect(typeof ui.symbols.info).toBe('string');
+    });
+
+    it('should have all UI element symbols', () => {
+      expect(typeof ui.symbols.bullet).toBe('string');
+      expect(typeof ui.symbols.clock).toBe('string');
+      expect(typeof ui.symbols.folder).toBe('string');
+      expect(typeof ui.symbols.package).toBe('string');
+      expect(typeof ui.symbols.pointer).toBe('string');
+      expect(typeof ui.symbols.section).toBe('string');
+    });
+
+    it('should have all box-drawing symbols', () => {
+      expect(typeof ui.symbols.separator).toBe('string');
+      expect(typeof ui.symbols.border).toBe('string');
+      expect(typeof ui.symbols.topLeft).toBe('string');
+      expect(typeof ui.symbols.topRight).toBe('string');
+      expect(typeof ui.symbols.bottomLeft).toBe('string');
+      expect(typeof ui.symbols.bottomRight).toBe('string');
+      expect(typeof ui.symbols.leftT).toBe('string');
+      expect(typeof ui.symbols.rightT).toBe('string');
+    });
+
+    it('should return expected symbol values', () => {
+      expect(ui.symbols.success).toBe('✓');
+      expect(ui.symbols.error).toBe('✗');
+      expect(ui.symbols.warning).toBe('⚠');
+      expect(ui.symbols.pointer).toBe('>');
+    });
+
+    it('should be usable in write calls', () => {
+      ui.write(ui.symbols.success + ' Done');
+      expect(ui.write).toHaveBeenCalledWith('✓ Done');
+
+      ui.write(ui.symbols.pointer + ' Item');
+      expect(ui.write).toHaveBeenCalledWith('> Item');
     });
   });
 
@@ -224,24 +291,78 @@ describe('UIFacade', () => {
   });
 
   describe('box method', () => {
-    it('should accept sections', () => {
-      ui.box([
-        { title: 'Section 1', lines: ['line 1', 'line 2'] },
-        { title: 'Section 2', lines: ['line 3'] },
-      ]);
-      expect(ui.box).toHaveBeenCalled();
+    it('should accept content and title', () => {
+      ui.box('content', 'Title');
+      expect(ui.box).toHaveBeenCalledWith('content', 'Title');
     });
 
-    it('should accept sections with options', () => {
-      const options: SideBoxOptions = { width: 80 };
-      ui.box(
-        [{ title: 'Title', lines: ['content'] }],
-        options,
-      );
-      expect(ui.box).toHaveBeenCalledWith(
-        [{ title: 'Title', lines: ['content'] }],
-        options,
-      );
+    it('should accept content without title', () => {
+      ui.box('content');
+      expect(ui.box).toHaveBeenCalledWith('content');
+    });
+  });
+
+  describe('sideBox method', () => {
+    it('should accept options with title', () => {
+      const options: SideBoxOptions = {
+        title: 'Test',
+      };
+      ui.sideBox(options);
+      expect(ui.sideBox).toHaveBeenCalledWith(options);
+    });
+
+    it('should accept options with status', () => {
+      const options: SideBoxOptions = {
+        title: 'Success',
+        status: 'success',
+      };
+      ui.sideBox(options);
+      expect(ui.sideBox).toHaveBeenCalledWith(options);
+    });
+
+    it('should accept options with summary', () => {
+      const options: SideBoxOptions = {
+        title: 'Info',
+        summary: { Key: 'Value', Count: 42 },
+      };
+      ui.sideBox(options);
+      expect(ui.sideBox).toHaveBeenCalledWith(options);
+    });
+
+    it('should accept options with sections', () => {
+      const options: SideBoxOptions = {
+        title: 'Details',
+        sections: [
+          { header: 'Section 1', items: ['item 1', 'item 2'] },
+          { header: 'Section 2', items: ['item 3'] },
+        ],
+      };
+      ui.sideBox(options);
+      expect(ui.sideBox).toHaveBeenCalledWith(options);
+    });
+
+    it('should accept options with timing', () => {
+      const options: SideBoxOptions = {
+        title: 'Complete',
+        status: 'success',
+        timing: 1234,
+      };
+      ui.sideBox(options);
+      expect(ui.sideBox).toHaveBeenCalledWith(options);
+    });
+
+    it('should accept full options', () => {
+      const options: SideBoxOptions = {
+        title: 'Full Example',
+        status: 'info',
+        summary: { Target: 'World', Mode: 'production' },
+        sections: [
+          { header: 'Details', items: ['Item 1', 'Item 2'] },
+        ],
+        timing: 5678,
+      };
+      ui.sideBox(options);
+      expect(ui.sideBox).toHaveBeenCalledWith(options);
     });
   });
 
@@ -348,6 +469,23 @@ describe('UIFacade', () => {
       ui.write(colored);
 
       expect(ui.write).toHaveBeenCalledWith('✓ Success');
+    });
+
+    it('should allow combining colors and symbols', () => {
+      const message = ui.colors.success(ui.symbols.success + ' Done');
+      ui.write(message);
+
+      expect(ui.write).toHaveBeenCalledWith('✓ Done');
+    });
+
+    it('should work with symbols in output methods', () => {
+      ui.success(ui.symbols.success + ' Complete');
+      ui.error(ui.symbols.error + ' Failed');
+      ui.warn(ui.symbols.warning + ' Warning');
+
+      expect(ui.success).toHaveBeenCalledWith('✓ Complete');
+      expect(ui.error).toHaveBeenCalledWith('✗ Failed');
+      expect(ui.warn).toHaveBeenCalledWith('⚠ Warning');
     });
 
     it('should allow mixing text output methods', () => {
