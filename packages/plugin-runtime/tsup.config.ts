@@ -15,6 +15,8 @@ export default defineConfig({
     // Bundle @kb-labs/plugin-contracts and @kb-labs/shared-cli-ui (remove from external list)
     // Keep only Node.js built-ins external
     /^node:/,
+    // Keep 'fs' external for sync fallback support
+    'fs',
   ],
   noExternal: [
     '@kb-labs/plugin-contracts', // Explicitly bundle this
