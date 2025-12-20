@@ -100,7 +100,7 @@ Implementation:
 - **Simple deployment**: No complex module resolution logic needed
 - **Development-friendly**: Works in monorepo without changes
 - **Reliable**: No dependency on symlinks, NODE_PATH, or workspace structure
-- **Small overhead**: ~23KB bundled size (contracts + runtime logic)
+- **Small overhead**: ~47KB bundled size (contracts + runtime logic, reduced from 67KB after ADR-0017 simplification)
 
 ### Negative
 
