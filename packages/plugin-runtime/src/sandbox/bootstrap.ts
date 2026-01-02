@@ -51,57 +51,44 @@ function createStdoutUI(): UIFacade {
     },
 
     info: (msg: string, options?: MessageOptions) => {
-      if (options?.sections && options.sections.length > 0) {
-        const boxOutput = sideBorderBox({
-          title: options.title || 'Info',
-          sections: options.sections,
-          status: 'info',
-          timing: options.timing,
-        });
-        console.log(boxOutput);
-      } else {
-        console.log(msg);
-      }
+      const boxOutput = sideBorderBox({
+        title: options?.title || 'Info',
+        sections: options?.sections || [{ items: [msg] }],
+        status: 'info',
+        timing: options?.timing,
+      });
+      console.log(boxOutput);
     },
     success: (msg: string, options?: MessageOptions) => {
-      if (options?.sections && options.sections.length > 0) {
-        const boxOutput = sideBorderBox({
-          title: options.title || 'Success',
-          sections: options.sections,
-          status: 'success',
-          timing: options.timing,
-        });
-        console.log(boxOutput);
-      } else {
-        console.log(`✓ ${msg}`);
-      }
+      console.log('[bootstrap] success called with:', { msg, options });
+      const boxOutput = sideBorderBox({
+        title: options?.title || 'Success',
+        sections: options?.sections || [{ items: [msg] }],
+        status: 'success',
+        timing: options?.timing,
+      });
+      console.log('[bootstrap] boxOutput length:', boxOutput.length);
+      console.log('[bootstrap] boxOutput:', boxOutput);
+      console.log(boxOutput);
     },
     warn: (msg: string, options?: MessageOptions) => {
-      if (options?.sections && options.sections.length > 0) {
-        const boxOutput = sideBorderBox({
-          title: options.title || 'Warning',
-          sections: options.sections,
-          status: 'warning',
-          timing: options.timing,
-        });
-        console.log(boxOutput);
-      } else {
-        console.warn(`⚠ ${msg}`);
-      }
+      const boxOutput = sideBorderBox({
+        title: options?.title || 'Warning',
+        sections: options?.sections || [{ items: [msg] }],
+        status: 'warning',
+        timing: options?.timing,
+      });
+      console.log(boxOutput);
     },
     error: (err: Error | string, options?: MessageOptions) => {
       const message = err instanceof Error ? err.message : err;
-      if (options?.sections && options.sections.length > 0) {
-        const boxOutput = sideBorderBox({
-          title: options.title || 'Error',
-          sections: options.sections,
-          status: 'error',
-          timing: options.timing,
-        });
-        console.error(boxOutput);
-      } else {
-        console.error(message);
-      }
+      const boxOutput = sideBorderBox({
+        title: options?.title || 'Error',
+        sections: options?.sections || [{ items: [message] }],
+        status: 'error',
+        timing: options?.timing,
+      });
+      console.error(boxOutput);
     },
     debug: (msg: string) => {
       if (process.env.DEBUG) console.debug(msg);
@@ -155,7 +142,7 @@ process.on('message', async (msg: ParentMessage) => {
   if (msg.type !== 'execute') return;
 
   const executeMsg = msg as ExecuteMessage;
-  const { descriptor, handlerPath, input, socketPath } = executeMsg;
+  const { descriptor, handlerPath, input, socketPath, cwd, outdir } = executeMsg;
 
   // Read sandbox mode from environment
   const sandboxMode = (process.env.KB_SANDBOX_MODE || 'enforce') as SandboxMode;
@@ -182,12 +169,36 @@ process.on('message', async (msg: ParentMessage) => {
     platform,
     ui,
     signal: abortController.signal,
+    cwd,
+    outdir,
   });
 
   // Set global context for sandbox proxying (used in compat mode)
   setGlobalContext(context);
 
+  // Analytics scope injection for plugin execution
+  // Save original source before overriding (for subprocess mode - not strictly needed since process dies)
+  let originalSource: { product: string; version: string } | undefined;
+
   try {
+    // Override analytics source with plugin-specific source
+    // This ensures events tracked by the plugin show the correct source
+    if (descriptor.pluginId && descriptor.pluginVersion && platform.analytics) {
+      // Save original source (for consistency with in-process mode)
+      originalSource = platform.analytics.getSource?.();
+
+      // Override source to plugin source
+      platform.analytics.setSource?.({
+        product: descriptor.pluginId,
+        version: descriptor.pluginVersion,
+      });
+
+      platform.logger?.debug?.('Analytics source overridden', {
+        from: originalSource?.product,
+        to: descriptor.pluginId,
+      });
+    }
+
     // Import handler
     const handlerModule = await import(handlerPath);
     const handler = handlerModule.default ?? handlerModule;

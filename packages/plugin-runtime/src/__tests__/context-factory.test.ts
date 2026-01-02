@@ -52,13 +52,12 @@ describe('createPluginContextV3', () => {
 
   it('should pass platform services directly without wrapping', () => {
     const descriptor: PluginContextDescriptor = {
-      host: 'cli',
+      requestId: 'test-request-id',
+      hostType: 'cli',
       pluginId: '@kb-labs/test',
       pluginVersion: '1.0.0',
-      cwd: '/test',
       permissions: {},
-      hostContext: { host: 'cli', argv: [], flags: {} },
-      parentRequestId: undefined,
+      hostContext: { hostType: 'cli', argv: [], flags: {} },
     };
 
     const { context } = createPluginContextV3({
@@ -81,19 +80,19 @@ describe('createPluginContextV3', () => {
 
   it('should create context with all required fields', () => {
     const descriptor: PluginContextDescriptor = {
-      host: 'cli',
+      requestId: 'test-request-id',
+      hostType: 'cli',
       pluginId: '@kb-labs/test',
       pluginVersion: '1.0.0',
-      cwd: '/test',
       permissions: {},
-      hostContext: { host: 'cli', argv: [], flags: {} },
-      parentRequestId: undefined,
+      hostContext: { hostType: 'cli', argv: [], flags: {} },
     };
 
     const { context } = createPluginContextV3({
       descriptor,
       platform: mockPlatform,
       ui: mockUI,
+      cwd: '/test',
     });
 
     // Metadata
@@ -117,13 +116,12 @@ describe('createPluginContextV3', () => {
 
   it('should wire runtime API correctly', () => {
     const descriptor: PluginContextDescriptor = {
-      host: 'cli',
+      requestId: 'test-request-id',
+      hostType: 'cli',
       pluginId: '@kb-labs/test',
       pluginVersion: '1.0.0',
-      cwd: '/test',
       permissions: { fs: { read: ['/test'] } },
-      hostContext: { host: 'cli', argv: [], flags: {} },
-      parentRequestId: undefined,
+      hostContext: { hostType: 'cli', argv: [], flags: {} },
     };
 
     const { context } = createPluginContextV3({
@@ -159,13 +157,12 @@ describe('createPluginContextV3', () => {
 
   it('should wire plugin API correctly', () => {
     const descriptor: PluginContextDescriptor = {
-      host: 'cli',
+      requestId: 'test-request-id',
+      hostType: 'cli',
       pluginId: '@kb-labs/test',
       pluginVersion: '1.0.0',
-      cwd: '/test',
       permissions: {},
-      hostContext: { host: 'cli', argv: [], flags: {} },
-      parentRequestId: undefined,
+      hostContext: { hostType: 'cli', argv: [], flags: {} },
     };
 
     const { context } = createPluginContextV3({
@@ -189,13 +186,12 @@ describe('createPluginContextV3', () => {
 
   it('should create cleanup stack', () => {
     const descriptor: PluginContextDescriptor = {
-      host: 'cli',
+      requestId: 'test-request-id',
+      hostType: 'cli',
       pluginId: '@kb-labs/test',
       pluginVersion: '1.0.0',
-      cwd: '/test',
       permissions: {},
-      hostContext: { host: 'cli', argv: [], flags: {} },
-      parentRequestId: undefined,
+      hostContext: { hostType: 'cli', argv: [], flags: {} },
     };
 
     const { cleanupStack } = createPluginContextV3({
@@ -210,13 +206,12 @@ describe('createPluginContextV3', () => {
 
   it('should use provided signal when given', () => {
     const descriptor: PluginContextDescriptor = {
-      host: 'cli',
+      requestId: 'test-request-id',
+      hostType: 'cli',
       pluginId: '@kb-labs/test',
       pluginVersion: '1.0.0',
-      cwd: '/test',
       permissions: {},
-      hostContext: { host: 'cli', argv: [], flags: {} },
-      parentRequestId: undefined,
+      hostContext: { hostType: 'cli', argv: [], flags: {} },
     };
 
     const abortController = new AbortController();
@@ -232,38 +227,36 @@ describe('createPluginContextV3', () => {
 
   it('should preserve optional fields from descriptor', () => {
     const descriptor: PluginContextDescriptor = {
-      host: 'cli',
+      requestId: 'test-request-id',
+      hostType: 'cli',
       pluginId: '@kb-labs/test',
       pluginVersion: '1.0.0',
       tenantId: 'acme-corp',
-      cwd: '/test',
-      outdir: '/test/output',
-      config: { foo: 'bar' },
       permissions: {},
-      hostContext: { host: 'cli', argv: [], flags: {} },
-      parentRequestId: 'parent-request-id',
+      hostContext: { hostType: 'cli', argv: [], flags: {} },
     };
 
     const { context } = createPluginContextV3({
       descriptor,
       platform: mockPlatform,
       ui: mockUI,
+      cwd: '/test',
+      outdir: '/test/output',
     });
 
     expect(context.tenantId).toBe('acme-corp');
+    expect(context.cwd).toBe('/test');
     expect(context.outdir).toBe('/test/output');
-    expect(context.config).toEqual({ foo: 'bar' });
   });
 
   it('should create unique requestId for each context', () => {
     const descriptor: PluginContextDescriptor = {
-      host: 'cli',
+      requestId: 'test-request-id',
+      hostType: 'cli',
       pluginId: '@kb-labs/test',
       pluginVersion: '1.0.0',
-      cwd: '/test',
       permissions: {},
-      hostContext: { host: 'cli', argv: [], flags: {} },
-      parentRequestId: undefined,
+      hostContext: { hostType: 'cli', argv: [], flags: {} },
     };
 
     const { context: context1 } = createPluginContextV3({
@@ -283,13 +276,12 @@ describe('createPluginContextV3', () => {
 
   it('should create trace context with valid IDs', () => {
     const descriptor: PluginContextDescriptor = {
-      host: 'cli',
+      requestId: 'test-request-id',
+      hostType: 'cli',
       pluginId: '@kb-labs/test',
       pluginVersion: '1.0.0',
-      cwd: '/test',
       permissions: {},
-      hostContext: { host: 'cli', argv: [], flags: {} },
-      parentRequestId: undefined,
+      hostContext: { hostType: 'cli', argv: [], flags: {} },
     };
 
     const { context } = createPluginContextV3({
@@ -308,13 +300,12 @@ describe('createPluginContextV3', () => {
 
   it('should allow reading all context fields', () => {
     const descriptor: PluginContextDescriptor = {
-      host: 'cli',
+      requestId: 'test-request-id',
+      hostType: 'cli',
       pluginId: '@kb-labs/test',
       pluginVersion: '1.0.0',
-      cwd: '/test',
       permissions: {},
-      hostContext: { host: 'cli', argv: [], flags: {} },
-      parentRequestId: undefined,
+      hostContext: { hostType: 'cli', argv: [], flags: {} },
     };
 
     const { context } = createPluginContextV3({

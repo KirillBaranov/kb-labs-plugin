@@ -5,10 +5,20 @@
  *
  * Critical component: Entry points for all plugin execution.
  * Failure here breaks ALL V3 plugins.
+ *
+ * ## RunResult Contract (v5)
+ *
+ * runInProcess/runInSubprocess now return RunResult<T>:
+ * - data: T (raw handler return value)
+ * - executionMeta: ExecutionMeta (timing, plugin info, request correlation)
+ *
+ * Host layer (CLI, REST, etc.) is responsible for wrapping this into
+ * host-specific format using wrapCliResult, wrapRestResult, etc.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { runInProcess } from '../sandbox/runner.js';
+import { wrapCliResult } from '../host/cli-wrapper.js';
 import { PluginError } from '@kb-labs/plugin-contracts';
 import type { PluginContextDescriptor, UIFacade, PlatformServices } from '@kb-labs/plugin-contracts';
 import { tmpdir } from 'node:os';
@@ -39,19 +49,20 @@ describe('Sandbox Runner', () => {
     warn: vi.fn(),
     error: vi.fn(),
     fatal: vi.fn(),
-    child: vi.fn(function(this: any) {
+    child: vi.fn(function(this: unknown) {
       return this;
     }),
   };
 
   const mockPlatform: PlatformServices = {
-    logger: mockLogger as any,
-    llm: {} as any,
-    embeddings: {} as any,
-    vectorStore: {} as any,
-    cache: {} as any,
-    storage: {} as any,
-    analytics: {} as any,
+    logger: mockLogger as PlatformServices['logger'],
+    llm: {} as PlatformServices['llm'],
+    embeddings: {} as PlatformServices['embeddings'],
+    vectorStore: {} as PlatformServices['vectorStore'],
+    cache: {} as PlatformServices['cache'],
+    storage: {} as PlatformServices['storage'],
+    analytics: {} as PlatformServices['analytics'],
+    eventBus: {} as PlatformServices['eventBus'],
   };
 
   let testDir: string;
@@ -61,17 +72,13 @@ describe('Sandbox Runner', () => {
     mkdirSync(testDir, { recursive: true });
   });
 
-  describe('runInProcess', () => {
-    it('should execute handler and return result with auto-injected metadata', async () => {
-      const handlerPath = join(testDir, 'success-handler.js');
+  describe('runInProcess - RunResult contract', () => {
+    it('should return RunResult with data and executionMeta', async () => {
+      const handlerPath = join(testDir, 'simple-handler.js');
       const handlerCode = `
         export default {
           async execute(ctx, input) {
-            return {
-              exitCode: 0,
-              result: { message: 'success', input },
-              meta: { custom: 'value' }
-            };
+            return { message: 'success', input };
           }
         };
       `;
@@ -97,27 +104,74 @@ describe('Sandbox Runner', () => {
         input: { test: 'data' },
       });
 
-      expect(result.exitCode).toBe(0);
-      expect(result.result).toEqual({
+      // Verify RunResult structure
+      expect(result.data).toEqual({
         message: 'success',
         input: { test: 'data' },
       });
 
-      // Verify auto-injected metadata
-      expect(result.meta).toBeDefined();
-      expect(result.meta?.executedAt).toBeDefined();
-      expect(typeof result.meta?.duration).toBe('number');
-      expect(result.meta?.pluginId).toBe('@kb-labs/test');
-      expect(result.meta?.pluginVersion).toBe('1.0.0');
-      expect(result.meta?.commandId).toBe('test:command');
-      expect(result.meta?.host).toBe('cli');
-      expect(result.meta?.requestId).toBe('req-123');
-
-      // Verify custom metadata is preserved
-      expect(result.meta?.custom).toBe('value');
+      // Verify executionMeta
+      expect(result.executionMeta).toBeDefined();
+      expect(result.executionMeta.pluginId).toBe('@kb-labs/test');
+      expect(result.executionMeta.pluginVersion).toBe('1.0.0');
+      expect(result.executionMeta.handlerId).toBe('test:command');
+      expect(result.executionMeta.requestId).toBe('req-123');
+      expect(typeof result.executionMeta.startTime).toBe('number');
+      expect(typeof result.executionMeta.endTime).toBe('number');
+      expect(typeof result.executionMeta.duration).toBe('number');
+      expect(result.executionMeta.duration).toBeGreaterThanOrEqual(0);
     });
 
-    it('should handle handler returning void with metadata injection', async () => {
+    it('should return raw CommandResult structure when handler returns it', async () => {
+      const handlerPath = join(testDir, 'command-result-handler.js');
+      const handlerCode = `
+        export default {
+          async execute(ctx, input) {
+            return {
+              exitCode: 0,
+              result: { message: 'success' },
+              meta: { custom: 'value' }
+            };
+          }
+        };
+      `;
+      writeFileSync(handlerPath, handlerCode);
+
+      const descriptor: PluginContextDescriptor = {
+        host: 'cli',
+        pluginId: '@kb-labs/test',
+        pluginVersion: '1.0.0',
+        requestId: 'req-cmd',
+        commandId: 'test:command',
+        cwd: testDir,
+        permissions: {},
+        hostContext: { host: 'cli', argv: [], flags: {} },
+      };
+
+      const runResult = await runInProcess({
+        descriptor,
+        platform: mockPlatform,
+        ui: mockUI,
+        handlerPath,
+        input: {},
+      });
+
+      // Raw CommandResult is in data
+      expect(runResult.data).toEqual({
+        exitCode: 0,
+        result: { message: 'success' },
+        meta: { custom: 'value' },
+      });
+
+      // CLI host can then wrap this into CommandResultWithMeta
+      const cliResult = wrapCliResult(runResult, descriptor);
+      expect(cliResult.exitCode).toBe(0);
+      expect(cliResult.result).toEqual({ message: 'success' });
+      expect(cliResult.meta?.custom).toBe('value');
+      expect(cliResult.meta?.pluginId).toBe('@kb-labs/test');
+    });
+
+    it('should handle void return (undefined data)', async () => {
       const handlerPath = join(testDir, 'void-handler.js');
       const handlerCode = `
         export default {
@@ -132,11 +186,10 @@ describe('Sandbox Runner', () => {
         host: 'cli',
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
-        requestId: 'req-456',
+        requestId: 'req-void',
         cwd: testDir,
         permissions: {},
         hostContext: { host: 'cli', argv: [], flags: {} },
-        parentRequestId: undefined,
       };
 
       const result = await runInProcess({
@@ -147,17 +200,46 @@ describe('Sandbox Runner', () => {
         input: {},
       });
 
-      expect(result.exitCode).toBe(0);
-      expect(result.result).toBeUndefined();
-
-      // Even for void handlers, metadata should be injected
-      expect(result.meta).toBeDefined();
-      expect(result.meta?.executedAt).toBeDefined();
-      expect(typeof result.meta?.duration).toBe('number');
-      expect(result.meta?.pluginId).toBe('@kb-labs/test');
-      expect(result.meta?.requestId).toBe('req-456');
+      expect(result.data).toBeUndefined();
+      expect(result.executionMeta).toBeDefined();
+      expect(result.executionMeta.pluginId).toBe('@kb-labs/test');
     });
 
+    it('should include tenantId in executionMeta when provided', async () => {
+      const handlerPath = join(testDir, 'tenant-handler.js');
+      const handlerCode = `
+        export default {
+          async execute(ctx, input) {
+            return { tenant: ctx.tenantId };
+          }
+        };
+      `;
+      writeFileSync(handlerPath, handlerCode);
+
+      const descriptor: PluginContextDescriptor = {
+        host: 'rest',
+        pluginId: '@kb-labs/test',
+        pluginVersion: '1.0.0',
+        requestId: 'req-tenant',
+        tenantId: 'acme-corp',
+        cwd: testDir,
+        permissions: {},
+        hostContext: { host: 'rest', method: 'GET', path: '/test', query: {}, headers: {} },
+      };
+
+      const result = await runInProcess({
+        descriptor,
+        platform: mockPlatform,
+        ui: mockUI,
+        handlerPath,
+        input: {},
+      });
+
+      expect(result.executionMeta.tenantId).toBe('acme-corp');
+    });
+  });
+
+  describe('runInProcess - Error handling', () => {
     it('should throw PluginError if handler missing execute function', async () => {
       const handlerPath = join(testDir, 'invalid-handler.js');
       const handlerCode = `
@@ -175,7 +257,6 @@ describe('Sandbox Runner', () => {
         cwd: testDir,
         permissions: {},
         hostContext: { host: 'cli', argv: [], flags: {} },
-        parentRequestId: undefined,
       };
 
       await expect(
@@ -199,8 +280,40 @@ describe('Sandbox Runner', () => {
       ).rejects.toThrow(/does not export an execute function/);
     });
 
+    it('should propagate handler errors', async () => {
+      const handlerPath = join(testDir, 'error-handler.js');
+      const handlerCode = `
+        export default {
+          async execute(ctx, input) {
+            throw new Error('Handler failed intentionally');
+          }
+        };
+      `;
+      writeFileSync(handlerPath, handlerCode);
+
+      const descriptor: PluginContextDescriptor = {
+        host: 'cli',
+        pluginId: '@kb-labs/test',
+        pluginVersion: '1.0.0',
+        cwd: testDir,
+        permissions: {},
+        hostContext: { host: 'cli', argv: [], flags: {} },
+      };
+
+      await expect(
+        runInProcess({
+          descriptor,
+          platform: mockPlatform,
+          ui: mockUI,
+          handlerPath,
+          input: {},
+        })
+      ).rejects.toThrow('Handler failed intentionally');
+    });
+  });
+
+  describe('runInProcess - Cleanup handlers', () => {
     it('should execute cleanup handlers after success', async () => {
-      // Use a file to track cleanup execution
       const cleanupFlag = join(testDir, 'cleanup-flag.txt');
 
       const handlerPath = join(testDir, 'cleanup-handler.js');
@@ -212,7 +325,7 @@ describe('Sandbox Runner', () => {
             ctx.api.lifecycle.onCleanup(async () => {
               writeFileSync('${cleanupFlag}', 'cleaned');
             });
-            return { exitCode: 0, result: { registered: true } };
+            return { registered: true };
           }
         };
       `;
@@ -226,7 +339,6 @@ describe('Sandbox Runner', () => {
         cwd: testDir,
         permissions: {},
         hostContext: { host: 'cli', argv: [], flags: {} },
-        parentRequestId: undefined,
       };
 
       const result = await runInProcess({
@@ -237,9 +349,8 @@ describe('Sandbox Runner', () => {
         input: {},
       });
 
-      expect(result.exitCode).toBe(0);
-      expect(result.result).toEqual({ registered: true });
-      expect(result.meta).toBeDefined();
+      expect(result.data).toEqual({ registered: true });
+      expect(result.executionMeta).toBeDefined();
 
       // Cleanup should have run and written file
       const { readFileSync, existsSync } = await import('node:fs');
@@ -272,7 +383,6 @@ describe('Sandbox Runner', () => {
         cwd: testDir,
         permissions: {},
         hostContext: { host: 'cli', argv: [], flags: {} },
-        parentRequestId: undefined,
       };
 
       await expect(
@@ -290,13 +400,15 @@ describe('Sandbox Runner', () => {
       expect(existsSync(cleanupFlag)).toBe(true);
       expect(readFileSync(cleanupFlag, 'utf-8')).toBe('cleaned-after-error');
     });
+  });
 
+  describe('runInProcess - Context', () => {
     it('should pass signal to context', async () => {
       const handlerPath = join(testDir, 'signal-handler.js');
       const handlerCode = `
         export default {
           async execute(ctx, input) {
-            return { exitCode: 0, result: { hasSignal: ctx.signal !== undefined } };
+            return { hasSignal: ctx.signal !== undefined };
           }
         };
       `;
@@ -310,7 +422,6 @@ describe('Sandbox Runner', () => {
         cwd: testDir,
         permissions: {},
         hostContext: { host: 'cli', argv: [], flags: {} },
-        parentRequestId: undefined,
       };
 
       const abortController = new AbortController();
@@ -323,16 +434,16 @@ describe('Sandbox Runner', () => {
         signal: abortController.signal,
       });
 
-      expect(result.result).toEqual({ hasSignal: true });
-      expect(result.meta).toBeDefined();
+      expect(result.data).toEqual({ hasSignal: true });
+      expect(result.executionMeta).toBeDefined();
     });
 
-    it('should handle default export vs named exports', async () => {
+    it('should handle named exports (module with execute function)', async () => {
       const handlerPath = join(testDir, 'named-export-handler.js');
       const handlerCode = `
         // No default export, handler is the module itself
         export async function execute(ctx, input) {
-          return { exitCode: 0, result: { type: 'named' } };
+          return { type: 'named' };
         }
       `;
       writeFileSync(handlerPath, handlerCode);
@@ -345,7 +456,6 @@ describe('Sandbox Runner', () => {
         cwd: testDir,
         permissions: {},
         hostContext: { host: 'cli', argv: [], flags: {} },
-        parentRequestId: undefined,
       };
 
       const result = await runInProcess({
@@ -356,9 +466,8 @@ describe('Sandbox Runner', () => {
         input: {},
       });
 
-      expect(result.exitCode).toBe(0);
-      expect(result.result).toEqual({ type: 'named' });
-      expect(result.meta).toBeDefined();
+      expect(result.data).toEqual({ type: 'named' });
+      expect(result.executionMeta).toBeDefined();
     });
 
     it('should provide complete context to handler', async () => {
@@ -367,16 +476,13 @@ describe('Sandbox Runner', () => {
         export default {
           async execute(ctx, input) {
             return {
-              exitCode: 0,
-              result: {
-                hasHost: typeof ctx.host === 'string',
-                hasRequestId: typeof ctx.requestId === 'string',
-                hasUI: ctx.ui !== undefined,
-                hasPlatform: ctx.platform !== undefined,
-                hasRuntime: ctx.runtime !== undefined,
-                hasAPI: ctx.api !== undefined,
-                hasTrace: ctx.trace !== undefined,
-              }
+              hasHost: typeof ctx.host === 'string',
+              hasRequestId: typeof ctx.requestId === 'string',
+              hasUI: ctx.ui !== undefined,
+              hasPlatform: ctx.platform !== undefined,
+              hasRuntime: ctx.runtime !== undefined,
+              hasAPI: ctx.api !== undefined,
+              hasTrace: ctx.trace !== undefined,
             };
           }
         };
@@ -391,7 +497,6 @@ describe('Sandbox Runner', () => {
         cwd: testDir,
         permissions: {},
         hostContext: { host: 'cli', argv: [], flags: {} },
-        parentRequestId: undefined,
       };
 
       const result = await runInProcess({
@@ -402,7 +507,7 @@ describe('Sandbox Runner', () => {
         input: {},
       });
 
-      expect(result.result).toEqual({
+      expect(result.data).toEqual({
         hasHost: true,
         hasRequestId: true,
         hasUI: true,
@@ -411,7 +516,7 @@ describe('Sandbox Runner', () => {
         hasAPI: true,
         hasTrace: true,
       });
-      expect(result.meta).toBeDefined();
+      expect(result.executionMeta).toBeDefined();
     });
   });
 

@@ -15,6 +15,8 @@ export interface ExecuteMessage {
   socketPath: string;
   handlerPath: string;
   input: unknown;
+  cwd: string;
+  outdir?: string;
 }
 
 /**

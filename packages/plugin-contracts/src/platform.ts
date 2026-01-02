@@ -17,12 +17,15 @@ export type {
   IVectorStore as VectorStoreAdapter,
   IStorage as StorageAdapter,
   IAnalytics as AnalyticsAdapter,
+  IEventBus as EventBusAdapter,
   // Re-export supporting types
   LLMOptions,
   LLMResponse,
   VectorRecord,
   VectorSearchResult,
   VectorFilter,
+  EventHandler,
+  Unsubscribe,
 } from '@kb-labs/core-platform/adapters';
 
 // ============================================================================
@@ -76,6 +79,12 @@ export interface PlatformServices {
    * Requires platform.analytics permission
    */
   readonly analytics: IAnalytics;
+
+  /**
+   * Event bus for pub/sub messaging (core IEventBus)
+   * Requires platform.eventBus permission
+   */
+  readonly eventBus: IEventBus;
 }
 
 // Import types for PlatformServices fields
@@ -87,4 +96,5 @@ import type {
   IVectorStore,
   IStorage,
   IAnalytics,
+  IEventBus,
 } from '@kb-labs/core-platform/adapters';

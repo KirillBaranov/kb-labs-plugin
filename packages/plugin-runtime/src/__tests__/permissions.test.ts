@@ -49,13 +49,12 @@ describe('Permission Enforcement', () => {
       const permissions: PermissionSpec = {};
 
       const descriptor: PluginContextDescriptor = {
-        host: 'cli',
+      requestId: 'test-request-id',
+        hostType: 'cli',
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
-        cwd: '/test',
         permissions,
-        hostContext: { host: 'cli', argv: [], flags: {} },
-        parentRequestId: undefined,
+        hostContext: { hostType: 'cli', argv: [], flags: {} },
       };
 
       const { context } = createPluginContextV3({
@@ -75,13 +74,12 @@ describe('Permission Enforcement', () => {
       const permissions: PermissionSpec = {};
 
       const descriptor: PluginContextDescriptor = {
-        host: 'cli',
+      requestId: 'test-request-id',
+        hostType: 'cli',
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
-        cwd: '/test',
         permissions,
-        hostContext: { host: 'cli', argv: [], flags: {} },
-        parentRequestId: undefined,
+        hostContext: { hostType: 'cli', argv: [], flags: {} },
       };
 
       const { context } = createPluginContextV3({
@@ -104,13 +102,12 @@ describe('Permission Enforcement', () => {
       };
 
       const descriptor: PluginContextDescriptor = {
-        host: 'cli',
+      requestId: 'test-request-id',
+        hostType: 'cli',
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
-        cwd: '/test/plugin',
         permissions,
-        hostContext: { host: 'cli', argv: [], flags: {} },
-        parentRequestId: undefined,
+        hostContext: { hostType: 'cli', argv: [], flags: {} },
       };
 
       const { context } = createPluginContextV3({
@@ -129,13 +126,12 @@ describe('Permission Enforcement', () => {
       const permissions: PermissionSpec = {};
 
       const descriptor: PluginContextDescriptor = {
-        host: 'cli',
+      requestId: 'test-request-id',
+        hostType: 'cli',
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
-        cwd: '/test',
         permissions,
-        hostContext: { host: 'cli', argv: [], flags: {} },
-        parentRequestId: undefined,
+        hostContext: { hostType: 'cli', argv: [], flags: {} },
       };
 
       const { context } = createPluginContextV3({
@@ -156,13 +152,12 @@ describe('Permission Enforcement', () => {
       const permissions: PermissionSpec = {};
 
       const descriptor: PluginContextDescriptor = {
-        host: 'cli',
+      requestId: 'test-request-id',
+        hostType: 'cli',
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
-        cwd: '/test',
         permissions,
-        hostContext: { host: 'cli', argv: [], flags: {} },
-        parentRequestId: undefined,
+        hostContext: { hostType: 'cli', argv: [], flags: {} },
       };
 
       const { context } = createPluginContextV3({
@@ -181,13 +176,12 @@ describe('Permission Enforcement', () => {
       const permissions: PermissionSpec = {};
 
       const descriptor: PluginContextDescriptor = {
-        host: 'cli',
+      requestId: 'test-request-id',
+        hostType: 'cli',
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
-        cwd: '/test',
         permissions,
-        hostContext: { host: 'cli', argv: [], flags: {} },
-        parentRequestId: undefined,
+        hostContext: { hostType: 'cli', argv: [], flags: {} },
       };
 
       const { context } = createPluginContextV3({
@@ -206,13 +200,12 @@ describe('Permission Enforcement', () => {
       const permissions: PermissionSpec = {};
 
       const descriptor: PluginContextDescriptor = {
-        host: 'cli',
+      requestId: 'test-request-id',
+        hostType: 'cli',
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
-        cwd: '/test',
         permissions,
-        hostContext: { host: 'cli', argv: [], flags: {} },
-        parentRequestId: undefined,
+        hostContext: { hostType: 'cli', argv: [], flags: {} },
       };
 
       const { context } = createPluginContextV3({
@@ -233,14 +226,12 @@ describe('Permission Enforcement', () => {
       const permissions: PermissionSpec = {};
 
       const descriptor: PluginContextDescriptor = {
-        host: 'cli',
+      requestId: 'test-request-id',
+        hostType: 'cli',
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
-        cwd: '/test',
-        outdir: '/test/output',
         permissions,
-        hostContext: { host: 'cli', argv: [], flags: {} },
-        parentRequestId: undefined,
+        hostContext: { hostType: 'cli', argv: [], flags: {} },
       };
 
       const { context } = createPluginContextV3({
@@ -259,14 +250,12 @@ describe('Permission Enforcement', () => {
       const permissions: PermissionSpec = {};
 
       const descriptor: PluginContextDescriptor = {
-        host: 'cli',
+      requestId: 'test-request-id',
+        hostType: 'cli',
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
-        cwd: '/test',
-        outdir: '/test/output',
         permissions,
-        hostContext: { host: 'cli', argv: [], flags: {} },
-        parentRequestId: undefined,
+        hostContext: { hostType: 'cli', argv: [], flags: {} },
       };
 
       const { context } = createPluginContextV3({
@@ -294,14 +283,12 @@ describe('Permission Enforcement', () => {
       };
 
       const descriptor: PluginContextDescriptor = {
-        host: 'cli',
+      requestId: 'test-request-id',
+        hostType: 'cli',
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
-        cwd: '/test',
-        outdir: '/test/output',
         permissions,
-        hostContext: { host: 'cli', argv: [], flags: {} },
-        parentRequestId: undefined,
+        hostContext: { hostType: 'cli', argv: [], flags: {} },
       };
 
       const { context } = createPluginContextV3({
@@ -321,14 +308,12 @@ describe('Permission Enforcement', () => {
       const permissions: PermissionSpec = {};
 
       const descriptor: PluginContextDescriptor = {
-        host: 'cli',
+      requestId: 'test-request-id',
+        hostType: 'cli',
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
-        cwd: '/test/plugin',
-        outdir: '/test/plugin/output',
         permissions,
-        hostContext: { host: 'cli', argv: [], flags: {} },
-        parentRequestId: undefined,
+        hostContext: { hostType: 'cli', argv: [], flags: {} },
       };
 
       const { context } = createPluginContextV3({
@@ -347,13 +332,12 @@ describe('Permission Enforcement', () => {
       const permissions: PermissionSpec = {};
 
       const descriptor: PluginContextDescriptor = {
-        host: 'cli',
+      requestId: 'test-request-id',
+        hostType: 'cli',
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
-        cwd: '/test',
         permissions,
-        hostContext: { host: 'cli', argv: [], flags: {} },
-        parentRequestId: undefined,
+        hostContext: { hostType: 'cli', argv: [], flags: {} },
       };
 
       const { context } = createPluginContextV3({
@@ -376,13 +360,12 @@ describe('Permission Enforcement', () => {
       };
 
       const descriptor: PluginContextDescriptor = {
-        host: 'cli',
+      requestId: 'test-request-id',
+        hostType: 'cli',
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
-        cwd: '/test',
         permissions,
-        hostContext: { host: 'cli', argv: [], flags: {} },
-        parentRequestId: undefined,
+        hostContext: { hostType: 'cli', argv: [], flags: {} },
       };
 
       const { context } = createPluginContextV3({
@@ -405,13 +388,12 @@ describe('Permission Enforcement', () => {
       };
 
       const descriptor: PluginContextDescriptor = {
-        host: 'cli',
+      requestId: 'test-request-id',
+        hostType: 'cli',
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
-        cwd: '/test',
         permissions,
-        hostContext: { host: 'cli', argv: [], flags: {} },
-        parentRequestId: undefined,
+        hostContext: { hostType: 'cli', argv: [], flags: {} },
       };
 
       const { context } = createPluginContextV3({
@@ -438,13 +420,12 @@ describe('Permission Enforcement', () => {
       };
 
       const descriptor: PluginContextDescriptor = {
-        host: 'cli',
+      requestId: 'test-request-id',
+        hostType: 'cli',
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
-        cwd: '/test',
         permissions,
-        hostContext: { host: 'cli', argv: [], flags: {} },
-        parentRequestId: undefined,
+        hostContext: { hostType: 'cli', argv: [], flags: {} },
       };
 
       const { context } = createPluginContextV3({
@@ -467,13 +448,12 @@ describe('Permission Enforcement', () => {
       };
 
       const descriptor: PluginContextDescriptor = {
-        host: 'cli',
+      requestId: 'test-request-id',
+        hostType: 'cli',
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
-        cwd: '/test',
         permissions,
-        hostContext: { host: 'cli', argv: [], flags: {} },
-        parentRequestId: undefined,
+        hostContext: { hostType: 'cli', argv: [], flags: {} },
       };
 
       const { context } = createPluginContextV3({
@@ -496,13 +476,12 @@ describe('Permission Enforcement', () => {
       };
 
       const descriptor: PluginContextDescriptor = {
-        host: 'cli',
+      requestId: 'test-request-id',
+        hostType: 'cli',
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
-        cwd: '/test',
         permissions,
-        hostContext: { host: 'cli', argv: [], flags: {} },
-        parentRequestId: undefined,
+        hostContext: { hostType: 'cli', argv: [], flags: {} },
       };
 
       const { context } = createPluginContextV3({
@@ -527,13 +506,12 @@ describe('Permission Enforcement', () => {
       };
 
       const descriptor: PluginContextDescriptor = {
-        host: 'cli',
+      requestId: 'test-request-id',
+        hostType: 'cli',
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
-        cwd: '/test',
         permissions,
-        hostContext: { host: 'cli', argv: [], flags: {} },
-        parentRequestId: undefined,
+        hostContext: { hostType: 'cli', argv: [], flags: {} },
       };
 
       const { context } = createPluginContextV3({

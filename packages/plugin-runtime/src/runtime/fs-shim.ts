@@ -1,5 +1,10 @@
 /**
  * Sandboxed filesystem implementation
+ *
+ * Security model:
+ * - Plugins declare what they WANT in manifest (allow-list)
+ * - Platform enforces hardcoded security patterns (deny-list below)
+ * - Users can further restrict via kb.config.json (future)
  */
 
 import * as fs from 'node:fs/promises';
@@ -8,9 +13,12 @@ import type { FSShim, FileStat, DirEntry, MkdirOptions, RmOptions, WriteFileOpti
 import { PermissionError } from '@kb-labs/plugin-contracts';
 
 /**
- * Patterns that are always denied (security)
+ * Patterns that are ALWAYS denied (platform security, not configurable)
+ *
+ * These are enforced regardless of what plugin requests in manifest.
+ * This protects against malicious or buggy plugins.
  */
-const DENIED_PATTERNS = [
+const HARDCODED_DENIED_PATTERNS = [
   /node_modules/,
   /\.git\//,
   /\.env$/,
@@ -20,11 +28,24 @@ const DENIED_PATTERNS = [
   /\/usr\//,
   /\/var\//,
   /credentials/i,
-  /secret/i,
   /password/i,
   /\.pem$/,
   /\.key$/,
+  /\.secret$/,
 ];
+
+/**
+ * Convert glob pattern to regex
+ */
+function globToRegex(pattern: string): RegExp {
+  const escaped = pattern
+    .replace(/[.+^${}()|[\]\\]/g, '\\$&') // Escape special chars
+    .replace(/\*\*/g, '{{GLOBSTAR}}')     // Temp placeholder for **
+    .replace(/\*/g, '[^/]*')              // * matches anything except /
+    .replace(/\?/g, '.')                   // ? matches single char
+    .replace(/{{GLOBSTAR}}/g, '.*');      // ** matches anything including /
+  return new RegExp(escaped);
+}
 
 export interface CreateFSShimOptions {
   permissions: PermissionSpec;
@@ -33,31 +54,53 @@ export interface CreateFSShimOptions {
 }
 
 /**
+ * Check if a path matches a glob pattern (resolved to absolute path)
+ */
+function matchesGlobPattern(filePath: string, pattern: string, cwd: string): boolean {
+  // SPECIAL CASE: ** wildcard means "match everything"
+  if (pattern === '**') {
+    return true;
+  }
+
+  // If pattern doesn't contain glob chars, treat as prefix match
+  if (!pattern.includes('*') && !pattern.includes('?')) {
+    const resolvedPattern = path.resolve(cwd, pattern);
+    return filePath.startsWith(resolvedPattern);
+  }
+
+  // Convert glob to regex and match
+  const resolvedPattern = path.resolve(cwd, pattern);
+  const regex = globToRegex(resolvedPattern);
+  return regex.test(filePath);
+}
+
+/**
  * Create a sandboxed filesystem shim
  */
 export function createFSShim(options: CreateFSShimOptions): FSShim {
   const { permissions, cwd, outdir } = options;
 
-  // Build allowed paths for reading
-  const readablePaths = new Set<string>([
-    path.resolve(cwd), // cwd always allowed for reading
-    ...(permissions.fs?.read ?? []).map(p => path.resolve(cwd, p)),
-  ]);
+  // Store patterns for glob matching (not resolved to absolute paths yet)
+  const readablePatterns: string[] = [
+    '.', // cwd always allowed for reading
+    ...(permissions.fs?.read ?? []),
+  ];
 
-  // Build allowed paths for writing
-  const writablePaths = new Set<string>([
-    outdir ? path.resolve(outdir) : path.resolve(cwd, '.kb/output'), // outdir always allowed
-    ...(permissions.fs?.write ?? []).map(p => path.resolve(cwd, p)),
-  ]);
+  // Store patterns for writing
+  const writablePatterns: string[] = [
+    outdir ? path.relative(cwd, path.resolve(outdir)) : '.kb/output', // outdir always allowed
+    ...(permissions.fs?.write ?? []),
+  ];
 
   function normalizePath(filePath: string): string {
     return path.normalize(path.resolve(cwd, filePath));
   }
 
   function checkDeniedPatterns(normalizedPath: string): void {
-    for (const pattern of DENIED_PATTERNS) {
+    // Check hardcoded security patterns (platform-level, not configurable)
+    for (const pattern of HARDCODED_DENIED_PATTERNS) {
       if (pattern.test(normalizedPath)) {
-        throw new PermissionError(`Access denied: path matches denied pattern`, {
+        throw new PermissionError(`Access denied: path matches security pattern`, {
           path: normalizedPath,
           pattern: pattern.toString(),
         });
@@ -69,8 +112,8 @@ export function createFSShim(options: CreateFSShimOptions): FSShim {
     const normalized = normalizePath(filePath);
     checkDeniedPatterns(normalized);
 
-    const isAllowed = Array.from(readablePaths).some(allowed =>
-      normalized.startsWith(allowed)
+    const isAllowed = readablePatterns.some(pattern =>
+      matchesGlobPattern(normalized, pattern, cwd)
     );
 
     if (!isAllowed) {
@@ -84,8 +127,8 @@ export function createFSShim(options: CreateFSShimOptions): FSShim {
     const normalized = normalizePath(filePath);
     checkDeniedPatterns(normalized);
 
-    const isAllowed = Array.from(writablePaths).some(allowed =>
-      normalized.startsWith(allowed)
+    const isAllowed = writablePatterns.some(pattern =>
+      matchesGlobPattern(normalized, pattern, cwd)
     );
 
     if (!isAllowed) {

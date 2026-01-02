@@ -9,7 +9,8 @@
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { runInProcess } from '../sandbox/runner.js';
-import type { PluginContextDescriptor, UIFacade, PlatformServices } from '@kb-labs/plugin-contracts';
+import { wrapCliResult } from '../host/cli-wrapper.js';
+import type { PluginContextDescriptor, UIFacade, PlatformServices, CommandResult } from '@kb-labs/plugin-contracts';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { writeFileSync, mkdirSync, rmSync } from 'node:fs';
@@ -113,23 +114,26 @@ describe('E2E Context Tests', () => {
     writeFileSync(handlerPath, handlerCode);
 
     const descriptor: PluginContextDescriptor = {
-      host: 'cli',
+      requestId: 'test-request-id',
+      hostType: 'cli',
       pluginId: '@kb-labs/test',
       pluginVersion: '1.0.0',
       requestId: 'e2e-test-123',
-      cwd: testDir,
       permissions: {},
-      hostContext: { host: 'cli', argv: [], flags: {} },
-      parentRequestId: undefined,
+      hostContext: { hostType: 'cli', argv: [], flags: {} },
     };
 
-    const result = await runInProcess({
+    const runResult = await runInProcess<CommandResult<unknown>>({
       descriptor,
       platform: mockPlatform,
       ui: mockUI,
       handlerPath,
       input: {},
+      cwd: testDir,
     });
+
+    // Wrap into CLI format for assertion
+    const result = wrapCliResult(runResult, descriptor);
 
     expect(result.exitCode).toBe(0);
     expect(result.result).toMatchObject({
@@ -171,23 +175,25 @@ describe('E2E Context Tests', () => {
     writeFileSync(handlerPath, handlerCode);
 
     const descriptor: PluginContextDescriptor = {
-      host: 'cli',
+      requestId: 'test-request-id',
+      hostType: 'cli',
       pluginId: '@kb-labs/test',
       pluginVersion: '1.0.0',
       requestId: 'e2e-fs-test',
-      cwd: testDir,
       permissions: {},
-      hostContext: { host: 'cli', argv: [], flags: {} },
-      parentRequestId: undefined,
+      hostContext: { hostType: 'cli', argv: [], flags: {} },
     };
 
-    const result = await runInProcess({
+    const runResult = await runInProcess<CommandResult<unknown>>({
       descriptor,
       platform: mockPlatform,
       ui: mockUI,
       handlerPath,
       input: {},
+      cwd: testDir,
     });
+
+    const result = wrapCliResult(runResult, descriptor);
 
     expect(result.exitCode).toBe(0);
     expect(result.result).toEqual({
@@ -216,23 +222,25 @@ describe('E2E Context Tests', () => {
     writeFileSync(handlerPath, handlerCode);
 
     const descriptor: PluginContextDescriptor = {
-      host: 'cli',
+      requestId: 'test-request-id',
+      hostType: 'cli',
       pluginId: '@kb-labs/test',
       pluginVersion: '1.0.0',
       requestId: 'e2e-trace-test',
-      cwd: testDir,
       permissions: {},
-      hostContext: { host: 'cli', argv: [], flags: {} },
-      parentRequestId: undefined,
+      hostContext: { hostType: 'cli', argv: [], flags: {} },
     };
 
-    const result = await runInProcess({
+    const runResult = await runInProcess<CommandResult<unknown>>({
       descriptor,
       platform: mockPlatform,
       ui: mockUI,
       handlerPath,
       input: {},
+      cwd: testDir,
     });
+
+    const result = wrapCliResult(runResult, descriptor);
 
     expect(result.exitCode).toBe(0);
     expect(result.result).toMatchObject({
@@ -258,23 +266,25 @@ describe('E2E Context Tests', () => {
     writeFileSync(handlerPath, handlerCode);
 
     const descriptor: PluginContextDescriptor = {
-      host: 'cli',
+      requestId: 'test-request-id',
+      hostType: 'cli',
       pluginId: '@kb-labs/test',
       pluginVersion: '1.0.0',
       requestId: 'e2e-exit-test',
-      cwd: testDir,
       permissions: {},
-      hostContext: { host: 'cli', argv: [], flags: {} },
-      parentRequestId: undefined,
+      hostContext: { hostType: 'cli', argv: [], flags: {} },
     };
 
-    const result = await runInProcess({
+    const runResult = await runInProcess<CommandResult<unknown>>({
       descriptor,
       platform: mockPlatform,
       ui: mockUI,
       handlerPath,
       input: {},
+      cwd: testDir,
     });
+
+    const result = wrapCliResult(runResult, descriptor);
 
     expect(result.exitCode).toBe(42);
     expect(result.result).toEqual({ custom: 'data' });
@@ -304,23 +314,25 @@ describe('E2E Context Tests', () => {
     writeFileSync(handlerPath, handlerCode);
 
     const descriptor: PluginContextDescriptor = {
-      host: 'cli',
+      requestId: 'test-request-id',
+      hostType: 'cli',
       pluginId: '@kb-labs/test',
       pluginVersion: '1.0.0',
       requestId: 'e2e-platform-test',
-      cwd: testDir,
       permissions: {},
-      hostContext: { host: 'cli', argv: [], flags: {} },
-      parentRequestId: undefined,
+      hostContext: { hostType: 'cli', argv: [], flags: {} },
     };
 
-    const result = await runInProcess({
+    const runResult = await runInProcess<CommandResult<unknown>>({
       descriptor,
       platform: mockPlatform,
       ui: mockUI,
       handlerPath,
       input: {},
+      cwd: testDir,
     });
+
+    const result = wrapCliResult(runResult, descriptor);
 
     expect(result.exitCode).toBe(0);
     expect(result.result).toEqual({
@@ -373,23 +385,25 @@ describe('E2E Context Tests', () => {
     writeFileSync(handlerPath, handlerCode);
 
     const descriptor: PluginContextDescriptor = {
-      host: 'cli',
+      requestId: 'test-request-id',
+      hostType: 'cli',
       pluginId: '@kb-labs/test',
       pluginVersion: '1.0.0',
       requestId: 'e2e-ui-api-test',
-      cwd: testDir,
       permissions: {},
-      hostContext: { host: 'cli', argv: [], flags: {} },
-      parentRequestId: undefined,
+      hostContext: { hostType: 'cli', argv: [], flags: {} },
     };
 
-    const result = await runInProcess({
+    const runResult = await runInProcess<CommandResult<unknown>>({
       descriptor,
       platform: mockPlatform,
       ui: mockUI,
       handlerPath,
       input: {},
+      cwd: testDir,
     });
+
+    const result = wrapCliResult(runResult, descriptor);
 
     expect(result.exitCode).toBe(0);
     expect(result.result).toEqual({

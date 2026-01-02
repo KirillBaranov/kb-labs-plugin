@@ -56,6 +56,14 @@ export {
   type RunInSubprocessOptions,
 } from './sandbox/index.js';
 
+// Host Wrappers
+export {
+  wrapCliResult,
+  wrapRestResult,
+  unwrapRestData,
+  type RestResultWithMeta,
+} from './host/index.js';
+
 // Re-export contracts for convenience
 export type {
   PluginContextV3,
@@ -70,4 +78,11 @@ export type {
   RuntimeAPI,
   PluginAPI,
   CleanupFn,
+  // Runner types
+  RunResult,
+  ExecutionMeta,
+  // CLI types (for wrapCliResult)
+  CommandResult,
+  CommandResultWithMeta,
+  StandardMeta,
 } from '@kb-labs/plugin-contracts';

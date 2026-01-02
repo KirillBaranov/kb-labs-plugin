@@ -1,22 +1,25 @@
 {
   "name": "@kb-labs/plugin-runtime",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Plugin System Runtime - Context factory, sandboxed shims, and APIs",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/index.js"
     },
     "./sandbox": {
+      "types": "./dist/sandbox/index.d.ts",
       "import": "./dist/sandbox/index.js",
-      "types": "./dist/sandbox/index.d.ts"
+      "require": "./dist/sandbox/index.js"
     },
     "./sandbox/bootstrap": {
+      "types": "./dist/sandbox/bootstrap.d.ts",
       "import": "./dist/sandbox/bootstrap.js",
-      "types": "./dist/sandbox/bootstrap.d.ts"
+      "require": "./dist/sandbox/bootstrap.js"
     }
   },
   "files": [
@@ -33,6 +36,8 @@
   },
   "dependencies": {
     "@kb-labs/plugin-contracts": "workspace:*",
+    "@kb-labs/core-contracts": "link:../../../kb-labs-core/packages/core-contracts",
+    "@kb-labs/studio-contracts": "link:../../../kb-labs-studio/packages/studio-contracts",
     "@kb-labs/shared-cli-ui": "link:../../../kb-labs-shared/packages/shared-cli-ui",
     "@kb-labs/core-runtime": "link:../../../kb-labs-core/packages/core-runtime"
   },

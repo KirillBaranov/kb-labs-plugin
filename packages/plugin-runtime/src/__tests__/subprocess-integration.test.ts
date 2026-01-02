@@ -14,7 +14,8 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { runInSubprocess } from '../sandbox/runner.js';
-import type { PluginContextDescriptor, UIFacade, PlatformServices } from '@kb-labs/plugin-contracts';
+import { wrapCliResult } from '../host/cli-wrapper.js';
+import type { PluginContextDescriptor, UIFacade, PlatformServices, CommandResult } from '@kb-labs/plugin-contracts';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { writeFileSync, mkdirSync } from 'node:fs';
@@ -126,13 +127,16 @@ describe('Subprocess Integration Tests', () => {
           parentRequestId: undefined,
         };
 
-        const result = await runInSubprocess({
+        const runResult = await runInSubprocess<CommandResult<unknown>>({
           descriptor,
           socketPath,
           handlerPath,
           input: {},
           timeoutMs: 5000,
         });
+
+        // Wrap into CLI format for assertion
+        const result = wrapCliResult(runResult, descriptor);
 
         // Verify result
         expect(result.exitCode).toBe(0);

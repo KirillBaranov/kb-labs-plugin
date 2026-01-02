@@ -48,14 +48,13 @@ describe('Context Structure (Runtime Verification)', () => {
   };
 
   const descriptor: PluginContextDescriptor = {
-    host: 'cli',
+      requestId: 'test-request-id',
+    hostType: 'cli',
     pluginId: '@kb-labs/test',
     pluginVersion: '1.0.0',
     requestId: 'test-req-123',
-    cwd: '/test/cwd',
     permissions: {},
-    hostContext: { host: 'cli', argv: [], flags: {} },
-    parentRequestId: undefined,
+    hostContext: { hostType: 'cli', argv: [], flags: {} },
   };
 
   it('should provide complete context structure to handlers', () => {
@@ -63,6 +62,7 @@ describe('Context Structure (Runtime Verification)', () => {
       descriptor,
       platform: mockPlatform,
       ui: mockUI,
+      cwd: '/test/cwd',
     });
 
     // Top-level fields
@@ -89,6 +89,7 @@ describe('Context Structure (Runtime Verification)', () => {
       descriptor,
       platform: mockPlatform,
       ui: mockUI,
+      cwd: '/test/cwd',
     });
 
     const uiMethods = Object.keys(context.ui);
@@ -112,6 +113,7 @@ describe('Context Structure (Runtime Verification)', () => {
       descriptor,
       platform: mockPlatform,
       ui: mockUI,
+      cwd: '/test/cwd',
     });
 
     expect(context.runtime.fs).toBeDefined();
@@ -132,6 +134,7 @@ describe('Context Structure (Runtime Verification)', () => {
       descriptor,
       platform: mockPlatform,
       ui: mockUI,
+      cwd: '/test/cwd',
     });
 
     expect(context.api.lifecycle).toBeDefined();
@@ -144,6 +147,7 @@ describe('Context Structure (Runtime Verification)', () => {
       descriptor,
       platform: mockPlatform,
       ui: mockUI,
+      cwd: '/test/cwd',
     });
 
     expect(context.platform.logger).toBeDefined();
@@ -160,6 +164,7 @@ describe('Context Structure (Runtime Verification)', () => {
       descriptor,
       platform: mockPlatform,
       ui: mockUI,
+      cwd: '/test/cwd',
     });
 
     expect(context.trace).toBeDefined();
@@ -171,13 +176,14 @@ describe('Context Structure (Runtime Verification)', () => {
     const descriptorWithOptionals: PluginContextDescriptor = {
       ...descriptor,
       tenantId: 'test-tenant',
-      outdir: '/test/outdir',
     };
 
     const { context } = createPluginContextV3({
       descriptor: descriptorWithOptionals,
       platform: mockPlatform,
       ui: mockUI,
+      cwd: '/test/cwd',
+      outdir: '/test/outdir',
     });
 
     expect(context.tenantId).toBe('test-tenant');
@@ -191,6 +197,7 @@ describe('Context Structure (Runtime Verification)', () => {
       descriptor,
       platform: mockPlatform,
       ui: mockUI,
+      cwd: '/test/cwd',
       signal: abortController.signal,
     });
 

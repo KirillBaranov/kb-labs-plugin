@@ -108,6 +108,18 @@ export async function connectToPlatform(socketPath?: string): Promise<PlatformSe
       clear: async (pattern?) => {
         return rpcClient!.call('cache', 'clear', [pattern]);
       },
+      zadd: async (key, score, member) => {
+        return rpcClient!.call('cache', 'zadd', [key, score, member]);
+      },
+      zrangebyscore: async (key, min, max) => {
+        return rpcClient!.call('cache', 'zrangebyscore', [key, min, max]);
+      },
+      zrem: async (key, member) => {
+        return rpcClient!.call('cache', 'zrem', [key, member]);
+      },
+      setIfNotExists: async (key, value, ttl?) => {
+        return rpcClient!.call('cache', 'setIfNotExists', [key, value, ttl]);
+      },
     },
 
     // Storage service via RPC
@@ -139,6 +151,19 @@ export async function connectToPlatform(socketPath?: string): Promise<PlatformSe
       },
       flush: async () => {
         return rpcClient!.call('analytics', 'flush', []);
+      },
+    },
+
+    // EventBus service via RPC
+    eventBus: {
+      publish: async <T>(topic: string, event: T): Promise<void> => {
+        return rpcClient!.call('eventBus', 'publish', [topic, event]);
+      },
+      subscribe: <T>(_topic: string, _handler: (event: T) => void | Promise<void>) => {
+        // Note: Event subscriptions in subprocess are not supported yet
+        // TODO: Implement proper cross-process event subscription via IPC
+        console.warn(`[eventBus] Subprocess subscription is not supported yet`);
+        return () => {}; // Return noop unsubscribe
       },
     },
   };
