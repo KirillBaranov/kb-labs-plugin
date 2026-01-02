@@ -25,8 +25,9 @@ export interface CreateInvokeAPIOptions {
 export function createInvokeAPI(options: CreateInvokeAPIOptions): InvokeAPI {
   const { permissions, invoker } = options;
 
-  // Check if invoke is allowed
-  if (!permissions.invoke?.allowed) {
+  // Check if invoke is allowed (empty array = disabled)
+  const allowedPlugins = permissions.invoke?.allow ?? [];
+  if (allowedPlugins.length === 0) {
     return {
       async call(): Promise<never> {
         throw new PermissionError('Plugin invocation not allowed');
@@ -34,16 +35,14 @@ export function createInvokeAPI(options: CreateInvokeAPIOptions): InvokeAPI {
     };
   }
 
-  const allowedPlugins = permissions.invoke.plugins ?? [];
-
   return {
     async call<T = unknown>(
       pluginId: string,
       input?: unknown,
       invokeOptions?: InvokeOptions
     ): Promise<T> {
-      // Check plugin whitelist (if specified)
-      if (allowedPlugins.length > 0 && !allowedPlugins.includes(pluginId)) {
+      // Check plugin whitelist
+      if (!allowedPlugins.includes(pluginId) && !allowedPlugins.includes('*')) {
         throw new PermissionError(`Plugin not in whitelist`, {
           pluginId,
           allowedPlugins,

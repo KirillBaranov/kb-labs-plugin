@@ -32,16 +32,15 @@ export interface CreateShellAPIOptions {
 export function createShellAPI(options: CreateShellAPIOptions): ShellAPI {
   const { permissions, cwd } = options;
 
-  // Check if shell is allowed
-  if (!permissions.shell?.allowed) {
+  // Check if shell is allowed (empty array = disabled)
+  const allowedCommands = permissions.shell?.allow ?? [];
+  if (allowedCommands.length === 0) {
     return {
       async exec(): Promise<never> {
         throw new PermissionError('Shell execution not allowed');
       },
     };
   }
-
-  const allowedCommands = permissions.shell.commands ?? [];
 
   return {
     async exec(
@@ -60,8 +59,8 @@ export function createShellAPI(options: CreateShellAPIOptions): ShellAPI {
         }
       }
 
-      // Check command whitelist (if specified)
-      if (allowedCommands.length > 0 && !allowedCommands.includes(command)) {
+      // Check command whitelist
+      if (!allowedCommands.includes(command) && !allowedCommands.includes('*')) {
         throw new PermissionError(`Command not in whitelist`, {
           command,
           allowedCommands,

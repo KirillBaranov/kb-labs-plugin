@@ -47,6 +47,16 @@ export interface CreateContextOptions {
    * Plugin invoker function (optional)
    */
   pluginInvoker?: PluginInvokerFn;
+
+  /**
+   * Current working directory (from WorkspaceLease)
+   */
+  cwd: string;
+
+  /**
+   * Output directory for artifacts (optional)
+   */
+  outdir?: string;
 }
 
 export interface CreateContextResult<TConfig = unknown> {
@@ -82,42 +92,38 @@ export interface CreateContextResult<TConfig = unknown> {
 export function createPluginContextV3<TConfig = unknown>(
   options: CreateContextOptions
 ): CreateContextResult<TConfig> {
-  const { descriptor, platform, ui, signal, eventEmitter, pluginInvoker } = options;
+  const { descriptor, platform, ui, signal, eventEmitter, pluginInvoker, cwd, outdir } = options;
 
-  // 1. Generate IDs
+  // 1. Generate IDs (no parent tracking in V3)
   const spanId = createId();
-  const traceId = descriptor.parentRequestId
-    ? extractTraceId(descriptor.parentRequestId)
-    : createId();
+  const traceId = createId();
   const requestId = `${traceId}:${spanId}`;
 
   // 2. Create cleanup stack
   const cleanupStack: Array<CleanupFn> = [];
 
-  // 3. Create trace context
+  // 3. Create trace context (no parent tracking in V3)
   const trace = createTraceContext({
     traceId,
     spanId,
-    parentSpanId: descriptor.parentRequestId
-      ? descriptor.parentRequestId.split(':')[1]
-      : undefined,
+    parentSpanId: undefined,
     logger: platform.logger,
   });
 
   // 4. Create runtime API (sandboxed fs, fetch, env)
   const runtime = createRuntimeAPI({
     permissions: descriptor.permissions,
-    cwd: descriptor.cwd,
-    outdir: descriptor.outdir,
+    cwd,
+    outdir,
   });
 
   // 5. Create plugin API
-  const outdir = descriptor.outdir ?? `${descriptor.cwd}/.kb/output`;
+  const finalOutdir = outdir ?? `${cwd}/.kb/output`;
   const api = createPluginAPI({
     pluginId: descriptor.pluginId,
     tenantId: descriptor.tenantId,
-    cwd: descriptor.cwd,
-    outdir,
+    cwd,
+    outdir: finalOutdir,
     permissions: descriptor.permissions,
     cache: platform.cache,
     eventEmitter,
@@ -129,14 +135,14 @@ export function createPluginContextV3<TConfig = unknown>(
   // Platform services passed through directly - no wrappers, no adapters
   const context: PluginContextV3<TConfig> = {
     // Metadata
-    host: descriptor.host,
+    host: descriptor.hostType,
     requestId,
     pluginId: descriptor.pluginId,
     pluginVersion: descriptor.pluginVersion,
     tenantId: descriptor.tenantId,
-    cwd: descriptor.cwd,
-    outdir,
-    config: descriptor.config as TConfig,
+    cwd,
+    outdir: finalOutdir,
+    config: undefined, // Config comes from platform.config, not descriptor
 
     // Cancellation
     signal,

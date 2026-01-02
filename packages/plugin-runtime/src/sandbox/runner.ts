@@ -4,6 +4,9 @@
  * Supports two modes:
  * - In-process: For trusted plugins or development
  * - Subprocess: For sandboxed execution
+ *
+ * Runner layer is host-agnostic - it returns RunResult<T> with raw data.
+ * Host layer (CLI, REST, etc.) wraps this into host-specific format.
  */
 
 import { fork, type ChildProcess } from 'node:child_process';
@@ -13,64 +16,29 @@ import type {
   PluginContextDescriptor,
   PlatformServices,
   UIFacade,
-  CommandResult,
-  CommandResultWithMeta,
-  StandardMeta,
+  RunResult,
+  ExecutionMeta,
 } from '@kb-labs/plugin-contracts';
-import { PluginError, TimeoutError, AbortError } from '@kb-labs/plugin-contracts';
+import { PluginError, TimeoutError, AbortError, createExecutionMeta } from '@kb-labs/plugin-contracts';
 import type { ParentMessage, ChildMessage, ResultMessage, ErrorMessage } from './ipc-protocol.js';
 import { createPluginContextV3 } from '../context/index.js';
 import { executeCleanup } from '../api/index.js';
 
 /**
- * Inject standard metadata into command result
+ * Create execution metadata from descriptor and timing
  */
-function injectStandardMeta<T>(
-  result: CommandResult<T> | void,
-  context: {
-    pluginId: string;
-    pluginVersion: string;
-    commandId?: string;
-    host: 'cli' | 'rest' | 'workflow' | 'webhook';
-    tenantId?: string;
-    requestId: string;
-    startTime: number;
-  }
-): CommandResultWithMeta<T> {
-  const endTime = Date.now();
-  const duration = endTime - context.startTime;
-
-  const standardMeta: StandardMeta = {
-    executedAt: new Date(context.startTime).toISOString(),
-    duration,
-    pluginId: context.pluginId,
-    pluginVersion: context.pluginVersion,
-    commandId: context.commandId,
-    host: context.host,
-    tenantId: context.tenantId,
-    requestId: context.requestId,
-  };
-
-  // If handler returned nothing, create default result
-  if (!result) {
-    return {
-      exitCode: 0,
-      meta: standardMeta as StandardMeta & Record<string, unknown>,
-    };
-  }
-
-  // Merge user meta with standard meta
-  // User meta can override standard meta if needed (no protection yet)
-  const mergedMeta: StandardMeta & Record<string, unknown> = {
-    ...result.meta,
-    ...standardMeta,
-  } as StandardMeta & Record<string, unknown>;
-
-  return {
-    exitCode: result.exitCode ?? 0,
-    result: result.result,
-    meta: mergedMeta,
-  };
+function buildExecutionMeta(
+  descriptor: PluginContextDescriptor,
+  startTime: number
+): ExecutionMeta {
+  return createExecutionMeta({
+    pluginId: descriptor.pluginId,
+    pluginVersion: descriptor.pluginVersion,
+    handlerId: descriptor.handlerId,
+    requestId: descriptor.requestId,
+    tenantId: descriptor.tenantId,
+    startTime,
+  });
 }
 
 export interface RunInProcessOptions {
@@ -80,6 +48,8 @@ export interface RunInProcessOptions {
   handlerPath: string;
   input: unknown;
   signal?: AbortSignal;
+  cwd: string;
+  outdir?: string;
 }
 
 export interface RunInSubprocessOptions {
@@ -89,17 +59,22 @@ export interface RunInSubprocessOptions {
   input: unknown;
   timeoutMs?: number;
   signal?: AbortSignal;
+  cwd: string;
+  outdir?: string;
 }
 
 /**
  * Run plugin handler in the current process (no sandbox)
  *
- * Use for trusted plugins or development.
+ * Returns raw handler result wrapped in RunResult with execution metadata.
+ * Host layer is responsible for transforming this into host-specific format.
+ *
+ * @returns RunResult<T> with raw data from handler and execution metadata
  */
 export async function runInProcess<T = unknown>(
   options: RunInProcessOptions
-): Promise<CommandResultWithMeta<T>> {
-  const { descriptor, platform, ui, handlerPath, input, signal } = options;
+): Promise<RunResult<T>> {
+  const { descriptor, platform, ui, handlerPath, input, signal, cwd, outdir } = options;
   const startTime = Date.now();
 
   // Create context
@@ -108,9 +83,33 @@ export async function runInProcess<T = unknown>(
     platform,
     ui,
     signal,
+    cwd,
+    outdir,
   });
 
+  // Analytics scope injection for plugin execution
+  // Save original source before overriding (for in-process mode)
+  let originalSource: { product: string; version: string } | undefined;
+
   try {
+    // Override analytics source with plugin-specific source
+    // This ensures events tracked by the plugin show the correct source
+    if (descriptor.pluginId && descriptor.pluginVersion && platform.analytics) {
+      // Save original source for restore (in-process mode)
+      originalSource = platform.analytics.getSource?.();
+
+      // Override source to plugin source
+      platform.analytics.setSource?.({
+        product: descriptor.pluginId,
+        version: descriptor.pluginVersion,
+      });
+
+      platform.logger?.debug?.('Analytics source overridden', {
+        from: originalSource?.product,
+        to: descriptor.pluginId,
+      });
+    }
+
     // Import and execute handler
     const handlerModule = await import(handlerPath);
     const handler = handlerModule.default ?? handlerModule;
@@ -122,19 +121,26 @@ export async function runInProcess<T = unknown>(
       );
     }
 
-    const result: CommandResult<T> | void = await handler.execute(context, input);
+    // Execute handler and get raw result
+    const data = await handler.execute(context, input) as T;
 
-    // Inject standard metadata
-    return injectStandardMeta(result, {
-      pluginId: descriptor.pluginId,
-      pluginVersion: descriptor.pluginVersion,
-      commandId: descriptor.commandId,
-      host: descriptor.host,
-      tenantId: descriptor.tenantId,
-      requestId: descriptor.requestId,
-      startTime,
-    });
+    // Return raw result with execution metadata
+    return {
+      ok: true,
+      data,
+      meta: buildExecutionMeta(descriptor, startTime),
+    };
   } finally {
+    // Restore original analytics source (for in-process mode)
+    // In subprocess mode, this is not needed (process dies after handler)
+    // But for in-process mode, we must restore to avoid cross-plugin contamination
+    if (originalSource && platform.analytics?.setSource) {
+      platform.analytics.setSource(originalSource);
+      platform.logger?.debug?.('Analytics source restored', {
+        to: originalSource.product,
+      });
+    }
+
     // Execute cleanups
     await executeCleanup(cleanupStack, platform.logger);
   }
@@ -142,10 +148,15 @@ export async function runInProcess<T = unknown>(
 
 /**
  * Run plugin handler in a subprocess (sandboxed)
+ *
+ * Returns raw handler result wrapped in RunResult with execution metadata.
+ * Host layer is responsible for transforming this into host-specific format.
+ *
+ * @returns RunResult<T> with raw data from handler and execution metadata
  */
 export async function runInSubprocess<T = unknown>(
   options: RunInSubprocessOptions
-): Promise<CommandResultWithMeta<T>> {
+): Promise<RunResult<T>> {
   const {
     descriptor,
     socketPath,
@@ -243,6 +254,8 @@ export async function runInSubprocess<T = unknown>(
           socketPath,
           handlerPath,
           input,
+          cwd: options.cwd,
+          outdir: options.outdir,
         };
         child.send(executeMsg);
       } else if (msg.type === 'result') {
@@ -252,25 +265,21 @@ export async function runInSubprocess<T = unknown>(
 
         const resultMsg = msg as ResultMessage;
 
-        // Inject standard metadata
-        const resultWithMeta = injectStandardMeta<T>(
-          {
-            exitCode: resultMsg.exitCode,
-            result: resultMsg.result as T,
-            meta: resultMsg.meta,
-          },
-          {
-            pluginId: descriptor.pluginId,
-            pluginVersion: descriptor.pluginVersion,
-            commandId: descriptor.commandId,
-            host: descriptor.host,
-            tenantId: descriptor.tenantId,
-            requestId: descriptor.requestId,
-            startTime,
-          }
-        );
+        // Reconstruct CommandResult from IPC message fields
+        // Bootstrap sends: exitCode, result, meta as separate fields
+        // We need to reassemble into CommandResult for wrapCliResult to process
+        const commandResult = {
+          exitCode: resultMsg.exitCode,
+          result: resultMsg.result,
+          meta: resultMsg.meta,
+        };
 
-        resolve(resultWithMeta);
+        // Return reconstructed CommandResult with execution metadata
+        resolve({
+          ok: true,
+          data: commandResult as T,
+          meta: buildExecutionMeta(descriptor, startTime),
+        });
       } else if (msg.type === 'error') {
         completed = true;
         clearTimeout(timeoutId);
