@@ -7,6 +7,7 @@
 
 import type { PermissionSpec } from './permissions.js';
 import type { HostType } from './host-context.js';
+import type { StudioConfig } from '@kb-labs/studio-contracts';
 
 /**
  * Schema reference for input/output validation
@@ -223,48 +224,6 @@ export interface JobDecl {
 }
 
 /**
- * Data source for Studio widget data
- */
-export type DataSource =
-  | {
-      type: 'rest';
-      routeId: string;
-      method?: 'GET' | 'POST';
-      headers?: Record<string, string>;
-    }
-  | {
-      type: 'mock';
-      fixtureId: string;
-    };
-
-/**
- * Studio widget action handler configuration
- */
-export interface ActionHandler {
-  type: 'rest' | 'navigate' | 'callback' | 'event' | 'modal';
-  config: Record<string, unknown>;
-}
-
-/**
- * Studio widget action definition
- */
-export interface WidgetAction {
-  id: string;
-  label: string;
-  type?: 'button' | 'modal' | 'link' | 'dropdown';
-  icon?: string;
-  variant?: 'primary' | 'default' | 'danger';
-  handler?: ActionHandler;
-  confirm?: {
-    title: string;
-    description: string;
-  };
-  disabled?: boolean | string;
-  visible?: boolean | string;
-  order?: number;
-}
-
-/**
  * Lifecycle hook specification
  */
 export interface LifecycleHooks {
@@ -276,118 +235,6 @@ export interface LifecycleHooks {
   onEnable?: string;
   /** Handler executed when plugin is disabled */
   onDisable?: string;
-}
-
-/**
- * Studio widget declaration
- */
-export interface StudioWidgetDecl<O = Record<string, unknown>> {
-  /** Unique widget identifier (e.g., 'ai-review/report') */
-  id: string;
-  /** Widget kind */
-  kind:
-    | 'panel'
-    | 'card'
-    | 'cardlist'
-    | 'table'
-    | 'chart'
-    | 'tree'
-    | 'timeline'
-    | 'metric'
-    | 'logs'
-    | 'json'
-    | 'diff'
-    | 'status'
-    | 'progress'
-    | 'infopanel'
-    | 'keyvalue'
-    | 'form'
-    | 'input-display';
-  /** Widget title */
-  title: string;
-  /** Widget description */
-  description?: string;
-  /** Data configuration */
-  data: {
-    source: DataSource;
-    schema?: SchemaRef;
-  };
-  /** UI options (typed downstream per widget kind) */
-  options?: O;
-  /** Layout hint for grid layouts */
-  layoutHint?: {
-    w: number;
-    h: number;
-    minW?: number;
-    minH?: number;
-    /** Height control: 'auto' (fit content), number (fixed px), 'fit-content' (minimal) */
-    height?: 'auto' | number | 'fit-content';
-  };
-  /** Widget actions (buttons, modals, etc.) */
-  actions?: WidgetAction[];
-  /** Event bus configuration */
-  events?: {
-    /** Events this widget can emit */
-    emit?: string[];
-    /** Events this widget subscribes to */
-    subscribe?: string[];
-  };
-  /** Polling interval in milliseconds (0 = no polling) */
-  pollingMs?: number;
-  /** Custom component reference (optional for standard widgets) */
-  component?: string;
-  /** Condition for widget visibility (JSONLogic expression) */
-  condition?: string;
-  /** Render order (lower = earlier) */
-  order?: number;
-}
-
-/**
- * Studio menu item declaration
- */
-export interface StudioMenuDecl {
-  /** Menu identifier */
-  id: string;
-  /** Menu label */
-  label: string;
-  /** Target widget or route */
-  target: string;
-  /** Icon (optional) */
-  icon?: string;
-  /** Render order (lower = earlier) */
-  order?: number;
-}
-
-/**
- * Studio layout declaration
- */
-export interface StudioLayoutDecl {
-  /** Layout identifier */
-  id: string;
-  /** Layout kind */
-  kind: 'grid' | 'two-pane';
-  /** Layout title */
-  title: string;
-  /** Layout description */
-  description?: string;
-  /** Layout-specific configuration */
-  config?: Record<string, unknown>;
-  /** Explicit list of widget IDs to render in this layout */
-  widgets?: string[];
-  /** Layout actions (page-level actions) */
-  actions?: WidgetAction[];
-}
-
-/**
- * Studio configuration
- */
-export interface StudioConfig {
-  /** Widget declarations */
-  widgets: StudioWidgetDecl[];
-  /** Menu items */
-  menus?: StudioMenuDecl[];
-  /** Layout declarations */
-  layouts?: StudioLayoutDecl[];
 }
 
 /**

@@ -3,15 +3,20 @@
  *
  * Permissions define what resources and operations a plugin can access.
  * They are declared in the plugin manifest and can be restricted by user config.
+ *
+ * Design principles:
+ * - Plugins declare what they WANT (allow-list only)
+ * - Platform enforces hardcoded security (node_modules, .git, .env, etc.)
+ * - Users can further restrict via kb.config.json (future)
  */
 export interface PermissionSpec {
   /**
    * Filesystem permissions
    */
   fs?: {
-    /** Directories allowed for reading (relative to cwd or absolute) */
+    /** Directories/patterns allowed for reading (relative to cwd or absolute) */
     read?: string[];
-    /** Directories allowed for writing (relative to cwd or absolute) */
+    /** Directories/patterns allowed for writing (relative to cwd or absolute) */
     write?: string[];
   };
 
@@ -19,7 +24,7 @@ export interface PermissionSpec {
    * Network permissions
    */
   network?: {
-    /** Allowed URL patterns for fetch (glob or regex) */
+    /** Allowed URL patterns for fetch (glob: *, **.domain.com, etc.) */
     fetch?: string[];
   };
 
@@ -27,7 +32,7 @@ export interface PermissionSpec {
    * Environment variable permissions
    */
   env?: {
-    /** Allowed env variable patterns (prefix or exact) */
+    /** Allowed env variable patterns (exact or prefix with *) */
     read?: string[];
   };
 
@@ -47,26 +52,41 @@ export interface PermissionSpec {
     analytics?: boolean;
     /** Embeddings access */
     embeddings?: boolean;
+    /** Event bus access */
+    events?: boolean | { publish?: string[]; subscribe?: string[] };
   };
 
   /**
    * Shell execution permissions
    */
   shell?: {
-    /** Whether shell is allowed at all */
-    allowed?: boolean;
-    /** Whitelist of allowed commands */
-    commands?: string[];
+    /** Whitelist of allowed commands (empty = shell disabled) */
+    allow?: string[];
   };
 
   /**
    * Plugin invocation permissions
    */
   invoke?: {
-    /** Whether invoke is allowed at all */
-    allowed?: boolean;
-    /** Whitelist of plugin IDs that can be invoked */
-    plugins?: string[];
+    /** Whitelist of plugin IDs that can be invoked (empty = invoke disabled) */
+    allow?: string[];
+  };
+
+  /**
+   * State Broker permissions
+   */
+  state?: {
+    /** Allowed namespace patterns (e.g., 'mind:*', 'workflow:*') */
+    namespaces?: string[];
+    /** State-specific quotas */
+    quotas?: {
+      /** Maximum number of entries */
+      maxEntries?: number;
+      /** Maximum total size in bytes */
+      maxSizeBytes?: number;
+      /** Operations per minute limit */
+      operationsPerMinute?: number;
+    };
   };
 
   /**
@@ -88,13 +108,13 @@ export interface PermissionSpec {
 export const DEFAULT_PERMISSIONS: PermissionSpec = {
   fs: {
     read: ['.'], // cwd only
-    write: [], // Only outdir
+    write: [], // Only outdir (added by runtime)
   },
   network: {
     fetch: [], // No network by default
   },
   env: {
-    read: [], // Only NODE_ENV, CI, DEBUG (always allowed)
+    read: [], // Only NODE_ENV, CI, DEBUG (always allowed by runtime)
   },
   platform: {
     llm: false,
@@ -103,11 +123,15 @@ export const DEFAULT_PERMISSIONS: PermissionSpec = {
     storage: false,
     analytics: false,
     embeddings: false,
+    events: false,
   },
   shell: {
-    allowed: false,
+    allow: [], // No shell by default
   },
   invoke: {
-    allowed: false,
+    allow: [], // No invoke by default
+  },
+  state: {
+    namespaces: [], // No state access by default
   },
 };
