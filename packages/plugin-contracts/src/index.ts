@@ -10,9 +10,6 @@
 // Context
 export type { PluginContextV3, ExtractConfig } from './context.js';
 
-// Descriptor (for IPC)
-export type { PluginContextDescriptor } from './descriptor.js';
-
 // Host Context
 export type {
   HostContext,
@@ -21,11 +18,18 @@ export type {
   RestHostContext,
   WorkflowHostContext,
   WebhookHostContext,
+  CronHostContext,
 } from './host-context.js';
 
 // Permissions
 export type { PermissionSpec } from './permissions.js';
 export { DEFAULT_PERMISSIONS } from './permissions.js';
+
+// Execution
+export type { ExecutionMeta, RunResult } from './execution.js';
+
+// Plugin Context Descriptor
+export type { PluginContextDescriptor } from './descriptor.js';
 
 // UI
 export type {
@@ -131,6 +135,10 @@ export type {
   WebhookDefinition,
 } from './handlers.js';
 
+// Runner utilities
+export type { ExecutionMetaOptions } from './runner.js';
+export { createExecutionMeta } from './runner.js';
+
 // Manifest
 export type {
   ManifestV3,
@@ -147,7 +155,12 @@ export type {
   JobDecl,
   SetupSpec,
   ErrorSpec,
-  // Studio types
+} from './manifest.js';
+export { isManifestV3, getHandlerPath, getHandlerPermissions } from './manifest.js';
+export { parseManifest, validateManifest, resolveHeaderPolicy } from './manifest-loader.js';
+
+// Studio (re-exports from @kb-labs/studio-contracts)
+export type {
   StudioConfig,
   StudioWidgetDecl,
   StudioMenuDecl,
@@ -155,6 +168,14 @@ export type {
   DataSource,
   WidgetAction,
   ActionHandler,
-} from './manifest.js';
-export { isManifestV3, getHandlerPath, getHandlerPermissions } from './manifest.js';
-export { parseManifest, validateManifest, resolveHeaderPolicy } from './manifest-loader.js';
+  StudioWidgetKind,
+  CompositeWidgetKind,
+  WidgetOptionsMap,
+  WidgetDataMap,
+} from './studio.js';
+export {
+  WIDGET_CATEGORIES,
+  COMPOSITE_WIDGET_KINDS,
+  isCompositeKind,
+  STANDARD_EVENTS,
+} from './studio.js';

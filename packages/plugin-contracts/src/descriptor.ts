@@ -7,76 +7,19 @@
  * IMPORTANT: This does NOT contain functions - only data that can be JSON.stringify'd.
  */
 
-import type { HostContext, HostType } from './host-context.js';
+import type { HostType, HostContext } from './host-context.js';
 import type { PermissionSpec } from './permissions.js';
 
 /**
- * JSON-serializable descriptor for creating plugin context
+ * Plugin context descriptor.
  */
 export interface PluginContextDescriptor {
-  /**
-   * Entry point type (cli, rest, workflow, webhook)
-   */
-  readonly host: HostType;
-
-  /**
-   * Plugin identifier (from manifest)
-   */
-  readonly pluginId: string;
-
-  /**
-   * Plugin version (from manifest)
-   */
-  readonly pluginVersion: string;
-
-  /**
-   * Tenant ID for multi-tenancy (optional)
-   */
-  readonly tenantId?: string;
-
-  /**
-   * Unique request ID for this execution (for tracing)
-   */
-  readonly requestId: string;
-
-  /**
-   * Command ID being executed (e.g., "plugin-template:hello")
-   */
-  readonly commandId?: string;
-
-  /**
-   * Parent request ID for tracing (when invoked from another plugin)
-   */
-  readonly parentRequestId?: string;
-
-  /**
-   * Invocation depth (prevents fork bomb via recursive plugin invocation)
-   * Default: 0. Max: 3.
-   */
-  readonly invocationDepth?: number;
-
-  /**
-   * Current working directory
-   */
-  readonly cwd: string;
-
-  /**
-   * Output directory for artifacts (default: .kb/output)
-   */
-  readonly outdir?: string;
-
-  /**
-   * Plugin configuration (from kb.config.json or --config flag)
-   */
-  readonly config?: unknown;
-
-  /**
-   * Effective permissions (intersection of manifest + user config)
-   */
-  readonly permissions: PermissionSpec;
-
-  /**
-   * Host-specific context data
-   */
-  readonly hostContext: HostContext;
+  hostType: HostType;
+  hostContext: HostContext;
+  permissions: PermissionSpec;
+  pluginId: string;
+  pluginVersion: string;
+  handlerId?: string;
+  requestId: string;
+  tenantId?: string;
 }

@@ -42,8 +42,12 @@ export interface WorkflowHostContext {
   readonly workflowId: string;
   /** Workflow run ID */
   readonly runId: string;
+  /** Job ID within the workflow run (optional - for multi-job workflows) */
+  readonly jobId?: string;
   /** Current step ID */
   readonly stepId: string;
+  /** Step execution attempt number (1-indexed, for retry tracking) */
+  readonly attempt?: number;
   /** Step input data */
   readonly input?: unknown;
 }
@@ -62,13 +66,32 @@ export interface WebhookHostContext {
 }
 
 /**
+ * Cron host context - for scheduled plugin execution
+ *
+ * Unlike Workflow (user orchestration), Cron is plugin-owned scheduling.
+ * The plugin defines WHEN and HOW OFTEN it runs via manifest.
+ */
+export interface CronHostContext {
+  readonly host: 'cron';
+  /** Cron job ID from manifest */
+  readonly cronId: string;
+  /** Cron schedule expression (e.g., "0 * * * *") */
+  readonly schedule: string;
+  /** When this run was scheduled (ISO string) */
+  readonly scheduledAt: string;
+  /** Previous run timestamp (ISO string, optional) */
+  readonly lastRunAt?: string;
+}
+
+/**
  * Discriminated union of all host contexts
  */
 export type HostContext =
   | CliHostContext
   | RestHostContext
   | WorkflowHostContext
-  | WebhookHostContext;
+  | WebhookHostContext
+  | CronHostContext;
 
 /**
  * Host type literal
