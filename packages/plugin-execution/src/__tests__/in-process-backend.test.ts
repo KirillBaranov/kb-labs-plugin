@@ -97,11 +97,10 @@ describe('InProcessBackend', () => {
 
   // Create test descriptor
   const createDescriptor = (host: HostType = 'rest'): PluginContextDescriptor => ({
-    host,
+    hostType: host,
     pluginId: '@test/plugin',
     pluginVersion: '1.0.0',
     requestId: 'req-123',
-    cwd: '/test/workspace',
     permissions: DEFAULT_PERMISSIONS,
     hostContext: {
       host: 'rest',

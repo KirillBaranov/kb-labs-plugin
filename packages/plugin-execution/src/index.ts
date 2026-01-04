@@ -64,19 +64,19 @@ export type {
 
 export { PROTOCOL_VERSION } from './types.js';
 
-// Factory
-export { createExecutionBackend } from './factory.js';
+// Factory - re-exported from @kb-labs/plugin-execution-factory
+export { createExecutionBackend } from '@kb-labs/plugin-execution-factory';
 
-// Adapters (for dependency injection)
-export { SubprocessRunnerAdapter } from './adapters/index.js';
+// Adapters - re-exported from @kb-labs/plugin-execution-factory
+export { SubprocessRunnerAdapter } from '@kb-labs/plugin-execution-factory';
 
-// Backends
+// Backends - re-exported from @kb-labs/plugin-execution-factory
 export {
   InProcessBackend,
   type InProcessBackendOptions,
   WorkerPoolBackend,
   type WorkerPoolBackendOptions,
-} from './backends/index.js';
+} from '@kb-labs/plugin-execution-factory';
 
 // Workspace
 export {

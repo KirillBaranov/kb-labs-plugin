@@ -103,7 +103,10 @@ export async function mountRoutes(
       // Generate IDs for tracing
       // requestId: correlation across services (goes into descriptor)
       // executionId: this specific execution attempt (goes into request)
-      const requestId = createExecutionId();
+      // Try to extract from headers first (for distributed tracing)
+      const requestId = (req.headers['x-request-id'] as string) || createExecutionId();
+      const traceId = (req.headers['x-trace-id'] as string) || createExecutionId();
+      const tenantId = req.headers['x-tenant-id'] as string | undefined;
       const executionId = createExecutionId();
 
       try {
@@ -116,6 +119,9 @@ export async function mountRoutes(
           headers: normalizeHeaders(req.headers),
           query: req.query as Record<string, string> | undefined,
           body: req.body,
+          requestId,
+          traceId,
+          tenantId,
         };
 
         const descriptor: PluginContextDescriptor = {
@@ -150,6 +156,7 @@ export async function mountRoutes(
         if (result.ok) {
           // Add execution metadata to response headers
           reply.header('X-Request-Id', requestId);
+          reply.header('X-Trace-Id', traceId);
           reply.header('X-Execution-Id', executionId);  // v4: separate execution ID
           reply.header('X-Execution-Time-Ms', String(Math.round(result.executionTimeMs)));
 
@@ -157,6 +164,7 @@ export async function mountRoutes(
         } else {
           // Error response
           reply.header('X-Request-Id', requestId);
+          reply.header('X-Trace-Id', traceId);
           reply.header('X-Execution-Id', executionId);
 
           const statusCode = getStatusCodeForError(result.error?.code);

@@ -212,13 +212,16 @@ describe('mountRoutes', () => {
         expect.objectContaining({
           executionId: expect.any(String),
           descriptor: expect.objectContaining({
-            host: 'rest',
+            hostType: 'rest',
             pluginId: '@test/plugin',
             pluginVersion: '1.0.0',
           }),
           pluginRoot: '/plugins/test',
           handlerRef: './dist/handler.js',
-          input: { query: 'test' },
+          input: expect.objectContaining({
+            body: { query: 'test' },
+            query: {},
+          }),
         }),
         expect.objectContaining({
           signal: expect.any(AbortSignal),
