@@ -31,6 +31,12 @@ export interface RestHostContext {
   readonly query?: Record<string, string>;
   /** Request body */
   readonly body?: unknown;
+  /** Request ID for correlation */
+  readonly requestId: string;
+  /** Trace ID for distributed tracing */
+  readonly traceId: string;
+  /** Tenant ID for multi-tenancy (optional) */
+  readonly tenantId?: string;
 }
 
 /**

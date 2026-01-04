@@ -104,6 +104,8 @@ export interface CliCommandDecl {
   examples?: string[];
   /** Handler file path relative to plugin root (e.g., './dist/commands/hello.js') */
   handler: string;
+  /** Handler path (legacy/optional, used by V3 adapter for resolving handler location) */
+  handlerPath?: string;
   /** Command-specific permissions (overrides plugin defaults) */
   permissions?: PermissionSpec;
 }

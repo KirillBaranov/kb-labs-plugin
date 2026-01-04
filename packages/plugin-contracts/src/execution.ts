@@ -50,5 +50,5 @@ export interface RunResult<T> {
   };
 
   /** Execution metadata */
-  meta: ExecutionMeta;
+  executionMeta: ExecutionMeta;
 }

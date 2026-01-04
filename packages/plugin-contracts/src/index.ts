@@ -21,6 +21,9 @@ export type {
   CronHostContext,
 } from './host-context.js';
 
+// Logger Metadata
+export { getLoggerMetadataFromHost } from './logger-metadata.js';
+
 // Permissions
 export type { PermissionSpec } from './permissions.js';
 export { DEFAULT_PERMISSIONS } from './permissions.js';
