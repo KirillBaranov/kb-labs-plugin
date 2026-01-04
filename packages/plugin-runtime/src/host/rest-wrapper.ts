@@ -37,7 +37,7 @@ export interface RestResultWithMeta<T> {
  * @returns RestResultWithMeta<T> with data and metadata headers
  */
 export function wrapRestResult<T>(runResult: RunResult<T>): RestResultWithMeta<T> {
-  const { data, meta: executionMeta } = runResult;
+  const { data, executionMeta } = runResult;
 
   // REST wrapper expects successful result with data
   // Error results should be handled separately by REST layer

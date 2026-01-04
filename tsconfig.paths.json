@@ -21,17 +21,17 @@
       "@kb-labs/core-platform/*": [
         "../kb-labs-core/packages/core-platform/src/*"
       ],
-      "@kb-labs/core-runtime": [
-        "../kb-labs-core/packages/core-runtime/src/index.ts"
-      ],
-      "@kb-labs/core-runtime/*": [
-        "../kb-labs-core/packages/core-runtime/src/*"
-      ],
       "@kb-labs/plugin-contracts": [
         "packages/plugin-contracts/src/index.ts"
       ],
       "@kb-labs/plugin-contracts/*": [
         "packages/plugin-contracts/src/*"
+      ],
+      "@kb-labs/plugin-execution-factory": [
+        "packages/plugin-execution-factory/src/index.ts"
+      ],
+      "@kb-labs/plugin-execution-factory/*": [
+        "packages/plugin-execution-factory/src/*"
       ],
       "@kb-labs/plugin-runtime": [
         "packages/plugin-runtime/src/index.ts"

@@ -60,7 +60,7 @@ export function wrapCliResult<T>(
   runResult: RunResult<CommandResult<T> | T | void>,
   descriptor: PluginContextDescriptor
 ): CommandResultWithMeta<T> {
-  const { data, meta: executionMeta } = runResult;
+  const { data, executionMeta } = runResult;
   const standardMeta = toStandardMeta(executionMeta, descriptor);
 
   // Case 1: Handler returned CommandResult

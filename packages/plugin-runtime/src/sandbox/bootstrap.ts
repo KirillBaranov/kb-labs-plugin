@@ -12,7 +12,8 @@ import { sideBorderBox, safeColors, safeSymbols } from '@kb-labs/shared-cli-ui';
 import { createPluginContextV3 } from '../context/index.js';
 import { executeCleanup } from '../api/index.js';
 import { connectToPlatform } from './platform-client.js';
-import { initPlatform } from '@kb-labs/core-runtime';
+// Dynamic import to break circular dependency at compile time
+// import { initPlatform } from '@kb-labs/core-runtime';
 import { applySandboxPatches, type SandboxMode } from './harden.js';
 import { setGlobalContext, clearGlobalContext } from './context-holder.js';
 
@@ -28,6 +29,19 @@ platformReady = (async () => {
       const platformConfig = rawConfig.platform;
 
       if (platformConfig) {
+        // ARCHITECTURE NOTE: Dynamic import to break circular dependency
+        //
+        // Circular dependency chain (if static import used):
+        //   core-runtime → plugin-execution-factory → plugin-runtime → core-runtime
+        //
+        // Solution: Lazy-load core-runtime only at runtime (not compile-time)
+        // This is safe because:
+        // 1. core-runtime is always available at runtime (parent process installs it)
+        // 2. This code only runs in child process (sandbox)
+        // 3. Error handling below catches missing module
+        // 4. Not in package.json dependencies to avoid circular dependency in build graph
+        // @ts-expect-error - Dynamic import to break circular dependency, runtime will resolve
+        const { initPlatform } = await import('@kb-labs/core-runtime');
         await initPlatform(platformConfig, process.cwd());
       }
     }

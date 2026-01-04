@@ -25,8 +25,9 @@ function checkCacheNamespace(key: string, permission: string[] | boolean | undef
   }
 
   // Check if key starts with any allowed namespace
+  // Note: namespaces already include trailing ':' (e.g., 'git-status:')
   const allowed = permission as string[];
-  const hasMatch = allowed.some((ns) => key.startsWith(`${ns}:`));
+  const hasMatch = allowed.some((ns) => key.startsWith(ns));
 
   if (!hasMatch) {
     throw new PermissionError(
@@ -59,10 +60,14 @@ function checkStoragePath(path: string, permission: string[] | boolean | undefin
 }
 
 /**
- * Create denied service stub
+ * Create denied service stub that throws on ANY property access
  */
-function createDeniedService(serviceName: string): never {
-  throw new PermissionError(`Platform service '${serviceName}' access denied`);
+function createDeniedService(serviceName: string): any {
+  return new Proxy({}, {
+    get() {
+      throw new PermissionError(`Platform service '${serviceName}' access denied`);
+    },
+  });
 }
 
 /**
@@ -167,5 +172,8 @@ export function createGovernedPlatformServices(
     analytics: permissions.platform?.analytics
       ? raw.analytics
       : (createDeniedService('analytics') as any),
+
+    // EventBus: always allowed (no permission check currently)
+    eventBus: raw.eventBus,
   };
 }

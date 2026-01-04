@@ -21,10 +21,11 @@
     "clean": "rimraf dist",
     "build": "pnpm clean && tsup --config tsup.config.ts",
     "dev": "tsup --config tsup.config.ts --watch",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
-    "@kb-labs/core-contracts": "link:../../../kb-labs-core/packages/core-contracts",
     "@kb-labs/core-platform": "link:../../../kb-labs-core/packages/core-platform",
     "@kb-labs/studio-contracts": "link:../../../kb-labs-studio/packages/studio-contracts"
   },
@@ -33,7 +34,8 @@
     "@types/node": "^24.3.3",
     "rimraf": "^6.0.1",
     "tsup": "^8.5.0",
-    "typescript": "^5.6.3"
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
   },
   "keywords": [
     "kb-labs",
