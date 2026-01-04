@@ -85,15 +85,13 @@ describe('Sandbox Runner', () => {
       writeFileSync(handlerPath, handlerCode);
 
       const descriptor: PluginContextDescriptor = {
-        host: 'cli',
+        hostType: 'cli',
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
         requestId: 'req-123',
-        commandId: 'test:command',
-        cwd: testDir,
+        handlerId: 'test:command',
         permissions: {},
         hostContext: { host: 'cli', argv: [], flags: {} },
-        parentRequestId: undefined,
       };
 
       const result = await runInProcess({
@@ -102,6 +100,7 @@ describe('Sandbox Runner', () => {
         ui: mockUI,
         handlerPath,
         input: { test: 'data' },
+        cwd: testDir,
       });
 
       // Verify RunResult structure
@@ -138,12 +137,11 @@ describe('Sandbox Runner', () => {
       writeFileSync(handlerPath, handlerCode);
 
       const descriptor: PluginContextDescriptor = {
-        host: 'cli',
+        hostType: 'cli',
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
         requestId: 'req-cmd',
-        commandId: 'test:command',
-        cwd: testDir,
+        handlerId: 'test:command',
         permissions: {},
         hostContext: { host: 'cli', argv: [], flags: {} },
       };
@@ -154,6 +152,7 @@ describe('Sandbox Runner', () => {
         ui: mockUI,
         handlerPath,
         input: {},
+        cwd: testDir,
       });
 
       // Raw CommandResult is in data
@@ -183,11 +182,10 @@ describe('Sandbox Runner', () => {
       writeFileSync(handlerPath, handlerCode);
 
       const descriptor: PluginContextDescriptor = {
-        host: 'cli',
+        hostType: 'cli',
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
         requestId: 'req-void',
-        cwd: testDir,
         permissions: {},
         hostContext: { host: 'cli', argv: [], flags: {} },
       };
@@ -198,6 +196,7 @@ describe('Sandbox Runner', () => {
         ui: mockUI,
         handlerPath,
         input: {},
+        cwd: testDir,
       });
 
       expect(result.data).toBeUndefined();
@@ -217,12 +216,11 @@ describe('Sandbox Runner', () => {
       writeFileSync(handlerPath, handlerCode);
 
       const descriptor: PluginContextDescriptor = {
-        host: 'rest',
+        hostType: 'rest',
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
         requestId: 'req-tenant',
         tenantId: 'acme-corp',
-        cwd: testDir,
         permissions: {},
         hostContext: { host: 'rest', method: 'GET', path: '/test', query: {}, headers: {} },
       };
@@ -233,6 +231,7 @@ describe('Sandbox Runner', () => {
         ui: mockUI,
         handlerPath,
         input: {},
+        cwd: testDir,
       });
 
       expect(result.executionMeta.tenantId).toBe('acme-corp');
@@ -251,10 +250,10 @@ describe('Sandbox Runner', () => {
       writeFileSync(handlerPath, handlerCode);
 
       const descriptor: PluginContextDescriptor = {
-        host: 'cli',
+        hostType: 'cli',
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
-        cwd: testDir,
+        requestId: 'req-invalid',
         permissions: {},
         hostContext: { host: 'cli', argv: [], flags: {} },
       };
@@ -266,6 +265,7 @@ describe('Sandbox Runner', () => {
           ui: mockUI,
           handlerPath,
           input: {},
+          cwd: testDir,
         })
       ).rejects.toThrow(PluginError);
 
@@ -276,6 +276,7 @@ describe('Sandbox Runner', () => {
           ui: mockUI,
           handlerPath,
           input: {},
+          cwd: testDir,
         })
       ).rejects.toThrow(/does not export an execute function/);
     });
@@ -292,10 +293,10 @@ describe('Sandbox Runner', () => {
       writeFileSync(handlerPath, handlerCode);
 
       const descriptor: PluginContextDescriptor = {
-        host: 'cli',
+        hostType: 'cli',
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
-        cwd: testDir,
+        requestId: 'req-error',
         permissions: {},
         hostContext: { host: 'cli', argv: [], flags: {} },
       };
@@ -307,6 +308,7 @@ describe('Sandbox Runner', () => {
           ui: mockUI,
           handlerPath,
           input: {},
+          cwd: testDir,
         })
       ).rejects.toThrow('Handler failed intentionally');
     });
@@ -332,11 +334,10 @@ describe('Sandbox Runner', () => {
       writeFileSync(handlerPath, handlerCode);
 
       const descriptor: PluginContextDescriptor = {
-        host: 'cli',
+        hostType: 'cli',
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
         requestId: 'req-cleanup',
-        cwd: testDir,
         permissions: {},
         hostContext: { host: 'cli', argv: [], flags: {} },
       };
@@ -347,6 +348,7 @@ describe('Sandbox Runner', () => {
         ui: mockUI,
         handlerPath,
         input: {},
+        cwd: testDir,
       });
 
       expect(result.data).toEqual({ registered: true });
@@ -377,10 +379,10 @@ describe('Sandbox Runner', () => {
       writeFileSync(handlerPath, handlerCode);
 
       const descriptor: PluginContextDescriptor = {
-        host: 'cli',
+        hostType: 'cli',
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
-        cwd: testDir,
+        requestId: 'req-cleanup-error',
         permissions: {},
         hostContext: { host: 'cli', argv: [], flags: {} },
       };
@@ -392,6 +394,7 @@ describe('Sandbox Runner', () => {
           ui: mockUI,
           handlerPath,
           input: {},
+          cwd: testDir,
         })
       ).rejects.toThrow('Handler failed');
 
@@ -415,11 +418,10 @@ describe('Sandbox Runner', () => {
       writeFileSync(handlerPath, handlerCode);
 
       const descriptor: PluginContextDescriptor = {
-        host: 'cli',
+        hostType: 'cli',
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
         requestId: 'req-signal',
-        cwd: testDir,
         permissions: {},
         hostContext: { host: 'cli', argv: [], flags: {} },
       };
@@ -432,6 +434,7 @@ describe('Sandbox Runner', () => {
         handlerPath,
         input: {},
         signal: abortController.signal,
+        cwd: testDir,
       });
 
       expect(result.data).toEqual({ hasSignal: true });
@@ -449,11 +452,10 @@ describe('Sandbox Runner', () => {
       writeFileSync(handlerPath, handlerCode);
 
       const descriptor: PluginContextDescriptor = {
-        host: 'cli',
+        hostType: 'cli',
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
         requestId: 'req-named',
-        cwd: testDir,
         permissions: {},
         hostContext: { host: 'cli', argv: [], flags: {} },
       };
@@ -464,6 +466,7 @@ describe('Sandbox Runner', () => {
         ui: mockUI,
         handlerPath,
         input: {},
+        cwd: testDir,
       });
 
       expect(result.data).toEqual({ type: 'named' });
@@ -490,11 +493,10 @@ describe('Sandbox Runner', () => {
       writeFileSync(handlerPath, handlerCode);
 
       const descriptor: PluginContextDescriptor = {
-        host: 'cli',
+        hostType: 'cli',
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
         requestId: 'req-context',
-        cwd: testDir,
         permissions: {},
         hostContext: { host: 'cli', argv: [], flags: {} },
       };
@@ -505,6 +507,7 @@ describe('Sandbox Runner', () => {
         ui: mockUI,
         handlerPath,
         input: {},
+        cwd: testDir,
       });
 
       expect(result.data).toEqual({

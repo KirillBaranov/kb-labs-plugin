@@ -128,7 +128,7 @@ export async function runInProcess<T = unknown>(
     return {
       ok: true,
       data,
-      meta: buildExecutionMeta(descriptor, startTime),
+      executionMeta: buildExecutionMeta(descriptor, startTime),
     };
   } finally {
     // Restore original analytics source (for in-process mode)
@@ -278,7 +278,7 @@ export async function runInSubprocess<T = unknown>(
         resolve({
           ok: true,
           data: commandResult as T,
-          meta: buildExecutionMeta(descriptor, startTime),
+          executionMeta: buildExecutionMeta(descriptor, startTime),
         });
       } else if (msg.type === 'error') {
         completed = true;

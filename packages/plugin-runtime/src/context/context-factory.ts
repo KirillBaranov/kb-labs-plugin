@@ -11,11 +11,14 @@ import type {
   UIFacade,
   CleanupFn,
 } from '@kb-labs/plugin-contracts';
+import { getLoggerMetadataFromHost } from '@kb-labs/plugin-contracts';
+import { createPrefixedLogger } from '@kb-labs/core-platform';
 
 import { createId, extractTraceId } from '../utils/index.js';
 import { createTraceContext } from './trace.js';
 import { createRuntimeAPI } from '../runtime/index.js';
 import { createPluginAPI, type EventEmitterFn, type PluginInvokerFn } from '../api/index.js';
+import { createGovernedPlatformServices } from '../platform/governed.js';
 
 export interface CreateContextOptions {
   /**
@@ -117,7 +120,29 @@ export function createPluginContextV3<TConfig = unknown>(
     outdir,
   });
 
-  // 5. Create plugin API
+  // 5. Apply permission governance to platform services
+  // IMPORTANT: This must be done BEFORE passing platform to handlers
+  // to ensure permission checks are enforced
+  const governedPlatform = createGovernedPlatformServices(
+    platform,
+    descriptor.permissions,
+    descriptor.pluginId
+  );
+
+  // 5.1. Enrich logger with host context (observability fields)
+  const loggerMeta = getLoggerMetadataFromHost(descriptor.hostContext);
+  const enrichedLogger = governedPlatform.logger.child(loggerMeta);
+
+  // 5.2. Wrap logger with prefix protection to prevent plugins from overriding system fields
+  const protectedLogger = createPrefixedLogger(enrichedLogger);
+
+  const enrichedPlatform: PlatformServices = {
+    ...governedPlatform,
+    logger: protectedLogger,
+  };
+
+  // 6. Create plugin API
+  // Use governed cache so permissions are enforced for api.state
   const finalOutdir = outdir ?? `${cwd}/.kb/output`;
   const api = createPluginAPI({
     pluginId: descriptor.pluginId,
@@ -125,14 +150,14 @@ export function createPluginContextV3<TConfig = unknown>(
     cwd,
     outdir: finalOutdir,
     permissions: descriptor.permissions,
-    cache: platform.cache,
+    cache: enrichedPlatform.cache, // Use governed cache, not raw
     eventEmitter,
     pluginInvoker,
     cleanupStack,
   });
 
-  // 6. Assemble full context
-  // Platform services passed through directly - no wrappers, no adapters
+  // 7. Assemble full context
+  // Platform services passed through with enriched logger
   const context: PluginContextV3<TConfig> = {
     // Metadata
     host: descriptor.hostType,
@@ -155,7 +180,7 @@ export function createPluginContextV3<TConfig = unknown>(
 
     // Services
     ui,
-    platform, // ← Direct passthrough of platform services
+    platform: enrichedPlatform, // ← Platform with enriched logger
     runtime,
     api,
   };

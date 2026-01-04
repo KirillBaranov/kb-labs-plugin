@@ -405,8 +405,7 @@ describe('Plugin API', () => {
     it('should allow whitelisted commands', async () => {
       const permissions: PermissionSpec = {
         shell: {
-          allowed: true,
-          commands: ['echo', 'ls'],
+          allow: ['echo', 'ls'],
         },
       };
       const api = createPluginAPI({
@@ -428,8 +427,7 @@ describe('Plugin API', () => {
     it('should block non-whitelisted commands', async () => {
       const permissions: PermissionSpec = {
         shell: {
-          allowed: true,
-          commands: ['echo'],
+          allow: ['echo'],
         },
       };
       const api = createPluginAPI({
@@ -449,8 +447,7 @@ describe('Plugin API', () => {
     it('should block dangerous commands', async () => {
       const permissions: PermissionSpec = {
         shell: {
-          allowed: true,
-          commands: [], // Allow all (risky, but for testing)
+          allow: ['*'], // Allow all (risky, but for testing)
         },
       };
       const api = createPluginAPI({
@@ -470,8 +467,7 @@ describe('Plugin API', () => {
     it('should allow all commands when whitelist is empty', async () => {
       const permissions: PermissionSpec = {
         shell: {
-          allowed: true,
-          commands: [], // Empty = allow all (except BLOCKED_COMMANDS)
+          allow: ['*'], // '*' = allow all (except BLOCKED_COMMANDS)
         },
       };
       const api = createPluginAPI({
@@ -581,8 +577,7 @@ describe('Plugin API', () => {
 
       const permissions: PermissionSpec = {
         invoke: {
-          allowed: true,
-          plugins: [], // Empty = allow all
+          allow: ['*'], // '*' = allow all
         },
       };
       const api = createPluginAPI({
@@ -614,8 +609,7 @@ describe('Plugin API', () => {
 
       const permissions: PermissionSpec = {
         invoke: {
-          allowed: true,
-          plugins: ['@kb-labs/allowed-plugin'],
+          allow: ['@kb-labs/allowed-plugin'],
         },
       };
       const api = createPluginAPI({

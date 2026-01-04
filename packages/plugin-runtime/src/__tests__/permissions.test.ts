@@ -54,13 +54,15 @@ describe('Permission Enforcement', () => {
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
         permissions,
-        hostContext: { hostType: 'cli', argv: [], flags: {} },
+        hostContext: { host: 'cli', argv: [], flags: {} },
       };
 
       const { context } = createPluginContextV3({
         descriptor,
         platform: mockPlatform,
         ui: mockUI,
+        cwd: '/test',
+        outdir: '/test/output',
       });
 
       // Should not throw PermissionError for file in cwd
@@ -79,13 +81,15 @@ describe('Permission Enforcement', () => {
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
         permissions,
-        hostContext: { hostType: 'cli', argv: [], flags: {} },
+        hostContext: { host: 'cli', argv: [], flags: {} },
       };
 
       const { context } = createPluginContextV3({
         descriptor,
         platform: mockPlatform,
         ui: mockUI,
+        cwd: '/test',
+        outdir: '/test/output',
       });
 
       // Subdirectories of cwd should be readable
@@ -107,13 +111,15 @@ describe('Permission Enforcement', () => {
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
         permissions,
-        hostContext: { hostType: 'cli', argv: [], flags: {} },
+        hostContext: { host: 'cli', argv: [], flags: {} },
       };
 
       const { context } = createPluginContextV3({
         descriptor,
         platform: mockPlatform,
         ui: mockUI,
+        cwd: '/test',
+        outdir: '/test/output',
       });
 
       // Additional path should be accessible
@@ -131,13 +137,15 @@ describe('Permission Enforcement', () => {
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
         permissions,
-        hostContext: { hostType: 'cli', argv: [], flags: {} },
+        hostContext: { host: 'cli', argv: [], flags: {} },
       };
 
       const { context } = createPluginContextV3({
         descriptor,
         platform: mockPlatform,
         ui: mockUI,
+        cwd: '/test',
+        outdir: '/test/output',
       });
 
       // Absolute paths outside cwd should be blocked
@@ -157,13 +165,15 @@ describe('Permission Enforcement', () => {
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
         permissions,
-        hostContext: { hostType: 'cli', argv: [], flags: {} },
+        hostContext: { host: 'cli', argv: [], flags: {} },
       };
 
       const { context } = createPluginContextV3({
         descriptor,
         platform: mockPlatform,
         ui: mockUI,
+        cwd: '/test',
+        outdir: '/test/output',
       });
 
       // .env files should be blocked even in cwd
@@ -181,13 +191,15 @@ describe('Permission Enforcement', () => {
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
         permissions,
-        hostContext: { hostType: 'cli', argv: [], flags: {} },
+        hostContext: { host: 'cli', argv: [], flags: {} },
       };
 
       const { context } = createPluginContextV3({
         descriptor,
         platform: mockPlatform,
         ui: mockUI,
+        cwd: '/test',
+        outdir: '/test/output',
       });
 
       // .git directory should be blocked
@@ -205,13 +217,15 @@ describe('Permission Enforcement', () => {
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
         permissions,
-        hostContext: { hostType: 'cli', argv: [], flags: {} },
+        hostContext: { host: 'cli', argv: [], flags: {} },
       };
 
       const { context } = createPluginContextV3({
         descriptor,
         platform: mockPlatform,
         ui: mockUI,
+        cwd: '/test',
+        outdir: '/test/output',
       });
 
       // node_modules should be blocked
@@ -231,13 +245,15 @@ describe('Permission Enforcement', () => {
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
         permissions,
-        hostContext: { hostType: 'cli', argv: [], flags: {} },
+        hostContext: { host: 'cli', argv: [], flags: {} },
       };
 
       const { context } = createPluginContextV3({
         descriptor,
         platform: mockPlatform,
         ui: mockUI,
+        cwd: '/test',
+        outdir: '/test/output',
       });
 
       // Writing to outdir should be allowed
@@ -255,13 +271,15 @@ describe('Permission Enforcement', () => {
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
         permissions,
-        hostContext: { hostType: 'cli', argv: [], flags: {} },
+        hostContext: { host: 'cli', argv: [], flags: {} },
       };
 
       const { context } = createPluginContextV3({
         descriptor,
         platform: mockPlatform,
         ui: mockUI,
+        cwd: '/test',
+        outdir: '/test/output',
       });
 
       // Writing to cwd (not outdir) should be blocked
@@ -288,13 +306,15 @@ describe('Permission Enforcement', () => {
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
         permissions,
-        hostContext: { hostType: 'cli', argv: [], flags: {} },
+        hostContext: { host: 'cli', argv: [], flags: {} },
       };
 
       const { context } = createPluginContextV3({
         descriptor,
         platform: mockPlatform,
         ui: mockUI,
+        cwd: '/test',
+        outdir: '/test/output',
       });
 
       // Additional write path should be allowed
@@ -313,13 +333,15 @@ describe('Permission Enforcement', () => {
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
         permissions,
-        hostContext: { hostType: 'cli', argv: [], flags: {} },
+        hostContext: { host: 'cli', argv: [], flags: {} },
       };
 
       const { context } = createPluginContextV3({
         descriptor,
         platform: mockPlatform,
         ui: mockUI,
+        cwd: '/test',
+        outdir: '/test/output',
       });
 
       // Trying to escape cwd with ../../../ should be blocked
@@ -337,13 +359,15 @@ describe('Permission Enforcement', () => {
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
         permissions,
-        hostContext: { hostType: 'cli', argv: [], flags: {} },
+        hostContext: { host: 'cli', argv: [], flags: {} },
       };
 
       const { context } = createPluginContextV3({
         descriptor,
         platform: mockPlatform,
         ui: mockUI,
+        cwd: '/test',
+        outdir: '/test/output',
       });
 
       // Relative path within cwd should work
@@ -365,13 +389,15 @@ describe('Permission Enforcement', () => {
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
         permissions,
-        hostContext: { hostType: 'cli', argv: [], flags: {} },
+        hostContext: { host: 'cli', argv: [], flags: {} },
       };
 
       const { context } = createPluginContextV3({
         descriptor,
         platform: mockPlatform,
         ui: mockUI,
+        cwd: '/test',
+        outdir: '/test/output',
       });
 
       // Fetch should be blocked without network permission
@@ -393,13 +419,15 @@ describe('Permission Enforcement', () => {
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
         permissions,
-        hostContext: { hostType: 'cli', argv: [], flags: {} },
+        hostContext: { host: 'cli', argv: [], flags: {} },
       };
 
       const { context } = createPluginContextV3({
         descriptor,
         platform: mockPlatform,
         ui: mockUI,
+        cwd: '/test',
+        outdir: '/test/output',
       });
 
       // Allowed domains should pass permission check
@@ -425,13 +453,15 @@ describe('Permission Enforcement', () => {
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
         permissions,
-        hostContext: { hostType: 'cli', argv: [], flags: {} },
+        hostContext: { host: 'cli', argv: [], flags: {} },
       };
 
       const { context } = createPluginContextV3({
         descriptor,
         platform: mockPlatform,
         ui: mockUI,
+        cwd: '/test',
+        outdir: '/test/output',
       });
 
       // Non-allowed domain should be blocked
@@ -453,13 +483,15 @@ describe('Permission Enforcement', () => {
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
         permissions,
-        hostContext: { hostType: 'cli', argv: [], flags: {} },
+        hostContext: { host: 'cli', argv: [], flags: {} },
       };
 
       const { context } = createPluginContextV3({
         descriptor,
         platform: mockPlatform,
         ui: mockUI,
+        cwd: '/test',
+        outdir: '/test/output',
       });
 
       // NODE_ENV is in ALWAYS_ALLOWED list (env-shim.ts line 10-17)
@@ -481,13 +513,15 @@ describe('Permission Enforcement', () => {
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
         permissions,
-        hostContext: { hostType: 'cli', argv: [], flags: {} },
+        hostContext: { host: 'cli', argv: [], flags: {} },
       };
 
       const { context } = createPluginContextV3({
         descriptor,
         platform: mockPlatform,
         ui: mockUI,
+        cwd: '/test',
+        outdir: '/test/output',
       });
 
       // Non-allowed env var should return undefined (env-shim.ts line 50-51)
@@ -511,13 +545,15 @@ describe('Permission Enforcement', () => {
         pluginId: '@kb-labs/test',
         pluginVersion: '1.0.0',
         permissions,
-        hostContext: { hostType: 'cli', argv: [], flags: {} },
+        hostContext: { host: 'cli', argv: [], flags: {} },
       };
 
       const { context } = createPluginContextV3({
         descriptor,
         platform: mockPlatform,
         ui: mockUI,
+        cwd: '/test',
+        outdir: '/test/output',
       });
 
       // Set test env vars

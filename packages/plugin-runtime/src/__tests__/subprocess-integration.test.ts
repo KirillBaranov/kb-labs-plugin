@@ -116,15 +116,13 @@ describe('Subprocess Integration Tests', () => {
 
       try {
         const descriptor: PluginContextDescriptor = {
-          host: 'cli',
+          hostType: 'cli',
           pluginId: '@kb-labs/test-subprocess',
           pluginVersion: '1.0.0',
           requestId: 'subprocess-req-123',
-          commandId: 'test:subprocess',
-          cwd: testDir,
+          handlerId: 'test:subprocess',
           permissions: {},
           hostContext: { host: 'cli', argv: [], flags: {} },
-          parentRequestId: undefined,
         };
 
         const runResult = await runInSubprocess<CommandResult<unknown>>({
@@ -133,6 +131,7 @@ describe('Subprocess Integration Tests', () => {
           handlerPath,
           input: {},
           timeoutMs: 5000,
+          cwd: testDir,
         });
 
         // Wrap into CLI format for assertion
@@ -191,14 +190,12 @@ describe('Subprocess Integration Tests', () => {
 
       try {
         const descriptor: PluginContextDescriptor = {
-          host: 'cli',
+          hostType: 'cli',
           pluginId: '@kb-labs/test-timeout',
           pluginVersion: '1.0.0',
           requestId: 'timeout-req',
-          cwd: testDir,
           permissions: {},
           hostContext: { host: 'cli', argv: [], flags: {} },
-          parentRequestId: undefined,
         };
 
         await expect(
@@ -208,6 +205,7 @@ describe('Subprocess Integration Tests', () => {
             handlerPath,
             input: {},
             timeoutMs: 1000, // 1 second timeout
+            cwd: testDir,
           })
         ).rejects.toThrow(/timed out/);
       } finally {
@@ -245,14 +243,12 @@ describe('Subprocess Integration Tests', () => {
 
       try {
         const descriptor: PluginContextDescriptor = {
-          host: 'cli',
+          hostType: 'cli',
           pluginId: '@kb-labs/test-abort',
           pluginVersion: '1.0.0',
           requestId: 'abort-req',
-          cwd: testDir,
           permissions: {},
           hostContext: { host: 'cli', argv: [], flags: {} },
-          parentRequestId: undefined,
         };
 
         const abortController = new AbortController();
@@ -268,6 +264,7 @@ describe('Subprocess Integration Tests', () => {
             input: {},
             signal: abortController.signal,
             timeoutMs: 10000,
+            cwd: testDir,
           })
         ).rejects.toThrow(/abort/);
       } finally {
