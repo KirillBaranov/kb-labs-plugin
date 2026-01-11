@@ -56,7 +56,16 @@ describe('createPluginContextV3', () => {
       hostType: 'cli',
       pluginId: '@kb-labs/test',
       pluginVersion: '1.0.0',
-      permissions: {},
+      permissions: {
+        platform: {
+          llm: true,
+          embeddings: true,
+          vectorStore: true,
+          cache: true,
+          storage: true,
+          analytics: true,
+        },
+      },
       hostContext: { hostType: 'cli', argv: [], flags: {} },
     };
 
@@ -66,16 +75,23 @@ describe('createPluginContextV3', () => {
       ui: mockUI,
     });
 
-    // CRITICAL: Platform services MUST be passed through directly
-    // No wrappers, no adapters, no child logger creation
-    expect(context.platform).toBe(mockPlatform); // ← Direct reference
-    expect(context.platform.logger).toBe(mockLogger); // ← Same logger instance
-    expect(context.platform.llm).toBe(mockPlatform.llm);
-    expect(context.platform.embeddings).toBe(mockPlatform.embeddings);
-    expect(context.platform.vectorStore).toBe(mockPlatform.vectorStore);
-    expect(context.platform.cache).toBe(mockPlatform.cache);
-    expect(context.platform.storage).toBe(mockPlatform.storage);
-    expect(context.platform.analytics).toBe(mockPlatform.analytics);
+    // Platform services should be accessible (may be wrapped by governed proxy or prefixed logger)
+    expect(context.platform).toBeDefined();
+    expect(context.platform.logger).toBeDefined();
+    expect(context.platform.llm).toBeDefined();
+    expect(context.platform.embeddings).toBeDefined();
+    expect(context.platform.vectorStore).toBeDefined();
+    expect(context.platform.cache).toBeDefined();
+    expect(context.platform.storage).toBeDefined();
+    expect(context.platform.analytics).toBeDefined();
+
+    // Verify logger has all required methods (may be wrapped by prefixedLogger)
+    expect(context.platform.logger.trace).toBeTypeOf('function');
+    expect(context.platform.logger.debug).toBeTypeOf('function');
+    expect(context.platform.logger.info).toBeTypeOf('function');
+    expect(context.platform.logger.warn).toBeTypeOf('function');
+    expect(context.platform.logger.error).toBeTypeOf('function');
+    expect(context.platform.logger.child).toBeTypeOf('function');
   });
 
   it('should create context with all required fields', () => {

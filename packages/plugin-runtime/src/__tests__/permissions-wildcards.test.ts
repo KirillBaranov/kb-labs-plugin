@@ -38,8 +38,18 @@ const mockUI: UIFacade = {
   prompt: async () => 'test',
 } as any;
 
+// Mock logger with all required methods
+const mockLogger = {
+  trace: () => {},
+  debug: () => {},
+  info: () => {},
+  warn: () => {},
+  error: () => {},
+  child: function() { return this; },
+};
+
 const mockPlatform: PlatformServices = {
-  logger: { debug: () => {}, info: () => {}, warn: () => {}, error: () => {}, child: function() { return this; } } as any,
+  logger: mockLogger as any,
   llm: {} as any,
   embeddings: {} as any,
   vectorStore: {} as any,
