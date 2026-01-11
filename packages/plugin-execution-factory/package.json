@@ -47,5 +47,6 @@
     "backend",
     "factory"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "private": true
 }

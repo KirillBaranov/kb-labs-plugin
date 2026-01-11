@@ -56,5 +56,6 @@
     "runtime",
     "v3"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "private": true
 }

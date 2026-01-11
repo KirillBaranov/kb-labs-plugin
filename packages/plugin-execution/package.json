@@ -48,5 +48,6 @@
     "fastify": {
       "optional": true
     }
-  }
+  },
+  "private": true
 }
