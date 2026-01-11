@@ -1,7 +1,6 @@
 {
   "name": "@kb-labs/plugin",
   "version": "0.1.0",
-  "private": true,
   "description": "Plugin system infrastructure for KB Labs ecosystem",
   "type": "module",
   "author": {
