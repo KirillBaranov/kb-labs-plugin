@@ -15,19 +15,21 @@
  * The `input` parameter passed to handlers contains:
  * ```typescript
  * {
- *   query: req.query,  // Query parameters from URL (?workspace=foo)
- *   body: req.body,    // Request body (JSON payload)
+ *   query: req.query,   // Query parameters from URL (?workspace=foo)
+ *   body: req.body,     // Request body (JSON payload)
+ *   params: req.params, // Route parameters from path (/history/:scope/:id)
  * }
  * ```
  *
- * This separates query and body parameters, preventing conflicts and making
+ * This separates query, body, and route parameters, preventing conflicts and making
  * the data source explicit for handler code.
  *
  * Example handler:
  * ```typescript
  * defineHandler({
- *   async execute(ctx, input: { query?: { workspace?: string }; body?: unknown }) {
+ *   async execute(ctx, input: RestInput<{ workspace?: string }, unknown, { id: string }>) {
  *     const workspace = input.query?.workspace || 'default';
+ *     const id = input.params?.id;
  *     // ...
  *   }
  * });
@@ -143,6 +145,7 @@ export async function mountRoutes(
             input: {
               query: req.query,
               body: req.body,
+              params: req.params,
             },
             workspace: {
               type: 'local',
