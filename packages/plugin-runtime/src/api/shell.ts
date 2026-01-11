@@ -74,7 +74,6 @@ export function createShellAPI(options: CreateShellAPIOptions): ShellAPI {
       return new Promise((resolve, reject) => {
         const child = spawn(command, args, {
           cwd: workingDir,
-          shell: true,
           env: {
             ...process.env,
             ...execOptions?.env,
