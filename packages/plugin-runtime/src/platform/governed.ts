@@ -87,10 +87,10 @@ export function createGovernedPlatformServices(
     // Logger: always allowed, create child logger with plugin context
     logger: raw.logger.child({ plugin: pluginId }),
 
-    // LLM: check permission
+    // LLM: check permission and proxy ILLM interface (complete, stream)
     llm: permissions.platform?.llm
       ? {
-          chat: async (messages, options) => {
+          complete: async (prompt, options) => {
             // Optional: check model whitelist
             const allowedModels =
               typeof permissions.platform?.llm === 'object'
@@ -103,14 +103,36 @@ export function createGovernedPlatformServices(
               );
             }
 
-            return raw.llm.chat(messages, options);
+            return raw.llm.complete(prompt, options);
+          },
+          stream: async function* (prompt, options) {
+            // Optional: check model whitelist
+            const allowedModels =
+              typeof permissions.platform?.llm === 'object'
+                ? (permissions.platform.llm as { models?: string[] }).models
+                : undefined;
+
+            if (allowedModels && options?.model && !allowedModels.includes(options.model)) {
+              throw new PermissionError(
+                `LLM model '${options.model}' not allowed. Permitted models: ${allowedModels.join(', ')}`
+              );
+            }
+
+            yield* raw.llm.stream(prompt, options);
           },
         }
       : (createDeniedService('llm') as any),
 
-    // Embeddings: binary permission
+    // Embeddings: binary permission with proper interface
     embeddings: permissions.platform?.embeddings
-      ? raw.embeddings
+      ? {
+          embed: (text) => raw.embeddings.embed(text),
+          embedBatch: (texts) => raw.embeddings.embedBatch(texts),
+          get dimensions() {
+            return raw.embeddings.dimensions;
+          },
+          getDimensions: () => raw.embeddings.getDimensions(),
+        }
       : (createDeniedService('embeddings') as any),
 
     // VectorStore: binary permission
@@ -133,11 +155,29 @@ export function createGovernedPlatformServices(
             checkCacheNamespace(key, permissions.platform?.cache);
             return raw.cache.delete(key);
           },
-          clear: async () => {
+          clear: async (pattern) => {
             if (permissions.platform?.cache !== true) {
               throw new PermissionError('Cache.clear() requires full cache permission');
             }
-            return raw.cache.clear();
+            return raw.cache.clear(pattern);
+          },
+          // Sorted set operations
+          zadd: async (key, score, member) => {
+            checkCacheNamespace(key, permissions.platform?.cache);
+            return raw.cache.zadd(key, score, member);
+          },
+          zrangebyscore: async (key, min, max) => {
+            checkCacheNamespace(key, permissions.platform?.cache);
+            return raw.cache.zrangebyscore(key, min, max);
+          },
+          zrem: async (key, member) => {
+            checkCacheNamespace(key, permissions.platform?.cache);
+            return raw.cache.zrem(key, member);
+          },
+          // Atomic operations
+          setIfNotExists: async (key, value, ttl) => {
+            checkCacheNamespace(key, permissions.platform?.cache);
+            return raw.cache.setIfNotExists(key, value, ttl);
           },
         }
       : (createDeniedService('cache') as any),
@@ -168,10 +208,8 @@ export function createGovernedPlatformServices(
         }
       : (createDeniedService('storage') as any),
 
-    // Analytics: binary permission
-    analytics: permissions.platform?.analytics
-      ? raw.analytics
-      : (createDeniedService('analytics') as any),
+    // Analytics: always allowed (like logger)
+    analytics: raw.analytics,
 
     // EventBus: always allowed (no permission check currently)
     eventBus: raw.eventBus,
