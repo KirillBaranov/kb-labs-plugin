@@ -25,6 +25,7 @@ function createSubprocessLogger(): Logger {
     info: (msg, meta?) => log('info', msg, meta),
     warn: (msg, meta?) => log('warn', msg, meta),
     error: (msg, _error?, meta?) => log('error', msg, meta),
+    fatal: (msg, _error?, meta?) => log('fatal', msg, meta),
     trace: (msg, meta?) => log('trace', msg, meta),
     child: (_bindings) => createSubprocessLogger(),
   };
