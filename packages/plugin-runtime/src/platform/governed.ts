@@ -9,6 +9,9 @@ import type {
   PlatformServices,
   PermissionSpec,
   Logger,
+  VectorRecord,
+  VectorSearchResult,
+  VectorFilter,
 } from '@kb-labs/plugin-contracts';
 import { PermissionError } from '@kb-labs/plugin-contracts';
 
@@ -60,6 +63,77 @@ function checkStoragePath(path: string, permission: string[] | boolean | undefin
 }
 
 /**
+ * Check if vector ID matches allowed namespaces and add prefix
+ * Returns the prefixed ID
+ */
+function prefixVectorId(id: string, permission: string[] | boolean | undefined): string {
+  if (permission === false || permission === undefined) {
+    throw new PermissionError('VectorStore access denied');
+  }
+
+  if (permission === true) {
+    return id; // No prefix needed, full access
+  }
+
+  // Get first allowed namespace as prefix (plugins typically have one namespace)
+  const allowed = permission as string[];
+  if (allowed.length === 0) {
+    throw new PermissionError('VectorStore access denied: no namespaces configured');
+  }
+
+  const namespace = allowed[0]!;
+
+  // If ID already has the prefix, don't add it again
+  if (id.startsWith(namespace)) {
+    return id;
+  }
+
+  // Add namespace prefix
+  return `${namespace}${id}`;
+}
+
+/**
+ * Remove namespace prefix from vector ID
+ * Returns the unprefixed ID for plugin consumption
+ */
+function unprefixVectorId(id: string, permission: string[] | boolean | undefined): string {
+  if (permission === true) {
+    return id; // No prefix to remove
+  }
+
+  const allowed = permission as string[];
+  if (allowed.length === 0) {
+    return id;
+  }
+
+  const namespace = allowed[0]!;
+
+  // Remove prefix if present
+  if (id.startsWith(namespace)) {
+    return id.slice(namespace.length);
+  }
+
+  return id;
+}
+
+/**
+ * Check if vector ID belongs to allowed namespace (for search results)
+ */
+function isVectorIdAllowed(id: string, permission: string[] | boolean | undefined): boolean {
+  if (permission === true) {
+    return true; // All IDs allowed
+  }
+
+  const allowed = permission as string[];
+  if (allowed.length === 0) {
+    return false;
+  }
+
+  // Check if ID starts with any allowed namespace
+  return allowed.some((ns) => id.startsWith(ns));
+}
+
+/**
  * Create denied service stub that throws on ANY property access
  */
 function createDeniedService(serviceName: string): any {
@@ -73,7 +147,7 @@ function createDeniedService(serviceName: string): any {
 /**
  * Wrap raw platform services with permission checks.
  *
- * @param raw - Raw platform services from parent process
+ * @param raw - Raw platform services
  * @param permissions - Plugin permissions spec
  * @param pluginId - Plugin ID for logger child context
  * @returns Governed platform services with permission enforcement
@@ -135,9 +209,74 @@ export function createGovernedPlatformServices(
         }
       : (createDeniedService('embeddings') as any),
 
-    // VectorStore: binary permission
+    // VectorStore: namespace-based permission (prefix isolation)
     vectorStore: permissions.platform?.vectorStore
-      ? raw.vectorStore
+      ? {
+          search: async (query: number[], limit: number, filter?: VectorFilter) => {
+            // Search in raw store
+            const results = await raw.vectorStore.search(query, limit, filter);
+
+            // Extract collections array from permission
+            const rawPermission = permissions.platform?.vectorStore;
+            const permission =
+              rawPermission === true
+                ? true
+                : typeof rawPermission === 'object'
+                  ? (rawPermission as { collections?: string[] }).collections
+                  : undefined;
+
+            // Filter results to only include allowed namespaces and remove prefix
+            return results
+              .filter((result) => isVectorIdAllowed(result.id, permission))
+              .map((result) => ({
+                ...result,
+                id: unprefixVectorId(result.id, permission),
+              }));
+          },
+
+          upsert: async (vectors: VectorRecord[]) => {
+            // Extract collections array from permission
+            const rawPermission = permissions.platform?.vectorStore;
+            const permission =
+              rawPermission === true
+                ? true
+                : typeof rawPermission === 'object'
+                  ? (rawPermission as { collections?: string[] }).collections
+                  : undefined;
+
+            // Add namespace prefix to all IDs
+            const prefixedVectors = vectors.map((vec) => ({
+              ...vec,
+              id: prefixVectorId(vec.id, permission),
+            }));
+
+            return raw.vectorStore.upsert(prefixedVectors);
+          },
+
+          delete: async (ids: string[]) => {
+            // Extract collections array from permission
+            const rawPermission = permissions.platform?.vectorStore;
+            const permission =
+              rawPermission === true
+                ? true
+                : typeof rawPermission === 'object'
+                  ? (rawPermission as { collections?: string[] }).collections
+                  : undefined;
+
+            // Add namespace prefix to all IDs
+            const prefixedIds = ids.map((id) => prefixVectorId(id, permission));
+
+            return raw.vectorStore.delete(prefixedIds);
+          },
+
+          count: async () => {
+            // Count all vectors and filter by namespace
+            // Note: This is not perfect - it counts all vectors in the store
+            // A better implementation would filter by prefix at DB level
+            // For now, this is a limitation of the simple wrapper approach
+            return raw.vectorStore.count();
+          },
+        }
       : (createDeniedService('vectorStore') as any),
 
     // Cache: namespace-based permission
