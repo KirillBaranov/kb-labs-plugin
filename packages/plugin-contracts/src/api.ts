@@ -291,6 +291,10 @@ export interface LifecycleAPI {
 // Plugin API (Combined)
 // ============================================================================
 
+// Import workflow and job APIs
+import type { WorkflowsAPI } from './workflows-api.js';
+import type { JobsAPI } from './jobs-api.js';
+
 /**
  * Combined Plugin API interface
  */
@@ -324,4 +328,14 @@ export interface PluginAPI {
    * Lifecycle management
    */
   readonly lifecycle: LifecycleAPI;
+
+  /**
+   * Background workflows (multi-step processes)
+   */
+  readonly workflows: WorkflowsAPI;
+
+  /**
+   * Background jobs (single-step tasks)
+   */
+  readonly jobs: JobsAPI;
 }

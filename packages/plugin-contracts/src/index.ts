@@ -121,6 +121,26 @@ export type {
   CleanupFn,
 } from './api.js';
 
+// Workflows API
+export type {
+  WorkflowsAPI,
+  WorkflowRunOptions,
+  WorkflowWaitOptions,
+  WorkflowStatus,
+  WorkflowRunStatus,
+  WorkflowListFilter,
+} from './workflows-api.js';
+
+// Jobs API
+export type {
+  JobsAPI,
+  JobSubmission,
+  JobStatus,
+  JobStatusInfo,
+  JobListFilter,
+  JobWaitOptions,
+} from './jobs-api.js';
+
 // Handlers
 export type {
   CommandHandler,
