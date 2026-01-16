@@ -153,6 +153,11 @@ export function createPluginContextV3<TConfig = unknown>(
     cache: enrichedPlatform.cache, // Use governed cache, not raw
     eventEmitter,
     pluginInvoker,
+    // Access workflows/jobs from platform container (if available)
+    // Cast to any to access workflows/jobs (they exist on PlatformContainer but not in PlatformServices interface)
+    // This is intentional - workflows/jobs are in PluginAPI, not PlatformServices
+    workflowEngine: (platform as any).workflows,
+    jobScheduler: (platform as any).jobs,
     cleanupStack,
   });
 
