@@ -198,32 +198,128 @@ export interface WebhookHandlerDecl {
 }
 
 /**
- * Job declaration for scheduled/background tasks
+ * Job handler declaration for background task execution
+ *
+ * Job handlers are executed in sandboxed subprocess when submitted via ctx.api.jobs.submit()
+ * These are different from scheduled jobs (JobDecl) - handlers are invoked on-demand.
+ *
+ * @example
+ * ```json
+ * {
+ *   "jobs": {
+ *     "handlers": [
+ *       {
+ *         "id": "send-email",
+ *         "handler": "./dist/jobs/send-email.js",
+ *         "describe": "Send email via SendGrid",
+ *         "timeout": 30000,
+ *         "maxRetries": 3
+ *       }
+ *     ]
+ *   }
+ * }
+ * ```
  */
-export interface JobDecl {
-  /** Unique job identifier (e.g., 'auto-index') */
+export interface JobHandlerDecl {
+  /** Unique job identifier (e.g., 'send-email', 'process-file') */
   id: string;
-  /** Handler file path relative to plugin root (e.g., './dist/jobs/auto-index.js') */
-  handler: string;
-  /** Cron schedule or interval ('0 * * * *', '5m', '1h') */
-  schedule?: string;
+
   /** Human-readable description */
   describe?: string;
-  /** Input data passed to handler */
-  input?: unknown;
-  /** Whether job is enabled by default */
-  enabled?: boolean;
-  /** Job priority (1-10, default: 5) */
-  priority?: number;
-  /** Execution timeout in milliseconds */
+
+  /** Handler file path relative to plugin root (e.g., './dist/jobs/send-email.js') */
+  handler: string;
+
+  /** Input schema for validation */
+  input?: SchemaRef;
+
+  /** Output schema */
+  output?: SchemaRef;
+
+  /** Job-specific timeout in milliseconds (overrides defaults) */
   timeout?: number;
-  /** Retry attempts on failure */
-  retries?: number;
-  /** Job tags */
-  tags?: string[];
-  /** Job-specific permissions */
+
+  /** Maximum retry attempts (default: 3) */
+  maxRetries?: number;
+
+  /** Retry backoff strategy */
+  retryBackoff?: 'exp' | 'lin';
+
+  /** Handler-specific permissions (can access what?) */
   permissions?: PermissionSpec;
 }
+
+/**
+ * Jobs configuration in manifest
+ */
+export interface JobsConfig {
+  /** Job handler declarations */
+  handlers: JobHandlerDecl[];
+
+  /** Default settings for all jobs */
+  defaults?: {
+    /** Default timeout in milliseconds */
+    timeout?: number;
+    /** Default max retries */
+    maxRetries?: number;
+    /** Default backoff strategy */
+    retryBackoff?: 'exp' | 'lin';
+  };
+}
+
+/**
+ * Cron schedule declaration for recurring tasks
+ *
+ * @example
+ * ```json
+ * {
+ *   "cron": {
+ *     "schedules": [
+ *       {
+ *         "id": "daily-cleanup",
+ *         "schedule": "0 3 * * *",
+ *         "job": {
+ *           "type": "cleanup-logs",
+ *           "payload": { "olderThanDays": 7 }
+ *         }
+ *       }
+ *     ]
+ *   }
+ * }
+ * ```
+ */
+export interface CronDecl {
+  /** Unique cron schedule identifier (e.g., 'daily-cleanup') */
+  id: string;
+
+  /** Cron expression ('0 * * * *') or interval ('5m', '1h', '1d') */
+  schedule: string;
+
+  /** Job to execute on schedule */
+  job: {
+    /** Job type (pluginId:jobId or just jobId for same plugin) */
+    type: string;
+    /** Job payload */
+    payload?: unknown;
+  };
+
+  /** Human-readable description */
+  describe?: string;
+
+  /** Whether schedule is enabled by default */
+  enabled?: boolean;
+
+  /** Timezone for cron expression (default: UTC) */
+  timezone?: string;
+
+  /** Cron-specific permissions */
+  permissions?: PermissionSpec;
+}
+
+/**
+ * @deprecated Use CronDecl instead (renamed for clarity)
+ */
+export interface JobDecl extends CronDecl {}
 
 /**
  * Lifecycle hook specification
@@ -324,7 +420,7 @@ export interface ManifestV3 {
   /** REST API routes */
   rest?: RestConfig;
 
-  /** Workflow handlers */
+  /** Workflow handlers (multi-step orchestration) */
   workflows?: {
     handlers: WorkflowHandlerDecl[];
   };
@@ -334,8 +430,14 @@ export interface ManifestV3 {
     handlers: WebhookHandlerDecl[];
   };
 
-  /** Scheduled/background jobs */
-  jobs?: JobDecl[];
+  /** Background job handlers (single-step tasks, invoked on-demand via ctx.api.jobs.submit) */
+  jobs?: JobsConfig;
+
+  /** Cron scheduled tasks (recurring jobs on schedule) */
+  cron?: {
+    /** Cron schedule declarations */
+    schedules: CronDecl[];
+  };
 
   /** Studio widgets, menus, and layouts */
   studio?: StudioConfig;

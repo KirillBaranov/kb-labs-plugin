@@ -78,6 +78,21 @@ export interface PermissionSpec {
       /** Allowed job types (glob patterns: 'send-email', 'cleanup-*', '*' for all) */
       types?: string[];
     };
+    /** Cron scheduler access */
+    cron?: boolean | {
+      /** Can register cron jobs */
+      register?: boolean;
+      /** Can unregister cron jobs */
+      unregister?: boolean;
+      /** Can list cron jobs */
+      list?: boolean;
+      /** Can manually trigger cron jobs */
+      trigger?: boolean;
+      /** Can pause cron jobs */
+      pause?: boolean;
+      /** Can resume cron jobs */
+      resume?: boolean;
+    };
   };
 
   /**
@@ -150,6 +165,7 @@ export const DEFAULT_PERMISSIONS: PermissionSpec = {
     events: false,
     workflows: false,
     jobs: false,
+    cron: false,
   },
   shell: {
     allow: [], // No shell by default
