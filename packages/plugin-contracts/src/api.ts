@@ -291,9 +291,10 @@ export interface LifecycleAPI {
 // Plugin API (Combined)
 // ============================================================================
 
-// Import workflow and job APIs
+// Import workflow, job, and cron APIs
 import type { WorkflowsAPI } from './workflows-api.js';
 import type { JobsAPI } from './jobs-api.js';
+import type { CronAPI } from './cron-api.js';
 
 /**
  * Combined Plugin API interface
@@ -338,4 +339,9 @@ export interface PluginAPI {
    * Background jobs (single-step tasks)
    */
   readonly jobs: JobsAPI;
+
+  /**
+   * Recurring scheduled tasks (cron jobs)
+   */
+  readonly cron: CronAPI;
 }

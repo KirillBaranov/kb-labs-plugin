@@ -84,10 +84,25 @@ export function validateManifest(manifest: ManifestV3): { valid: boolean; errors
     }
   }
 
+  // Validate job handlers
   if (manifest.jobs) {
-    for (const job of manifest.jobs) {
+    const handlers = manifest.jobs.handlers ?? [];
+    for (const job of handlers) {
       if (!job.handler) {
-        errors.push(`Job "${job.id}" missing handler path`);
+        errors.push(`Job handler "${job.id}" missing handler path`);
+      }
+    }
+  }
+
+  // Validate cron schedules
+  if (manifest.cron) {
+    const schedules = manifest.cron.schedules ?? [];
+    for (const schedule of schedules) {
+      if (!schedule.schedule) {
+        errors.push(`Cron schedule "${schedule.id}" missing cron expression`);
+      }
+      if (!schedule.job?.type) {
+        errors.push(`Cron schedule "${schedule.id}" missing job type`);
       }
     }
   }

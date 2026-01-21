@@ -141,6 +141,17 @@ export type {
   JobWaitOptions,
 } from './jobs-api.js';
 
+// Cron API
+export type {
+  CronAPI,
+  CronRegistration,
+  CronStatus,
+  CronInfo,
+} from './cron-api.js';
+
+// Job Context
+export type { JobContext, JobHandler } from './job-context.js';
+
 // Handlers
 export type {
   CommandHandler,
@@ -175,6 +186,9 @@ export type {
   RestConfig,
   WorkflowHandlerDecl,
   WebhookHandlerDecl,
+  JobHandlerDecl,
+  JobsConfig,
+  CronDecl,
   JobDecl,
   SetupSpec,
   ErrorSpec,
