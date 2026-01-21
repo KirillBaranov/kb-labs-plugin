@@ -25,6 +25,13 @@ export interface CreateInvokeAPIOptions {
 export function createInvokeAPI(options: CreateInvokeAPIOptions): InvokeAPI {
   const { permissions, invoker } = options;
 
+  // DEBUG: Log incoming permissions
+  console.log('[createInvokeAPI DEBUG] Permissions received:', {
+    hasInvoke: !!permissions.invoke,
+    invokeAllow: permissions.invoke?.allow,
+    fullInvoke: JSON.stringify(permissions.invoke),
+  });
+
   // Check if invoke is allowed (empty array = disabled)
   const allowedPlugins = permissions.invoke?.allow ?? [];
   if (allowedPlugins.length === 0) {

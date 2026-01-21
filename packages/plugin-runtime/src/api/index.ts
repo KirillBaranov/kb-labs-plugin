@@ -8,7 +8,7 @@ import type {
   CacheAdapter,
   PermissionSpec,
 } from '@kb-labs/plugin-contracts';
-import type { IWorkflowEngine, IJobScheduler } from '@kb-labs/core-platform';
+import type { IWorkflowEngine } from '@kb-labs/core-platform';
 
 import { createLifecycleAPI, executeCleanup } from './lifecycle.js';
 import { createStateAPI } from './state.js';
@@ -18,6 +18,7 @@ import { createEventsAPI, createNoopEventsAPI, type EventEmitterFn } from './eve
 import { createInvokeAPI, createNoopInvokeAPI, type PluginInvokerFn } from './invoke.js';
 import { createWorkflowsAPI, createNoopWorkflowsAPI } from './workflows.js';
 import { createJobsAPI, createNoopJobsAPI } from './jobs.js';
+import { createCronAPI, createNoopCronAPI } from './cron.js';
 
 // Re-export individual APIs
 export { createLifecycleAPI, executeCleanup } from './lifecycle.js';
@@ -28,6 +29,7 @@ export { createEventsAPI, createNoopEventsAPI } from './events.js';
 export { createInvokeAPI, createNoopInvokeAPI } from './invoke.js';
 export { createWorkflowsAPI, createNoopWorkflowsAPI } from './workflows.js';
 export { createJobsAPI, createNoopJobsAPI } from './jobs.js';
+export { createCronAPI, createNoopCronAPI } from './cron.js';
 export type { EventEmitterFn } from './events.js';
 export type { PluginInvokerFn } from './invoke.js';
 
@@ -41,7 +43,11 @@ export interface CreatePluginAPIOptions {
   eventEmitter?: EventEmitterFn;
   pluginInvoker?: PluginInvokerFn;
   workflowEngine?: IWorkflowEngine;
-  jobScheduler?: IJobScheduler;
+  /**
+   * Workflow Service base URL for Jobs/Cron HTTP APIs
+   * @example "http://localhost:3000"
+   */
+  workflowServiceUrl?: string;
   cleanupStack: Array<CleanupFn>;
 }
 
@@ -59,7 +65,7 @@ export function createPluginAPI(options: CreatePluginAPIOptions): PluginAPI {
     eventEmitter,
     pluginInvoker,
     workflowEngine,
-    jobScheduler,
+    workflowServiceUrl,
     cleanupStack,
   } = options;
 
@@ -77,8 +83,11 @@ export function createPluginAPI(options: CreatePluginAPIOptions): PluginAPI {
     workflows: workflowEngine
       ? createWorkflowsAPI({ tenantId, engine: workflowEngine, permissions })
       : createNoopWorkflowsAPI(),
-    jobs: jobScheduler
-      ? createJobsAPI({ tenantId, scheduler: jobScheduler, permissions })
+    jobs: workflowServiceUrl
+      ? createJobsAPI({ tenantId, workflowServiceUrl, permissions })
       : createNoopJobsAPI(),
+    cron: workflowServiceUrl
+      ? createCronAPI({ tenantId, workflowServiceUrl, permissions })
+      : createNoopCronAPI(),
   };
 }

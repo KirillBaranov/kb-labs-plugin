@@ -1,7 +1,8 @@
 /**
  * Jobs API implementation
  *
- * Adapter from simplified JobsAPI to full IJobScheduler interface.
+ * HTTP client adapter for Workflow Service Jobs API.
+ * Makes REST API calls instead of in-process manager calls.
  */
 
 import type {
@@ -12,11 +13,10 @@ import type {
   JobWaitOptions,
   PermissionSpec,
 } from '@kb-labs/plugin-contracts';
-import type { IJobScheduler, JobHandle } from '@kb-labs/core-platform';
 
 export interface CreateJobsAPIOptions {
   tenantId?: string;
-  scheduler: IJobScheduler;
+  workflowServiceUrl: string;
   permissions?: PermissionSpec;
 }
 
@@ -25,7 +25,7 @@ export interface CreateJobsAPIOptions {
  */
 function checkJobPermission(
   permissions: PermissionSpec | undefined,
-  operation: 'submit' | 'schedule' | 'list' | 'cancel',
+  operation: 'submit' | 'list' | 'cancel',
   jobType?: string
 ): void {
   const jobPerms = permissions?.platform?.jobs;
@@ -50,7 +50,7 @@ function checkJobPermission(
 
     // Check job type scope if specified
     if (jobType && jobPerms.types) {
-      const allowed = jobPerms.types.some(pattern => {
+      const allowed = jobPerms.types.some((pattern: string) => {
         if (pattern === '*') return true;
         if (pattern.endsWith('*')) {
           const prefix = pattern.slice(0, -1);
@@ -60,55 +60,95 @@ function checkJobPermission(
       });
 
       if (!allowed) {
-        throw new Error(`Job type '${jobType}' access denied: not in allowed types scope`);
+        throw new Error(
+          `Job type '${jobType}' access denied: not in allowed types scope`
+        );
       }
     }
   }
 }
 
 /**
- * Create JobsAPI adapter
+ * Create JobsAPI HTTP client
  *
- * Maps simplified plugin API to full job scheduler interface.
+ * Makes REST API calls to Workflow Service instead of in-process calls.
  */
 export function createJobsAPI(options: CreateJobsAPIOptions): JobsAPI {
-  const { tenantId, scheduler, permissions } = options;
+  const { tenantId, workflowServiceUrl, permissions } = options;
+
+  const fetchJSON = async <T>(path: string, init?: RequestInit): Promise<T> => {
+    const url = `${workflowServiceUrl}${path}`;
+    const response = await fetch(url, {
+      ...init,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Tenant-ID': tenantId ?? 'default',
+        ...init?.headers,
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Workflow Service request failed: ${response.status} ${errorText}`);
+    }
+
+    return response.json() as Promise<T>;
+  };
 
   return {
-    async submit(job: JobSubmission): Promise<string> {
-      checkJobPermission(permissions, 'submit', job.type);
+    async submit(submission: JobSubmission): Promise<string> {
+      checkJobPermission(permissions, 'submit', submission.type);
 
-      const handle = await scheduler.submit({
-        type: job.type,
-        payload: job.payload,
-        tenantId,
-        priority: job.priority,
-        maxRetries: job.maxRetries,
-        timeout: job.timeout,
-        runAt: job.runAt,
-        idempotencyKey: job.idempotencyKey,
+      const response = await fetchJSON<{ jobId: string }>('/api/jobs', {
+        method: 'POST',
+        body: JSON.stringify({
+          type: submission.type,
+          payload: submission.payload,
+          priority: submission.priority,
+          maxRetries: submission.maxRetries,
+          timeout: submission.timeout,
+          runAt: submission.runAt,
+          idempotencyKey: submission.idempotencyKey,
+        }),
       });
 
-      return handle.id;
+      return response.jobId;
     },
 
     async schedule(job: JobSubmission, schedule: string | Date): Promise<string> {
-      checkJobPermission(permissions, 'schedule', job.type);
+      checkJobPermission(permissions, 'submit', job.type);
 
-      const handle = await scheduler.schedule(
-        {
+      // Convert schedule to runAt date
+      const runAt = typeof schedule === 'string'
+        ? new Date(schedule) // For ISO date strings or we'd need cron parser
+        : schedule;
+
+      const response = await fetchJSON<{ jobId: string }>('/api/jobs', {
+        method: 'POST',
+        body: JSON.stringify({
           type: job.type,
           payload: job.payload,
-          tenantId,
           priority: job.priority,
           maxRetries: job.maxRetries,
           timeout: job.timeout,
+          runAt,
           idempotencyKey: job.idempotencyKey,
-        },
-        schedule
-      );
+        }),
+      });
 
-      return handle.id;
+      return response.jobId;
+    },
+
+    async status(jobId: string): Promise<JobStatusInfo | null> {
+      try {
+        return await fetchJSON<JobStatusInfo>(`/api/jobs/${jobId}`);
+      } catch (error) {
+        // 404 means job not found
+        if (error instanceof Error && error.message.includes('404')) {
+          return null;
+        }
+        throw error;
+      }
     },
 
     async wait(jobId: string, options?: JobWaitOptions): Promise<unknown> {
@@ -116,95 +156,79 @@ export function createJobsAPI(options: CreateJobsAPIOptions): JobsAPI {
       const pollInterval = options?.pollInterval ?? 1000; // 1s default
       const startTime = Date.now();
 
-      while (Date.now() - startTime < timeout) {
-        const handle = await scheduler.getStatus(jobId);
+      while (true) {
+        const info = await this.status(jobId);
 
-        if (!handle) {
+        if (!info) {
           throw new Error(`Job not found: ${jobId}`);
         }
 
-        if (handle.status === 'completed') {
-          return handle.result;
+        // Check if completed
+        if (info.status === 'completed') {
+          return info.result;
         }
 
-        if (handle.status === 'failed') {
-          throw new Error(`Job failed: ${handle.error ?? 'Unknown error'}`);
+        // Check if failed
+        if (info.status === 'failed') {
+          throw new Error(`Job failed: ${info.error ?? 'Unknown error'}`);
         }
 
-        if (handle.status === 'cancelled') {
-          throw new Error(`Job cancelled`);
+        // Check if cancelled
+        if (info.status === 'cancelled') {
+          throw new Error('Job was cancelled');
         }
 
-        // Still running, poll again after interval
+        // Check timeout
+        if (Date.now() - startTime > timeout) {
+          throw new Error(`Job wait timeout after ${timeout}ms`);
+        }
+
+        // Wait before next poll
         await new Promise(resolve => setTimeout(resolve, pollInterval));
       }
-
-      throw new Error(`Job wait timeout after ${timeout}ms`);
-    },
-
-    async status(jobId: string): Promise<JobStatusInfo | null> {
-      checkJobPermission(permissions, 'list');
-
-      const handle = await scheduler.getStatus(jobId);
-
-      if (!handle) {
-        return null;
-      }
-
-      return mapJobHandleToStatus(handle);
     },
 
     async cancel(jobId: string): Promise<boolean> {
       checkJobPermission(permissions, 'cancel');
-      return scheduler.cancel(jobId);
+
+      const response = await fetchJSON<{ cancelled: boolean }>(`/api/jobs/${jobId}/cancel`, {
+        method: 'POST',
+      });
+
+      return response.cancelled;
     },
 
     async list(filter?: JobListFilter): Promise<JobStatusInfo[]> {
       checkJobPermission(permissions, 'list');
 
-      const handles = await scheduler.list({
-        type: filter?.type,
-        tenantId, // Use adapter's tenantId, not from filter
-        status: filter?.status,
-        limit: filter?.limit,
-        offset: filter?.offset,
-      });
+      const queryParams = new URLSearchParams();
+      if (filter?.type) queryParams.set('type', filter.type);
+      if (filter?.status) queryParams.set('status', filter.status);
+      if (filter?.limit) queryParams.set('limit', String(filter.limit));
+      if (filter?.offset) queryParams.set('offset', String(filter.offset));
 
-      return handles.map(mapJobHandleToStatus);
+      const query = queryParams.toString();
+      const path = query ? `/api/jobs?${query}` : '/api/jobs';
+
+      const response = await fetchJSON<{ jobs: JobStatusInfo[] }>(path);
+      return response.jobs;
     },
   };
 }
 
 /**
- * Map internal JobHandle to simplified JobStatusInfo
- */
-function mapJobHandleToStatus(handle: JobHandle): JobStatusInfo {
-  return {
-    id: handle.id,
-    type: handle.type,
-    status: handle.status,
-    progress: handle.progress,
-    result: handle.result,
-    error: handle.error,
-    createdAt: handle.createdAt,
-    startedAt: handle.startedAt,
-    completedAt: handle.completedAt,
-  };
-}
-
-/**
- * Create a no-op jobs API (for when job scheduler is not available)
+ * Create noop JobsAPI (when job scheduler is not available)
  */
 export function createNoopJobsAPI(): JobsAPI {
-  const notAvailable = async (): Promise<never> => {
-    throw new Error('Job scheduler not available');
+  const notAvailable = () => {
+    throw new Error('Job scheduler not available in this context');
   };
 
   return {
     submit: notAvailable,
     schedule: notAvailable,
-    wait: notAvailable,
     status: async () => null,
+    wait: notAvailable,
     cancel: async () => false,
     list: async () => [],
   };
