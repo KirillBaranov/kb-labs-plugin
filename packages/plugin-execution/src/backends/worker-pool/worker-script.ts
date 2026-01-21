@@ -44,62 +44,89 @@ async function handleExecute(message: ExecuteMessage): Promise<void> {
       return;
     }
 
-    // Create a minimal platform for worker
-    // In production, this would be injected via config
-    const platform = {
-      logger: {
+    // Create platform with proxy adapters (IPC to parent process)
+    // Socket path is passed via environment variable by parent
+    const socketPath = process.env.KB_IPC_SOCKET_PATH;
+
+    let platform;
+    if (socketPath) {
+      // Production: Use proxy platform (IPC to parent)
+      const { createProxyPlatform } = await import('@kb-labs/core-runtime');
+      platform = await createProxyPlatform({ socketPath });
+    } else {
+      // Fallback: Use noop platform (dev/testing without IPC)
+      const noopLogger = {
         debug: () => {},
         info: () => {},
         warn: () => {},
         error: () => {},
         trace: () => {},
-        child: () => platform.logger,
-      },
-      llm: {
-        complete: async () => ({
-          content: '',
-          usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
-          model: 'noop'
-        }),
-        stream: async function* () {},
-      },
-      cache: {
-        get: async () => null,
-        set: async () => {},
-        delete: async () => {},
-        clear: async () => {},
-      },
-      embeddings: {
-        embed: async () => [],
-        embedBatch: async () => [],
-        dimensions: 1536,
-        getDimensions: async () => 1536,
-      },
-      vectorStore: {
-        upsert: async () => {},
-        search: async () => [],
-        delete: async () => {},
-        get: async () => null,
-      },
-      storage: {
-        get: async () => undefined,
-        set: async () => {},
-        delete: async () => {},
-        list: async () => [],
-        exists: async () => false,
-      },
-      analytics: {
-        track: () => {},
-        identify: () => {},
-        flush: async () => {},
-      },
-      eventBus: {
-        on: () => () => {},
-        once: () => () => {},
-        off: () => {},
-        emit: () => {},
-      },
-    };
+        child: () => noopLogger,
+      };
+
+      platform = {
+        logger: noopLogger,
+        llm: {
+          complete: async () => ({
+            content: '',
+            usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+            model: 'noop'
+          }),
+          stream: async function* () {},
+        },
+        cache: {
+          get: async () => null,
+          set: async () => {},
+          delete: async () => {},
+          clear: async () => {},
+          zadd: async () => {},
+          zrangebyscore: async () => [],
+          zrem: async () => {},
+          setIfNotExists: async () => false,
+        },
+        embeddings: {
+          embed: async () => [],
+          embedBatch: async () => [],
+          dimensions: 1536,
+          getDimensions: async () => 1536,
+        },
+        vectorStore: {
+          upsert: async () => {},
+          search: async () => [],
+          delete: async () => {},
+          get: async () => null,
+        },
+        storage: {
+          get: async () => undefined,
+          set: async () => {},
+          delete: async () => {},
+          list: async () => [],
+          exists: async () => false,
+        },
+        sqlDatabase: {
+          query: async () => ({ rows: [], rowCount: 0 }),
+          execute: async () => ({ rowCount: 0 }),
+        },
+        documentDatabase: {
+          findOne: async () => null,
+          find: async () => [],
+          insertOne: async () => ({ insertedId: '' }),
+          updateOne: async () => ({ modifiedCount: 0 }),
+          deleteOne: async () => ({ deletedCount: 0 }),
+        },
+        analytics: {
+          track: () => {},
+          identify: () => {},
+          flush: async () => {},
+        },
+        eventBus: {
+          on: () => () => {},
+          once: () => () => {},
+          off: () => {},
+          emit: async () => {},
+        },
+      };
+    }
 
     // Execute handler
     const result = await runInProcess({
