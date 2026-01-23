@@ -24,7 +24,13 @@ describe('InProcessBackend', () => {
   let backend: InProcessBackend;
 
   const mockPlatform: PlatformServices = {
-    // Minimal mock platform
+    logger: {
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn(),
+      child: vi.fn(() => mockPlatform.logger),
+    },
   } as any;
 
   const mockUIProvider = (hostType: HostType): UIFacade => ({
@@ -85,6 +91,18 @@ describe('InProcessBackend', () => {
           commandId: 'test:command',
           handlerId: 'test:handler',
           hostType: 'cli',
+          hostContext: {
+            host: 'cli',
+            cwd: testDir,
+            requestId: 'test-req',
+            traceId: 'test-trace',
+          },
+          hostContext: {
+            host: 'cli',
+            cwd: testDir,
+            requestId: 'test-req',
+            traceId: 'test-trace',
+          },
           currentUser: 'test-user',
           entrypoint: handlerPath,
           permissions: {},
@@ -131,6 +149,12 @@ describe('InProcessBackend', () => {
           commandId: 'test:error',
           handlerId: 'test:error-handler',
           hostType: 'cli',
+          hostContext: {
+            host: 'cli',
+            cwd: testDir,
+            requestId: 'test-req',
+            traceId: 'test-trace',
+          },
           currentUser: 'test-user',
           entrypoint: handlerPath,
           permissions: {},
@@ -158,6 +182,12 @@ describe('InProcessBackend', () => {
           commandId: 'test:missing',
           handlerId: 'test:missing-handler',
           hostType: 'cli',
+          hostContext: {
+            host: 'cli',
+            cwd: testDir,
+            requestId: 'test-req',
+            traceId: 'test-trace',
+          },
           currentUser: 'test-user',
           entrypoint: join(testDir, 'nonexistent-handler.js'),
           permissions: {},
@@ -200,6 +230,12 @@ describe('InProcessBackend', () => {
           commandId: 'test:stats',
           handlerId: 'test:stats-handler',
           hostType: 'cli',
+          hostContext: {
+            host: 'cli',
+            cwd: testDir,
+            requestId: 'test-req',
+            traceId: 'test-trace',
+          },
           currentUser: 'test-user',
           entrypoint: handlerPath,
           permissions: {},
@@ -248,6 +284,12 @@ describe('InProcessBackend', () => {
           commandId: 'test:error-stats',
           handlerId: 'test:error-stats-handler',
           hostType: 'cli',
+          hostContext: {
+            host: 'cli',
+            cwd: testDir,
+            requestId: 'test-req',
+            traceId: 'test-trace',
+          },
           currentUser: 'test-user',
           entrypoint: handlerPath,
           permissions: {},

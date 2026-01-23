@@ -34,12 +34,15 @@
     "@kb-labs/plugin-execution-factory": "workspace:*"
   },
   "devDependencies": {
+    "@fastify/websocket": "^11.0.1",
     "@types/node": "^20.0.0",
+    "@types/ws": "^8.5.13",
     "fastify": "^4.28.0",
     "rimraf": "^5.0.0",
     "tsup": "^8.0.0",
     "typescript": "^5.4.0",
-    "vitest": "^3.0.0"
+    "vitest": "^3.0.0",
+    "ws": "^8.18.0"
   },
   "peerDependencies": {
     "fastify": "^4.0.0"
