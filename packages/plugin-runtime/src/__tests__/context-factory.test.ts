@@ -162,7 +162,7 @@ describe('createPluginContextV3', () => {
     expect(fsMethods).toContain('move');
     expect(fsMethods).toContain('readdir');
     expect(fsMethods).toContain('stat');
-    expect(fsMethods.length).toBe(17);
+    expect(fsMethods.length).toBe(18);
 
     // Fetch should be a function
     expect(typeof context.runtime.fetch).toBe('function');

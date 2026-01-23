@@ -9,7 +9,7 @@
 
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import type { FSShim, FileStat, DirEntry, MkdirOptions, RmOptions, WriteFileOptions, PermissionSpec } from '@kb-labs/plugin-contracts';
+import type { FSShim, FileStat, DirEntry, MkdirOptions, RmOptions, WriteFileOptions, GlobOptions, PermissionSpec } from '@kb-labs/plugin-contracts';
 import { PermissionError } from '@kb-labs/plugin-contracts';
 
 /**
@@ -239,6 +239,48 @@ export function createFSShim(options: CreateFSShimOptions): FSShim {
       // Ensure parent directory exists
       await fs.mkdir(path.dirname(resolvedDest), { recursive: true });
       await fs.rename(resolvedSrc, resolvedDest);
+    },
+
+    async glob(pattern: string, options?: GlobOptions): Promise<string[]> {
+      // Use node:fs to implement simple glob
+      const searchCwd = options?.cwd ? path.resolve(cwd, options.cwd) : cwd;
+      const ignorePatterns = options?.ignore ?? [];
+
+      // Simple recursive file walker
+      const matches: string[] = [];
+
+      async function walk(dir: string): Promise<void> {
+        // Check read permission for directory
+        try {
+          checkReadPermission(dir);
+        } catch {
+          return; // Skip directories we can't read
+        }
+
+        const entries = await fs.readdir(dir, { withFileTypes: true });
+
+        for (const entry of entries) {
+          const fullPath = path.join(dir, entry.name);
+          const relativePath = path.relative(searchCwd, fullPath);
+
+          // Skip ignored patterns
+          if (ignorePatterns.some((ignore: string) => matchesGlobPattern(fullPath, ignore, searchCwd))) {
+            continue;
+          }
+
+          if (entry.isDirectory()) {
+            await walk(fullPath);
+          } else if (entry.isFile()) {
+            // Check if file matches pattern
+            if (matchesGlobPattern(fullPath, pattern, searchCwd)) {
+              matches.push(options?.absolute ? fullPath : relativePath);
+            }
+          }
+        }
+      }
+
+      await walk(searchCwd);
+      return matches;
     },
 
     resolve(filePath: string): string {

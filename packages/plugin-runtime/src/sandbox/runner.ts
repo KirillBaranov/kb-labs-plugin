@@ -87,6 +87,17 @@ export async function runInProcess<T = unknown>(
     outdir,
   });
 
+  // DEBUG: Log descriptor.configSection
+  console.log('[RUNNER IN-PROCESS DEBUG] descriptor.configSection:', descriptor.configSection);
+
+  // Set __KB_CONFIG_SECTION__ for useConfig() auto-detection (in-process mode)
+  if (descriptor.configSection) {
+    (globalThis as any).__KB_CONFIG_SECTION__ = descriptor.configSection;
+    console.log('[RUNNER IN-PROCESS DEBUG] Set __KB_CONFIG_SECTION__ to:', descriptor.configSection);
+  } else {
+    console.log('[RUNNER IN-PROCESS DEBUG] No configSection in descriptor, not setting global');
+  }
+
   // Analytics scope injection for plugin execution
   // Save original source before overriding (for in-process mode)
   let originalSource: { product: string; version: string } | undefined;

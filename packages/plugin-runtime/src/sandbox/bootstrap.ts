@@ -190,6 +190,17 @@ process.on('message', async (msg: ParentMessage) => {
   // Set global context for sandbox proxying (used in compat mode)
   setGlobalContext(context);
 
+  // DEBUG: Log descriptor.configSection
+  console.log('[BOOTSTRAP DEBUG] descriptor.configSection:', descriptor.configSection);
+
+  // Set __KB_CONFIG_SECTION__ for useConfig() auto-detection (subprocess mode)
+  if (descriptor.configSection) {
+    (globalThis as any).__KB_CONFIG_SECTION__ = descriptor.configSection;
+    console.log('[BOOTSTRAP DEBUG] Set __KB_CONFIG_SECTION__ to:', descriptor.configSection);
+  } else {
+    console.log('[BOOTSTRAP DEBUG] No configSection in descriptor, not setting global');
+  }
+
   // Analytics scope injection for plugin execution
   // Save original source before overriding (for subprocess mode - not strictly needed since process dies)
   let originalSource: { product: string; version: string } | undefined;
