@@ -115,3 +115,13 @@ export {
   normalizeHeaders,
   createTimeoutPromise,
 } from './utils.js';
+
+// WebSocket mounting
+export {
+  mountWebSocketChannels,
+  type MountWebSocketChannelsOptions,
+  connectionRegistry,
+  ConnectionRegistry,
+  type ConnectionInfo,
+  createWSSender,
+} from './ws/index.js';
