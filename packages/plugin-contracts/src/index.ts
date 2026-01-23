@@ -19,7 +19,16 @@ export type {
   WorkflowHostContext,
   WebhookHostContext,
   CronHostContext,
+  WebSocketHostContext,
 } from './host-context.js';
+
+// WebSocket types
+export type {
+  WSMessage,
+  WSSender,
+  WSLifecycleEvent,
+  WSInput,
+} from './ws-types.js';
 
 // Logger Metadata
 export { getLoggerMetadataFromHost } from './logger-metadata.js';
@@ -86,6 +95,7 @@ export type {
   MkdirOptions,
   RmOptions,
   WriteFileOptions,
+  GlobOptions,
 } from './runtime.js';
 
 // Platform
@@ -184,6 +194,8 @@ export type {
   CliCommandDecl,
   RestRouteDecl,
   RestConfig,
+  WebSocketChannelDecl,
+  WebSocketConfig,
   WorkflowHandlerDecl,
   WebhookHandlerDecl,
   JobHandlerDecl,

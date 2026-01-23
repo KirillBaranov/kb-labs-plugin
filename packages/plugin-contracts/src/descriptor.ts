@@ -22,4 +22,6 @@ export interface PluginContextDescriptor {
   handlerId?: string;
   requestId: string;
   tenantId?: string;
+  /** Config section from manifest (for useConfig auto-detection) */
+  configSection?: string;
 }

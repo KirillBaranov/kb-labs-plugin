@@ -82,5 +82,15 @@ export function getLoggerMetadataFromHost(hostContext: HostContext): Record<stri
         scheduledAt: hostContext.scheduledAt,
         lastRunAt: hostContext.lastRunAt,
       };
+
+    case 'ws':
+      return {
+        ...base,
+        reqId: hostContext.requestId,
+        traceId: hostContext.traceId,
+        tenantId: hostContext.tenantId,
+        connectionId: hostContext.connectionId,
+        channelPath: hostContext.channelPath,
+      };
   }
 }

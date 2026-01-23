@@ -164,6 +164,67 @@ export interface RestConfig {
 }
 
 /**
+ * WebSocket channel declaration
+ */
+export interface WebSocketChannelDecl {
+  /** Channel path (e.g., '/live', '/chat') */
+  path: string;
+
+  /** Human-readable description */
+  description?: string;
+
+  /** Channel-specific protocol/subprotocol */
+  protocol?: string;
+
+  /** Handler file path relative to plugin root (e.g., './dist/ws/live-handler.js') */
+  handler: string;
+
+  /** Input message schema (client → server) */
+  inputMessage?: SchemaRef;
+
+  /** Output message schema (server → client) */
+  outputMessage?: SchemaRef;
+
+  /** Channel-specific permissions (overrides plugin defaults) */
+  permissions?: PermissionSpec;
+
+  /** Connection timeout in milliseconds */
+  timeoutMs?: number;
+
+  /** Max message size in bytes */
+  maxMessageSize?: number;
+
+  /** Authentication requirement */
+  auth?: 'none' | 'token' | 'session';
+
+  /** Idle timeout (auto-disconnect after this many ms of inactivity) */
+  idleTimeoutMs?: number;
+}
+
+/**
+ * WebSocket configuration in manifest
+ */
+export interface WebSocketConfig {
+  /** Base path for all channels (e.g., '/v1/ws/plugins/commit') */
+  basePath?: `/v1/ws/plugins/${string}`;
+
+  /** Default settings for all channels */
+  defaults?: {
+    /** Default connection timeout (milliseconds) */
+    timeoutMs?: number;
+    /** Default max message size (bytes) */
+    maxMessageSize?: number;
+    /** Default auth requirement */
+    auth?: 'none' | 'token' | 'session';
+    /** Default idle timeout (milliseconds) */
+    idleTimeoutMs?: number;
+  };
+
+  /** Channel declarations */
+  channels: WebSocketChannelDecl[];
+}
+
+/**
  * Workflow handler declaration
  */
 export interface WorkflowHandlerDecl {
@@ -420,6 +481,9 @@ export interface ManifestV3 {
   /** REST API routes */
   rest?: RestConfig;
 
+  /** WebSocket channels (real-time bidirectional communication) */
+  ws?: WebSocketConfig;
+
   /** Workflow handlers (multi-step orchestration) */
   workflows?: {
     handlers: WorkflowHandlerDecl[];
@@ -470,6 +534,8 @@ export function getHandlerPath(
       return manifest.rest?.routes.find(
         (route) => `${route.method} ${route.path}` === id
       )?.handler;
+    case 'ws':
+      return manifest.ws?.channels.find((ch) => ch.path === id)?.handler;
     case 'workflow':
       return manifest.workflows?.handlers.find((h) => h.id === id)?.handler;
     case 'webhook':
@@ -499,6 +565,10 @@ export function getHandlerPermissions(
       handlerPerms = manifest.rest?.routes.find(
         (route) => `${route.method} ${route.path}` === id
       )?.permissions;
+      break;
+    case 'ws':
+      handlerPerms = manifest.ws?.channels.find((ch) => ch.path === id)
+        ?.permissions;
       break;
     case 'workflow':
       handlerPerms = manifest.workflows?.handlers.find((h) => h.id === id)

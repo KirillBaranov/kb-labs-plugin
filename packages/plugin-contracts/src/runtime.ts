@@ -96,6 +96,31 @@ export interface WriteFileOptions {
 }
 
 /**
+ * Options for glob
+ */
+export interface GlobOptions {
+  /**
+   * Current working directory for pattern matching
+   */
+  cwd?: string;
+
+  /**
+   * Patterns to ignore
+   */
+  ignore?: string[];
+
+  /**
+   * Return absolute paths instead of relative
+   */
+  absolute?: boolean;
+
+  /**
+   * Follow symbolic links
+   */
+  followSymlinks?: boolean;
+}
+
+/**
  * Sandboxed filesystem operations
  *
  * All paths are relative to cwd (unless absolute).
@@ -191,6 +216,14 @@ export interface FSShim {
    * @param dest Destination path
    */
   move(src: string, dest: string): Promise<void>;
+
+  /**
+   * Find files matching glob pattern
+   *
+   * @param pattern Glob pattern (e.g., "**​/*.ts", "src/**​/*.{ts,tsx}")
+   * @param options Glob options (cwd, ignore, etc.)
+   */
+  glob(pattern: string, options?: GlobOptions): Promise<string[]>;
 
   /**
    * Resolve path relative to cwd

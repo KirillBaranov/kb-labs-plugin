@@ -90,6 +90,35 @@ export interface CronHostContext {
 }
 
 /**
+ * WebSocket host context - for real-time bidirectional communication
+ */
+export interface WebSocketHostContext {
+  readonly host: 'ws';
+  /** Channel path (e.g., "/live", "/chat") */
+  readonly channelPath: string;
+  /** Connection ID (unique per connection) */
+  readonly connectionId: string;
+  /** Client IP address */
+  readonly clientIp: string;
+  /** Initial HTTP upgrade headers */
+  readonly headers: Record<string, string>;
+  /** Query parameters from upgrade request */
+  readonly query?: Record<string, string>;
+  /** Request ID for correlation */
+  readonly requestId: string;
+  /** Trace ID for distributed tracing */
+  readonly traceId: string;
+  /** Tenant ID for multi-tenancy (optional) */
+  readonly tenantId?: string;
+  /** Authenticated user info (if auth enabled) */
+  readonly user?: {
+    id: string;
+    name?: string;
+    roles?: string[];
+  };
+}
+
+/**
  * Discriminated union of all host contexts
  */
 export type HostContext =
@@ -97,7 +126,8 @@ export type HostContext =
   | RestHostContext
   | WorkflowHostContext
   | WebhookHostContext
-  | CronHostContext;
+  | CronHostContext
+  | WebSocketHostContext;
 
 /**
  * Host type literal
