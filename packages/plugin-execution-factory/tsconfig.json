@@ -1,9 +1,9 @@
 {
-  "extends": "../../tsconfig.base.json",
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "@kb-labs/devkit/tsconfig/node.json",
   "compilerOptions": {
-    "outDir": "./dist",
-    "skipLibCheck": true
+    "rootDir": "src",
+    "outDir": "dist"
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"]
+  "include": ["src"]
 }
