@@ -39,9 +39,9 @@ export interface StandardMeta {
   commandId?: string;
 
   /**
-   * Host type (cli, rest, workflow, webhook, cron)
+   * Host type (cli, rest, workflow, webhook, cron, ws)
    */
-  host: 'cli' | 'rest' | 'workflow' | 'webhook' | 'cron';
+  host: 'cli' | 'rest' | 'workflow' | 'webhook' | 'cron' | 'ws';
 
   /**
    * Tenant ID (for multi-tenancy)

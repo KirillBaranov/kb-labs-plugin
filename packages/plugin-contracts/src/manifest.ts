@@ -380,7 +380,7 @@ export interface CronDecl {
 /**
  * @deprecated Use CronDecl instead (renamed for clarity)
  */
-export interface JobDecl extends CronDecl {}
+export type JobDecl = CronDecl;
 
 /**
  * Lifecycle hook specification
