@@ -1,0 +1,9 @@
+{
+  "files": [],
+  "references": [],
+  "exclude": [
+    "**/__tests__/**",
+    "dist",
+    "node_modules"
+  ]
+}

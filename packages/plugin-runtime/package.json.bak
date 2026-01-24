@@ -1,0 +1,67 @@
+{
+  "name": "@kb-labs/plugin-runtime",
+  "version": "0.1.1",
+  "description": "Plugin System Runtime - Context factory, sandboxed shims, and APIs",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    },
+    "./sandbox": {
+      "types": "./dist/sandbox/index.d.ts",
+      "import": "./dist/sandbox/index.js",
+      "require": "./dist/sandbox/index.js"
+    },
+    "./sandbox/bootstrap": {
+      "types": "./dist/sandbox/bootstrap.d.ts",
+      "import": "./dist/sandbox/bootstrap.js",
+      "require": "./dist/sandbox/bootstrap.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "clean": "rimraf dist",
+    "build": "pnpm clean && tsup --config tsup.config.ts",
+    "dev": "tsup --config tsup.config.ts --watch",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix"
+  },
+  "dependencies": {
+    "@kb-labs/plugin-contracts": "workspace:*",
+    "@kb-labs/core-contracts": "link:../../../kb-labs-core/packages/core-contracts",
+    "@kb-labs/core-platform": "link:../../../kb-labs-core/packages/core-platform",
+    "@kb-labs/studio-contracts": "link:../../../kb-labs-studio/packages/studio-contracts",
+    "@kb-labs/shared-cli-ui": "link:../../../kb-labs-shared/packages/shared-cli-ui"
+  },
+  "devDependencies": {
+    "@kb-labs/devkit": "link:../../../kb-labs-devkit",
+    "@types/node": "^24.3.3",
+    "@vitest/ui": "^3.0.0",
+    "rimraf": "^6.0.1",
+    "tsup": "^8.5.0",
+    "typescript": "^5.6.3",
+    "vitest": "^3.2.4"
+  },
+  "keywords": [
+    "kb-labs",
+    "plugin",
+    "runtime",
+    "v3"
+  ],
+  "license": "MIT",
+  "private": true,
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  }
+}
