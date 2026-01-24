@@ -5,10 +5,8 @@
  * Follows the same pattern as route-mounter but for WebSocket channels.
  */
 
-/// <reference types="@fastify/websocket" />
-
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import fastifyWebsocket, { type WebsocketHandler } from '@fastify/websocket';
+import fastifyWebsocket, { type WebSocketHandler } from '@fastify/websocket';
 import type { WebSocket } from 'ws';
 import type {
   ManifestV3,
@@ -87,10 +85,11 @@ export async function mountWebSocketChannels(
   // Register WebSocket plugin if not already registered
   if (!server.hasPlugin('@fastify/websocket')) {
     try {
-      // TODO: Remove 'as any' when tsup properly supports @fastify/websocket module augmentation
-      // Issue: tsup's DTS generation doesn't see Fastify module augmentation from @fastify/websocket
-      // even with types: ["@fastify/websocket"] in tsconfig. This is a known limitation.
-      await server.register(fastifyWebsocket as any);
+      await server.register(fastifyWebsocket, {
+        options: {
+          maxPayload: options.defaultMaxMessageSize || 1024 * 1024, // 1MB
+        },
+      });
     } catch (error) {
       errors.push(`Failed to register WebSocket plugin: ${error instanceof Error ? error.message : String(error)}`);
       return { mounted, errors };
@@ -104,8 +103,8 @@ export async function mountWebSocketChannels(
       const fullPath = `${basePath}${channel.path}`;
 
       // Register WebSocket route
-      const handler: WebsocketHandler = async (socket, request) => {
-        const ws = socket;
+      const handler: WebSocketHandler = async (connection, request) => {
+        const ws = connection.socket;
         const connectionId = createExecutionId();
 
         // Extract IDs for tracing
@@ -170,7 +169,7 @@ export async function mountWebSocketChannels(
         }
 
         // Handle incoming messages
-        ws.on('message', async (data: Buffer) => {
+        ws.on('message', async (data) => {
           try {
             const rawMessage = JSON.parse(data.toString());
             const messageInput: WSInput = {
@@ -222,7 +221,7 @@ export async function mountWebSocketChannels(
         });
 
         // Handle disconnect
-        ws.on('close', async (code: number, reason: Buffer) => {
+        ws.on('close', async (code, reason) => {
           connectionRegistry.unregister(connectionId);
 
           try {
@@ -249,7 +248,7 @@ export async function mountWebSocketChannels(
         });
 
         // Handle errors
-        ws.on('error', async (error: Error) => {
+        ws.on('error', async (error) => {
           try {
             const errorInput: WSInput = {
               event: 'error',
@@ -273,9 +272,7 @@ export async function mountWebSocketChannels(
         });
       };
 
-      // TODO: Remove 'as any' when tsup properly supports @fastify/websocket module augmentation
-      // Same issue as register() above - tsup DTS generation doesn't see extended types
-      server.get(fullPath, { websocket: true } as any, handler as any);
+      server.get(fullPath, { websocket: true }, handler);
 
       mounted++;
       console.log(`Mounted WebSocket channel: ${fullPath}`);
