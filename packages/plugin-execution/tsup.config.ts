@@ -1,5 +1,5 @@
 import { defineConfig } from 'tsup';
-import nodePreset from '@kb-labs/devkit/tsup/node.js';
+import nodePreset from '@kb-labs/devkit/tsup/node';
 
 export default defineConfig({
   ...nodePreset,
@@ -7,6 +7,7 @@ export default defineConfig({
   entry: {
     index: 'src/index.ts',
     'http/index': 'src/http/index.ts',
+    'ws/index': 'src/ws/index.ts',
     // TODO: worker-script needs type fixes before including in build
     // 'backends/worker-pool/worker-script': 'src/backends/worker-pool/worker-script.ts',
   },
