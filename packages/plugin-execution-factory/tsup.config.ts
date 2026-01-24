@@ -1,17 +1,9 @@
 import { defineConfig } from 'tsup';
+import nodePreset from '@kb-labs/devkit/tsup/node';
 
 export default defineConfig({
+  ...nodePreset,
+  tsconfig: 'tsconfig.build.json',
   entry: ['src/index.ts'],
-  format: ['esm', 'cjs'],
   dts: true,
-  clean: true,
-  splitting: false,
-  sourcemap: true,
-  minify: false,
-  external: [
-    '@kb-labs/plugin-runtime',
-    '@kb-labs/plugin-contracts',
-    '@kb-labs/core-platform',
-    '@kb-labs/core-ipc',
-  ],
 });
