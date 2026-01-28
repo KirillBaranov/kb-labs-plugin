@@ -7,7 +7,7 @@
 
 import { EventEmitter } from 'node:events';
 import type { WorkerPoolConfig } from './types.js';
-import { Worker } from './worker.js';
+import type { Worker } from './worker.js';
 import type { ExecutionRequest, ExecutionResult } from '../../types.js';
 import { QueueFullError } from '../../errors.js';
 import { normalizeError } from '../../utils.js';
@@ -187,7 +187,7 @@ export class WorkerPool extends EventEmitter<PoolEvents> {
 
     try {
       // Try to get available worker immediately
-      let worker = this.executor.getAvailableWorker();
+      const worker = this.executor.getAvailableWorker();
 
       if (worker) {
         return await this.executor.executeOnWorker(
