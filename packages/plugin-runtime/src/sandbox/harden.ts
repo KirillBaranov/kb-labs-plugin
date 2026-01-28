@@ -53,8 +53,8 @@ export function applySandboxPatches(options: SandboxPatchOptions): PatchRestore 
   // Default: enabled for 'enforce', disabled for 'compat'/'warn'
   const shouldShowTrace = (() => {
     const traceEnv = process.env.KB_SANDBOX_TRACE;
-    if (traceEnv === '1') return true;
-    if (traceEnv === '0') return false;
+    if (traceEnv === '1') {return true;}
+    if (traceEnv === '0') {return false;}
     return mode === 'enforce'; // Default: trace only in enforce mode
   })();
 
@@ -305,7 +305,7 @@ function patchFetch(
       }
     } else {
       const allowed = allowedPatterns.some((pattern: string) => {
-        if (pattern === '*') return true;
+        if (pattern === '*') {return true;}
         // Simple pattern matching: 'api.github.com' or '*.github.com'
         if (pattern.startsWith('*.')) {
           return urlObj.hostname.endsWith(pattern.slice(1));

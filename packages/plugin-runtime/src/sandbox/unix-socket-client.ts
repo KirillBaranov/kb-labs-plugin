@@ -68,7 +68,9 @@ export class UnixSocketClient {
 
     if (this.connecting) {
       // Wait for existing connection attempt
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) => {
+        setTimeout(resolve, 100);
+      });
       return this.connect();
     }
 

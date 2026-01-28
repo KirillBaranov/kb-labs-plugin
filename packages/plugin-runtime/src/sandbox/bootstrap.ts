@@ -19,8 +19,7 @@ import { setGlobalContext, clearGlobalContext } from './context-holder.js';
 
 // Initialize platform with adapters from parent process config
 // This must happen BEFORE any handler execution so usePlatform() returns proxy adapters
-let platformReady: Promise<void>;
-platformReady = (async () => {
+const platformReady: Promise<void> = (async () => {
   try {
     // Get platform config from env var (set by parent process)
     const rawConfigJson = process.env.KB_RAW_CONFIG_JSON;
@@ -40,7 +39,7 @@ platformReady = (async () => {
         // 2. This code only runs in child process (sandbox)
         // 3. Error handling below catches missing module
         // 4. Not in package.json dependencies to avoid circular dependency in build graph
-        // @ts-expect-error - Dynamic import to break circular dependency, runtime will resolve
+        // @ts-ignore - Dynamic import to break circular dependency, runtime will resolve
         const { initPlatform } = await import('@kb-labs/core-runtime');
         await initPlatform(platformConfig, process.cwd());
       }
@@ -105,7 +104,7 @@ function createStdoutUI(): UIFacade {
       console.error(boxOutput);
     },
     debug: (msg: string) => {
-      if (process.env.DEBUG) console.debug(msg);
+      if (process.env.DEBUG) {console.debug(msg);}
     },
     spinner: (msg) => {
       console.log(`⟳ ${msg}`);
@@ -121,22 +120,22 @@ function createStdoutUI(): UIFacade {
     newline: () => console.log(),
     divider: () => console.log('─'.repeat(40)),
     box: (content, title) => {
-      if (title) console.log(`┌─ ${title} ─┐`);
+      if (title) {console.log(`┌─ ${title} ─┐`);}
       console.log(content);
-      if (title) console.log(`└${'─'.repeat(title.length + 4)}┘`);
+      if (title) {console.log(`└${'─'.repeat(title.length + 4)}┘`);}
     },
     sideBox: (options) => {
       // Simple implementation for sandbox
-      if (options.title) console.log(`┌─ ${options.title} ─┐`);
+      if (options.title) {console.log(`┌─ ${options.title} ─┐`);}
       if (options.sections) {
         for (const section of options.sections) {
-          if (section.header) console.log(`\n${section.header}`);
+          if (section.header) {console.log(`\n${section.header}`);}
           for (const item of section.items) {
             console.log(`  ${item}`);
           }
         }
       }
-      if (options.title) console.log(`└${'─'.repeat(options.title.length + 4)}┘`);
+      if (options.title) {console.log(`└${'─'.repeat(options.title.length + 4)}┘`);}
     },
     confirm: async () => true,
     prompt: async () => '',
@@ -153,7 +152,7 @@ process.on('message', async (msg: ParentMessage) => {
     return;
   }
 
-  if (msg.type !== 'execute') return;
+  if (msg.type !== 'execute') {return;}
 
   const executeMsg = msg as ExecuteMessage;
   const { descriptor, handlerPath, input, socketPath, cwd, outdir } = executeMsg;

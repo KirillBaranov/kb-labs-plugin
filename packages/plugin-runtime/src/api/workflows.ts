@@ -51,7 +51,7 @@ function checkWorkflowPermission(
     // Check workflow ID scope if specified
     if (workflowId && workflowPerms.workflowIds) {
       const allowed = workflowPerms.workflowIds.some(pattern => {
-        if (pattern === '*') return true;
+        if (pattern === '*') {return true;}
         if (pattern.endsWith('*')) {
           const prefix = pattern.slice(0, -1);
           return workflowId.startsWith(prefix);

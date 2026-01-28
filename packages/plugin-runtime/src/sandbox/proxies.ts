@@ -416,7 +416,7 @@ export function createHttpProxy(fetchShim: FetchShim, protocol: 'http' | 'https'
     }
 
     end(callback?: any): this {
-      if (callback) this._callback = callback;
+      if (callback) {this._callback = callback;}
       // Trigger the request (this should be set by request() method)
       if (this._callback) {
         this._callback();
@@ -463,7 +463,7 @@ export function createHttpProxy(fetchShim: FetchShim, protocol: 'http' | 'https'
         .then(async (response) => {
           const body = await response.text();
           const fakeResponse = new FakeIncomingMessage(response, body);
-          if (callback) callback(fakeResponse);
+          if (callback) {callback(fakeResponse);}
         })
         .catch((err) => {
           console.error(`[SANDBOX] ${protocol}.get() failed:`, err);
@@ -510,7 +510,7 @@ export function createHttpProxy(fetchShim: FetchShim, protocol: 'http' | 'https'
           .then(async (response) => {
             const body = await response.text();
             const fakeResponse = new FakeIncomingMessage(response, body);
-            if (callback) callback(fakeResponse);
+            if (callback) {callback(fakeResponse);}
           })
           .catch((err) => {
             console.error(`[SANDBOX] ${protocol}.request() failed:`, err);
@@ -521,7 +521,7 @@ export function createHttpProxy(fetchShim: FetchShim, protocol: 'http' | 'https'
             }
           });
 
-        if (callback) originalEnd(callback);
+        if (callback) {originalEnd(callback);}
         return this;
       };
 

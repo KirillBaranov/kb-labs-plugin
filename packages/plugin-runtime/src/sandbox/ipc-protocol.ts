@@ -65,7 +65,7 @@ export type ChildMessage = ResultMessage | ErrorMessage | ReadyMessage;
  * Type guard for ParentMessage
  */
 export function isParentMessage(msg: unknown): msg is ParentMessage {
-  if (typeof msg !== 'object' || msg === null) return false;
+  if (typeof msg !== 'object' || msg === null) {return false;}
   const m = msg as { type?: unknown };
   return m.type === 'execute' || m.type === 'abort';
 }
@@ -74,7 +74,7 @@ export function isParentMessage(msg: unknown): msg is ParentMessage {
  * Type guard for ChildMessage
  */
 export function isChildMessage(msg: unknown): msg is ChildMessage {
-  if (typeof msg !== 'object' || msg === null) return false;
+  if (typeof msg !== 'object' || msg === null) {return false;}
   const m = msg as { type?: unknown };
   return m.type === 'result' || m.type === 'error' || m.type === 'ready';
 }

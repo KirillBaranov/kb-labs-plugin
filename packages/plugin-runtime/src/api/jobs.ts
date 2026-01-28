@@ -51,7 +51,7 @@ function checkJobPermission(
     // Check job type scope if specified
     if (jobType && jobPerms.types) {
       const allowed = jobPerms.types.some((pattern: string) => {
-        if (pattern === '*') return true;
+        if (pattern === '*') {return true;}
         if (pattern.endsWith('*')) {
           const prefix = pattern.slice(0, -1);
           return jobType.startsWith(prefix);
@@ -202,10 +202,10 @@ export function createJobsAPI(options: CreateJobsAPIOptions): JobsAPI {
       checkJobPermission(permissions, 'list');
 
       const queryParams = new URLSearchParams();
-      if (filter?.type) queryParams.set('type', filter.type);
-      if (filter?.status) queryParams.set('status', filter.status);
-      if (filter?.limit) queryParams.set('limit', String(filter.limit));
-      if (filter?.offset) queryParams.set('offset', String(filter.offset));
+      if (filter?.type) {queryParams.set('type', filter.type);}
+      if (filter?.status) {queryParams.set('status', filter.status);}
+      if (filter?.limit) {queryParams.set('limit', String(filter.limit));}
+      if (filter?.offset) {queryParams.set('offset', String(filter.offset));}
 
       const query = queryParams.toString();
       const path = query ? `/api/jobs?${query}` : '/api/jobs';
