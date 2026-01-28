@@ -172,7 +172,7 @@ export class WorkerPool extends EventEmitter<PoolEvents> {
 
     try {
       // Try to get available worker immediately
-      let worker = this.getAvailableWorker();
+      const worker = this.getAvailableWorker();
 
       if (worker) {
         return await this.executeOnWorker(worker, request, timeoutMs, startTime);

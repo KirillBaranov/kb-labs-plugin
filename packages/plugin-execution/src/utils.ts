@@ -132,7 +132,7 @@ export function normalizeHeaders(
   const result: Record<string, string> = {};
 
   for (const [key, value] of Object.entries(headers)) {
-    if (value === undefined) continue;
+    if (value === undefined) {continue;}
 
     if (Array.isArray(value)) {
       result[key] = value.join(', ');
