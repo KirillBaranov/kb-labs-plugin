@@ -8,9 +8,7 @@
 import type {
   PlatformServices,
   PermissionSpec,
-  Logger,
   VectorRecord,
-  VectorSearchResult,
   VectorFilter,
 } from '@kb-labs/plugin-contracts';
 import { PermissionError } from '@kb-labs/plugin-contracts';

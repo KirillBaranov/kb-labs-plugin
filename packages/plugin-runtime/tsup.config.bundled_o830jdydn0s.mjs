@@ -1,7 +1,7 @@
 // tsup.config.ts
 import { defineConfig } from "tsup";
 import nodePreset from "@kb-labs/devkit/tsup/node.js";
-var tsup_config_default = defineConfig({
+const tsup_config_default = defineConfig({
   ...nodePreset,
   tsconfig: "tsconfig.build.json",
   entry: {

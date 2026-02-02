@@ -11,43 +11,26 @@ import { PluginError, wrapError } from '@kb-labs/plugin-contracts';
 import { sideBorderBox, safeColors, safeSymbols } from '@kb-labs/shared-cli-ui';
 import { createPluginContextV3 } from '../context/index.js';
 import { executeCleanup } from '../api/index.js';
-import { connectToPlatform } from './platform-client.js';
-// Dynamic import to break circular dependency at compile time
-// import { initPlatform } from '@kb-labs/core-runtime';
 import { applySandboxPatches, type SandboxMode } from './harden.js';
 import { setGlobalContext, clearGlobalContext } from './context-holder.js';
 
-// Initialize platform with adapters from parent process config
-// This must happen BEFORE any handler execution so usePlatform() returns proxy adapters
-const platformReady: Promise<void> = (async () => {
-  try {
-    // Get platform config from env var (set by parent process)
-    const rawConfigJson = process.env.KB_RAW_CONFIG_JSON;
-    if (rawConfigJson) {
-      const rawConfig = JSON.parse(rawConfigJson);
-      const platformConfig = rawConfig.platform;
-
-      if (platformConfig) {
-        // ARCHITECTURE NOTE: Dynamic import to break circular dependency
-        //
-        // Circular dependency chain (if static import used):
-        //   core-runtime → plugin-execution-factory → plugin-runtime → core-runtime
-        //
-        // Solution: Lazy-load core-runtime only at runtime (not compile-time)
-        // This is safe because:
-        // 1. core-runtime is always available at runtime (parent process installs it)
-        // 2. This code only runs in child process (sandbox)
-        // 3. Error handling below catches missing module
-        // 4. Not in package.json dependencies to avoid circular dependency in build graph
-        // @ts-ignore - Dynamic import to break circular dependency, runtime will resolve
-        const { initPlatform } = await import('@kb-labs/core-runtime');
-        await initPlatform(platformConfig, process.cwd());
-      }
-    }
-  } catch (error) {
-    console.error('[bootstrap] Failed to initialize platform in child process:', error);
-  }
-})();
+// ARCHITECTURE NOTE: Platform Initialization in Child Process
+//
+// Platform is NOT initialized in child process via initPlatform().
+// Instead, child process connects to parent's platform via IPC proxy (connectToPlatform).
+// This eliminates circular dependency: core-runtime ↔ plugin-execution-factory ↔ plugin-runtime
+//
+// Flow:
+// 1. Parent process initializes platform (core-runtime/loader.ts)
+// 2. Parent spawns child process (SubprocessBackend via runInSubprocess)
+// 3. Child calls connectToPlatform() to get RPC proxy to parent's platform
+// 4. Child uses platform services via IPC (Unix socket)
+//
+// Legacy code removed (2026-01-28):
+// - Dynamic import of initPlatform() from core-runtime (caused circular dependency)
+// - KB_RAW_CONFIG_JSON env var parsing (no longer needed)
+// - platformReady Promise (no longer needed)
+import { connectToPlatform } from './platform-client.js';
 
 // Create simple stdout UI with MessageOptions support
 function createStdoutUI(): UIFacade {
@@ -167,10 +150,7 @@ process.on('message', async (msg: ParentMessage) => {
     mode: sandboxMode, // Read from KB_SANDBOX_MODE env var
   });
 
-  // Wait for platform to be initialized
-  await platformReady;
-
-  // Connect to platform services via RPC
+  // Connect to platform services via RPC (Unix socket to parent process)
   const platform = await connectToPlatform(socketPath);
 
   // Create stdout UI (plain text output)

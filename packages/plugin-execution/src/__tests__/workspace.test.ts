@@ -4,7 +4,7 @@
  * Tests for workspace leasing (LocalWorkspaceManager).
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { localWorkspaceManager } from '../workspace/local.js';
 import type { WorkspaceRef, LeaseContext } from '../workspace/types.js';
 

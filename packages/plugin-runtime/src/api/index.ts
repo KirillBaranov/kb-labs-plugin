@@ -10,7 +10,7 @@ import type {
 } from '@kb-labs/plugin-contracts';
 import type { IWorkflowEngine } from '@kb-labs/core-platform';
 
-import { createLifecycleAPI, executeCleanup } from './lifecycle.js';
+import { createLifecycleAPI } from './lifecycle.js';
 import { createStateAPI } from './state.js';
 import { createArtifactsAPI } from './artifacts.js';
 import { createShellAPI } from './shell.js';

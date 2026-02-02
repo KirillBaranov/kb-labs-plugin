@@ -14,7 +14,7 @@ import type {
 import { getLoggerMetadataFromHost } from '@kb-labs/plugin-contracts';
 import { createPrefixedLogger } from '@kb-labs/core-platform';
 
-import { createId, extractTraceId } from '../utils/index.js';
+import { createId } from '../utils/index.js';
 import { createTraceContext } from './trace.js';
 import { createRuntimeAPI } from '../runtime/index.js';
 import { createPluginAPI, type EventEmitterFn, type PluginInvokerFn } from '../api/index.js';

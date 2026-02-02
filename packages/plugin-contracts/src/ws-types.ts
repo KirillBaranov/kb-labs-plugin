@@ -88,4 +88,7 @@ export interface WSInput {
 
   /** Disconnect reason (only present for 'disconnect' event) */
   disconnectReason?: string;
+
+  /** WebSocket sender interface (present for all events except 'disconnect') */
+  sender?: WSSender;
 }

@@ -7,9 +7,8 @@
 
 /// <reference types="@fastify/websocket" />
 
-import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import fastifyWebsocket, { type WebsocketHandler } from '@fastify/websocket';
-import type { WebSocket } from 'ws';
 import type {
   ManifestV3,
   PluginContextDescriptor,
@@ -133,6 +132,7 @@ export async function mountWebSocketChannels(
           clientIp: request.ip,
           headers: normalizeHeaders(request.headers),
           query: request.query as Record<string, string> | undefined,
+          params: request.params as Record<string, string> | undefined,
           requestId,
           traceId,
           tenantId,
@@ -150,7 +150,7 @@ export async function mountWebSocketChannels(
 
         // Call onConnect lifecycle
         try {
-          const connectInput: WSInput = { event: 'connect' };
+          const connectInput: WSInput = { event: 'connect', sender };
 
           await options.backend.execute({
             executionId: createExecutionId(),
@@ -181,6 +181,7 @@ export async function mountWebSocketChannels(
                 messageId: rawMessage.messageId,
                 timestamp: rawMessage.timestamp || Date.now(),
               },
+              sender,
             };
 
             await options.backend.execute({
@@ -201,6 +202,7 @@ export async function mountWebSocketChannels(
             const errorInput: WSInput = {
               event: 'error',
               error: error as Error,
+              sender,
             };
 
             try {
@@ -254,6 +256,7 @@ export async function mountWebSocketChannels(
             const errorInput: WSInput = {
               event: 'error',
               error,
+              sender,
             };
 
             await options.backend.execute({

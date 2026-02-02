@@ -4,9 +4,9 @@
  * Tests for HTTP route mounter (mountRoutes function).
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { mountRoutes } from '../http/route-mounter.js';
-import type { ExecutionBackend, ExecutionRequest, ExecutionResult } from '../types.js';
+import type { ExecutionBackend, ExecutionResult } from '../types.js';
 import type { ManifestV3 } from '@kb-labs/plugin-contracts';
 import { DEFAULT_PERMISSIONS } from '@kb-labs/plugin-contracts';
 

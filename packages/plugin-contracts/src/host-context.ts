@@ -104,6 +104,8 @@ export interface WebSocketHostContext {
   readonly headers: Record<string, string>;
   /** Query parameters from upgrade request */
   readonly query?: Record<string, string>;
+  /** Path parameters extracted from URL pattern (e.g., { runId: "abc" } for /events/:runId) */
+  readonly params?: Record<string, string>;
   /** Request ID for correlation */
   readonly requestId: string;
   /** Trace ID for distributed tracing */

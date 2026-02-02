@@ -8,7 +8,6 @@
 import { fork, type ChildProcess } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import { randomBytes } from 'node:crypto';
-import * as path from 'node:path';
 import type {
   WorkerState,
   WorkerInfo,
@@ -16,11 +15,10 @@ import type {
   ExecuteMessage,
   ResultMessage,
   ErrorMessage,
-  HealthOkMessage,
   ReadyMessage,
 } from './types.js';
 import type { ExecutionRequest, ExecutionResult } from '../../types.js';
-import { WorkerCrashedError, WorkerUnhealthyError } from '../../errors.js';
+import { WorkerCrashedError } from '../../errors.js';
 
 /**
  * Worker events.

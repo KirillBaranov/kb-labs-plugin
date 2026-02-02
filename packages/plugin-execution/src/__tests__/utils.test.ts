@@ -7,7 +7,6 @@
 import { describe, it, expect } from 'vitest';
 import { normalizeError, createExecutionId, normalizeHeaders } from '../utils.js';
 import { AbortError, HandlerNotFoundError, TimeoutError, ExecutionLayerError } from '../errors.js';
-import { PluginError } from '@kb-labs/plugin-contracts';
 
 describe('Utils', () => {
   describe('createExecutionId', () => {

@@ -7,7 +7,7 @@
 import type { WorkerPoolConfig } from './types.js';
 import type { Worker } from './worker.js';
 import type { ExecutionRequest, ExecutionResult } from '../../types.js';
-import { WorkerCrashedError, QueueFullError } from '../../errors.js';
+import { WorkerCrashedError } from '../../errors.js';
 import { normalizeError } from '../../utils.js';
 
 /**

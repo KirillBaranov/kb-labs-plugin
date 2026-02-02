@@ -477,8 +477,7 @@ export function createHttpProxy(fetchShim: FetchShim, protocol: 'http' | 'https'
         });
 
       // Return fake ClientRequest
-      const req = new FakeClientRequest();
-      return req;
+      return new FakeClientRequest();
     },
 
     // http.request() / https.request()
@@ -722,8 +721,7 @@ export function createChildProcessProxy(shellAPI: ShellAPI): any {
         });
 
       // Return fake ChildProcess
-      const proc = new FakeChildProcess();
-      return proc;
+      return new FakeChildProcess();
     },
 
     /**
@@ -802,8 +800,7 @@ export function createChildProcessProxy(shellAPI: ShellAPI): any {
           }
         });
 
-      const proc = new FakeChildProcess();
-      return proc;
+      return new FakeChildProcess();
     },
 
     /**

@@ -14,7 +14,6 @@ import type {
   ReadyMessage,
   ShutdownMessage,
 } from './types.js';
-import type { ExecutionRequest, ExecutionResult } from '../../types.js';
 
 // Worker state
 const workerId = process.env.KB_WORKER_ID ?? 'unknown';

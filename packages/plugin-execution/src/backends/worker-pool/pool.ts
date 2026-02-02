@@ -10,7 +10,6 @@ import type {
   WorkerPoolConfig,
   QueuedRequest,
   WorkerPoolStats,
-  DEFAULT_WORKER_POOL_CONFIG,
 } from './types.js';
 import { Worker } from './worker.js';
 import type { ExecutionRequest, ExecutionResult } from '../../types.js';
@@ -18,7 +17,6 @@ import {
   QueueFullError,
   AcquireTimeoutError,
   WorkerCrashedError,
-  WorkerUnhealthyError,
 } from '../../errors.js';
 import { normalizeError } from '../../utils.js';
 

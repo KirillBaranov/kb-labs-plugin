@@ -3,7 +3,7 @@
  */
 
 import type { RuntimeAPI, PermissionSpec } from '@kb-labs/plugin-contracts';
-import { createFSShim, type CreateFSShimOptions } from './fs-shim.js';
+import { createFSShim } from './fs-shim.js';
 import { createFetchShim } from './fetch-shim.js';
 import { createEnvShim } from './env-shim.js';
 
