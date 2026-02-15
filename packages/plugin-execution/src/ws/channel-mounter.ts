@@ -5,8 +5,6 @@
  * Follows the same pattern as route-mounter but for WebSocket channels.
  */
 
-/// <reference types="@fastify/websocket" />
-
 import type { FastifyInstance } from 'fastify';
 import fastifyWebsocket, { type WebsocketHandler } from '@fastify/websocket';
 import type {
