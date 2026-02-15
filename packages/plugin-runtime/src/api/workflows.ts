@@ -119,7 +119,9 @@ export function createWorkflowsAPI(options: CreateWorkflowsAPIOptions): Workflow
         }
 
         // Still running, poll again after interval
-        await new Promise(resolve => setTimeout(resolve, pollInterval));
+        await new Promise(resolve => {
+          setTimeout(resolve, pollInterval);
+        });
       }
 
       throw new Error(`Workflow wait timeout after ${timeout}ms`);

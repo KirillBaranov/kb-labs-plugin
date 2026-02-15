@@ -184,7 +184,9 @@ export function createJobsAPI(options: CreateJobsAPIOptions): JobsAPI {
         }
 
         // Wait before next poll
-        await new Promise(resolve => setTimeout(resolve, pollInterval));
+        await new Promise(resolve => {
+          setTimeout(resolve, pollInterval);
+        });
       }
     },
 

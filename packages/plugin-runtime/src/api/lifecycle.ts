@@ -32,9 +32,9 @@ export async function executeCleanup(
     try {
       await Promise.race([
         cleanup(),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Cleanup timeout')), timeoutMs)
-        ),
+        new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Cleanup timeout')), timeoutMs);
+        }),
       ]);
     } catch (error) {
       logger.warn('Cleanup failed', {
