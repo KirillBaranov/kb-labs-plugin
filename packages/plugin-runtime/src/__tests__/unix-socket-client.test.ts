@@ -107,7 +107,9 @@ describe('UnixSocketClient', () => {
 
       // Cleanup default socket
       await client.close();
-      await new Promise<void>((resolve) => server!.close(() => resolve()));
+      await new Promise<void>((resolve) => {
+        server!.close(() => resolve());
+      });
       server = null;
       if (fs.existsSync(defaultPath)) {
         fs.unlinkSync(defaultPath);
@@ -178,7 +180,9 @@ describe('UnixSocketClient', () => {
     it('should timeout after specified duration', async () => {
       server = await startMockServer(socketPath, async (request) => {
         // Delay response longer than timeout
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        await new Promise((resolve) => {
+          setTimeout(resolve, 1000);
+        });
         return {
           type: 'adapter:response',
           requestId: request.requestId,
@@ -230,7 +234,9 @@ describe('UnixSocketClient', () => {
     it('should reject pending calls on close', async () => {
       server = await startMockServer(socketPath, async (request) => {
         // Delay to keep call pending
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        await new Promise((resolve) => {
+          setTimeout(resolve, 500);
+        });
         return {
           type: 'adapter:response',
           requestId: request.requestId,
