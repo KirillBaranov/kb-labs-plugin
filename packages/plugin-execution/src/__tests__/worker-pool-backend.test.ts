@@ -10,9 +10,9 @@ import type { PlatformServices, PluginContextDescriptor, UIFacade } from '@kb-la
 import { noopUI, DEFAULT_PERMISSIONS } from '@kb-labs/plugin-contracts';
 
 // Mock WorkerPool - must use factory function to avoid hoisting issues
-vi.mock('../backends/worker-pool/pool.js', () => {
+vi.mock('../backends/worker-pool/pool.js', async () => {
   // Import EventEmitter inside factory to avoid hoisting issues
-  const { EventEmitter } = require('node:events');
+  const { EventEmitter } = await import('node:events');
 
   class MockWorkerPool extends EventEmitter {
     private started = false;

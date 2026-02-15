@@ -10,9 +10,9 @@ import type { PluginContextDescriptor } from '@kb-labs/plugin-contracts';
 import { DEFAULT_PERMISSIONS } from '@kb-labs/plugin-contracts';
 
 // Mock the Worker import - must use factory function
-vi.mock('../backends/worker-pool/worker.js', () => {
+vi.mock('../backends/worker-pool/worker.js', async () => {
   // Import EventEmitter inside factory to avoid hoisting issues
-  const { EventEmitter } = require('node:events');
+  const { EventEmitter } = await import('node:events');
 
   class MockWorker extends EventEmitter {
     readonly id: string;
@@ -40,7 +40,9 @@ vi.mock('../backends/worker-pool/worker.js', () => {
 
     async spawn() {
       this._state = 'starting';
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise(resolve => {
+        setTimeout(resolve, 10);
+      });
       this._state = 'idle';
       this._healthy = true;
       this.emit('ready', this);
@@ -51,7 +53,9 @@ vi.mock('../backends/worker-pool/worker.js', () => {
       this._requestCount++;
 
       // Simulate execution
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise(resolve => {
+        setTimeout(resolve, 10);
+      });
 
       this._state = 'idle';
       return {

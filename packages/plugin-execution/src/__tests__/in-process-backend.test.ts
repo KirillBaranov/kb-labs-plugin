@@ -392,7 +392,9 @@ describe('InProcessBackend', () => {
 
     it('should track uptime', async () => {
       // Wait a bit
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise(resolve => {
+        setTimeout(resolve, 10);
+      });
 
       const health = await backend.health();
 
