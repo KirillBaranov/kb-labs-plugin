@@ -247,6 +247,7 @@ export async function runInSubprocess<T = unknown>(
     child.stderr?.pipe(process.stderr);
 
     // Set timeout
+    // eslint-disable-next-line prefer-const
     timeoutId = setTimeout(() => {
       if (!completed) {
         completed = true;

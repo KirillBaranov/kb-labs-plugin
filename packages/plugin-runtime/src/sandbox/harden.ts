@@ -178,6 +178,7 @@ function patchRequire(
         console.warn('⚠️  [COMPAT] Direct fs access detected. Using native fs.');
         console.warn('   Migrate to: await ctx.runtime.fs.readFile(path)');
         console.warn('   Set KB_SANDBOX_MODE=enforce to block this in future');
+        // eslint-disable-next-line prefer-rest-params
         return originalRequire.apply(this, arguments as any);
       } else {
         // Enforce mode - block
@@ -206,6 +207,7 @@ function patchRequire(
         console.warn(`⚠️  [COMPAT] Direct ${protocol} access detected. Using native ${protocol}.`);
         console.warn('   Migrate to: await ctx.runtime.fetch(url)');
         console.warn('   Set KB_SANDBOX_MODE=enforce to block this in future');
+        // eslint-disable-next-line prefer-rest-params
         return originalRequire.apply(this, arguments as any);
       } else {
         // Enforce mode - block
@@ -227,6 +229,7 @@ function patchRequire(
         console.warn('⚠️  [COMPAT] Direct child_process access detected. Using native child_process.');
         console.warn('   Migrate to: await ctx.api.shell.exec(command, args)');
         console.warn('   Set KB_SANDBOX_MODE=enforce to block this in future');
+        // eslint-disable-next-line prefer-rest-params
         return originalRequire.apply(this, arguments as any);
       } else {
         // Enforce mode - block
@@ -247,6 +250,7 @@ function patchRequire(
     }
 
     // Path module is safe, allow it (no proxying needed)
+    // eslint-disable-next-line prefer-rest-params
     return originalRequire.apply(this, arguments as any);
   };
 
