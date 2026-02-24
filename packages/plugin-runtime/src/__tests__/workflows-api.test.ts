@@ -622,6 +622,93 @@ describe('WorkflowsAPI', () => {
       await api.run('any-workflow', {});
       expect(mockEngine.execute).toHaveBeenCalledTimes(1);
     });
+
+    it('should deny targeted workflow run when target namespace is missing', async () => {
+      const api = createWorkflowsAPI({
+        tenantId: 'test-tenant',
+        engine: mockEngine,
+        permissions: {
+          platform: {
+            workflows: { run: true },
+            execution: { targetUse: true, namespaces: ['demo/*'] },
+          },
+        },
+      });
+
+      await expect(
+        api.run('test-workflow', {}, {
+          target: { environmentId: 'env-1' },
+        })
+      ).rejects.toThrow('Target namespace is required when workflow target is specified');
+    });
+
+    it('should deny targeted workflow run outside execution namespace scope', async () => {
+      const api = createWorkflowsAPI({
+        tenantId: 'test-tenant',
+        engine: mockEngine,
+        permissions: {
+          platform: {
+            workflows: { run: true },
+            execution: { targetUse: true, namespaces: ['team-a/*'] },
+          },
+        },
+      });
+
+      await expect(
+        api.run('test-workflow', {}, {
+          target: { environmentId: 'env-1', namespace: 'team-b/dev' },
+        })
+      ).rejects.toThrow(
+        "Target namespace 'team-b/dev' denied: not in allowed execution namespaces scope"
+      );
+    });
+
+    it('should call target execution audit callback for targeted workflow run', async () => {
+      vi.mocked(mockEngine.execute).mockResolvedValue({
+        id: 'run-target-1',
+        workflowId: 'test-workflow',
+        tenantId: 'test-tenant',
+        status: 'running',
+        input: {},
+        steps: [],
+      });
+
+      const auditTargetExecution = vi.fn(async () => undefined);
+      const api = createWorkflowsAPI({
+        tenantId: 'test-tenant',
+        engine: mockEngine,
+        permissions: {
+          platform: {
+            workflows: { run: true },
+            execution: { targetUse: true, namespaces: ['demo/*'] },
+          },
+        },
+        auditTargetExecution,
+      });
+
+      await api.run('test-workflow', {}, {
+        target: { environmentId: 'env-1', namespace: 'demo/dev' },
+      });
+
+      expect(auditTargetExecution).toHaveBeenCalledWith({
+        method: 'workflow',
+        workflowId: 'test-workflow',
+        target: {
+          environmentId: 'env-1',
+          namespace: 'demo/dev',
+        },
+      });
+      expect(mockEngine.execute).toHaveBeenCalledWith(
+        'test-workflow',
+        {},
+        expect.objectContaining({
+          target: {
+            environmentId: 'env-1',
+            namespace: 'demo/dev',
+          },
+        })
+      );
+    });
   });
 
   describe('createNoopWorkflowsAPI', () => {
