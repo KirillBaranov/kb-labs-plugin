@@ -14,6 +14,8 @@ import type {
   ReadyMessage,
   ShutdownMessage,
 } from './types.js';
+import type { PlatformServices } from '@kb-labs/plugin-contracts';
+import { createNoOpPlatform } from '@kb-labs/core-platform/noop';
 
 // Worker state
 const workerId = process.env.KB_WORKER_ID ?? 'unknown';
@@ -23,12 +25,12 @@ let isShuttingDown = false;
  * Handle execute message.
  */
 async function handleExecute(message: ExecuteMessage): Promise<void> {
-  const { requestId, request, timeoutMs } = message;
+  const { requestId, request, timeoutMs: _timeoutMs } = message;
 
   try {
     // Dynamic import to avoid loading at startup
     const { runInProcess } = await import('@kb-labs/plugin-runtime');
-    const { noopUI, DEFAULT_PERMISSIONS } = await import('@kb-labs/plugin-contracts');
+    const { noopUI } = await import('@kb-labs/plugin-contracts');
     const path = await import('node:path');
     const fs = await import('node:fs');
 
@@ -45,60 +47,7 @@ async function handleExecute(message: ExecuteMessage): Promise<void> {
 
     // Create a minimal platform for worker
     // In production, this would be injected via config
-    const platform = {
-      logger: {
-        debug: () => {},
-        info: () => {},
-        warn: () => {},
-        error: () => {},
-        trace: () => {},
-        child: () => platform.logger,
-      },
-      llm: {
-        complete: async () => ({
-          content: '',
-          usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
-          model: 'noop'
-        }),
-        stream: async function* () {},
-      },
-      cache: {
-        get: async () => null,
-        set: async () => {},
-        delete: async () => {},
-        clear: async () => {},
-      },
-      embeddings: {
-        embed: async () => [],
-        embedBatch: async () => [],
-        dimensions: 1536,
-        getDimensions: async () => 1536,
-      },
-      vectorStore: {
-        upsert: async () => {},
-        search: async () => [],
-        delete: async () => {},
-        get: async () => null,
-      },
-      storage: {
-        get: async () => undefined,
-        set: async () => {},
-        delete: async () => {},
-        list: async () => [],
-        exists: async () => false,
-      },
-      analytics: {
-        track: () => {},
-        identify: () => {},
-        flush: async () => {},
-      },
-      eventBus: {
-        on: () => () => {},
-        once: () => () => {},
-        off: () => {},
-        emit: () => {},
-      },
-    };
+    const platform = createNoOpPlatform() as unknown as PlatformServices;
 
     // Execute handler
     const result = await runInProcess({
@@ -106,6 +55,7 @@ async function handleExecute(message: ExecuteMessage): Promise<void> {
       platform,
       ui: noopUI,
       handlerPath,
+      cwd: request.pluginRoot,
       input: request.input,
     });
 
@@ -120,7 +70,7 @@ async function handleExecute(message: ExecuteMessage): Promise<void> {
         metadata: {
           backend: 'worker-pool',
           workerId,
-          executionMeta: result.meta,
+          executionMeta: result.executionMeta,
         },
       },
     };

@@ -44,6 +44,7 @@ export function createExecutionBackend(options: BackendOptions): ExecutionBacken
       return new InProcessBackend({
         platform: options.platform,
         uiProvider: options.uiProvider,
+        pluginInvoker: options.pluginInvoker,
       });
 
     case 'subprocess':

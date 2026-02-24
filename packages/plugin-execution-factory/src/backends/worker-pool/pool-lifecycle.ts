@@ -128,7 +128,7 @@ export class PoolLifecycleManager {
   private handleWorkerExit(
     worker: Worker,
     code: number | null,
-    signal: string | null
+    _signal: string | null
   ): void {
     this.workers.delete(worker.id);
     this.onWorkerExited(worker, code);

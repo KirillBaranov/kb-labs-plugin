@@ -59,4 +59,5 @@ export type {
   ExecutionError,
   HealthStatus,
   ExecutionStats,
+  PluginInvokerFn,
 } from './types.js';

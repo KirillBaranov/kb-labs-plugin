@@ -45,6 +45,7 @@ import type {
   HealthStatus,
   ExecutionStats,
   HostType,
+  PluginInvokerFn,
 } from '../types.js';
 import type { PlatformServices, UIFacade } from '@kb-labs/plugin-contracts';
 import { noopUI } from '@kb-labs/plugin-contracts';
@@ -52,6 +53,7 @@ import { runInProcess } from '@kb-labs/plugin-runtime';
 import { localWorkspaceManager } from '../workspace/local.js';
 import type { WorkspaceLease } from '../workspace/types.js';
 import { normalizeError } from '../utils.js';
+import { resolveExecutionTarget } from '../target-resolver.js';
 import {
   AbortError,
   HandlerNotFoundError,
@@ -68,6 +70,10 @@ export interface InProcessBackendOptions {
    * For CLI: return real UI when hostType === 'cli'.
    */
   uiProvider?: (hostType: HostType) => UIFacade;
+  /**
+   * Optional default plugin invoker for ctx.api.invoke.
+   */
+  pluginInvoker?: PluginInvokerFn;
 }
 
 /**
@@ -84,10 +90,12 @@ export class InProcessBackend implements ExecutionBackend {
   private startTime = Date.now();
   private readonly platform: PlatformServices;
   private readonly uiProvider: (hostType: HostType) => UIFacade;
+  private readonly pluginInvoker?: PluginInvokerFn;
 
   constructor(options: InProcessBackendOptions) {
     this.platform = options.platform;
     this.uiProvider = options.uiProvider ?? (() => noopUI);
+    this.pluginInvoker = options.pluginInvoker;
   }
 
   async execute(
@@ -96,6 +104,7 @@ export class InProcessBackend implements ExecutionBackend {
   ): Promise<ExecutionResult> {
     const start = performance.now();
     let lease: WorkspaceLease | undefined;
+    let resolvedTarget = request.target;
 
     try {
       // 1. Check abort before starting
@@ -103,17 +112,20 @@ export class InProcessBackend implements ExecutionBackend {
         throw new AbortError('Execution aborted before start');
       }
 
+      const requestToExecute = await resolveExecutionTarget(request, this.platform);
+      resolvedTarget = requestToExecute.target;
+
       // 2. Lease workspace (trivial for local)
       // NOTE: Uses request.executionId, NOT descriptor.requestId (v4 fix)
-      lease = await localWorkspaceManager.lease(request.workspace, {
-        executionId: request.executionId,
-        pluginRoot: request.pluginRoot,
+      lease = await localWorkspaceManager.lease(requestToExecute.workspace, {
+        executionId: requestToExecute.executionId,
+        pluginRoot: requestToExecute.pluginRoot,
       });
 
       // 3. Resolve handler path and verify existence
       // handlerRef format: './path/to/file.js#exportName' or './path/to/file.js'
-      const hashIndex = request.handlerRef.indexOf('#');
-      const relPath = hashIndex > 0 ? request.handlerRef.slice(0, hashIndex) : request.handlerRef;
+      const hashIndex = requestToExecute.handlerRef.indexOf('#');
+      const relPath = hashIndex > 0 ? requestToExecute.handlerRef.slice(0, hashIndex) : requestToExecute.handlerRef;
       const handlerPath = path.resolve(lease.pluginRoot, relPath);
 
       if (!fs.existsSync(handlerPath)) {
@@ -122,17 +134,19 @@ export class InProcessBackend implements ExecutionBackend {
 
       // 4. Get UI based on host type (v4: supports CLI UI)
       const ui = this.uiProvider(request.descriptor.hostType);
+      const pluginInvoker = options?.pluginInvoker ?? this.pluginInvoker;
 
       // 5. Execute via runtime
       // NOTE: request.descriptor is PluginContextDescriptor - passed AS-IS!
       // No conversion needed (v3 unified types).
       // v5: runInProcess returns RunResult<T> with raw data
       const runResult = await runInProcess({
-        descriptor: request.descriptor,  // Direct pass-through!
+        descriptor: requestToExecute.descriptor,  // Direct pass-through!
         platform: this.platform,
         ui,
+        pluginInvoker,
         handlerPath,
-        input: request.input,
+        input: requestToExecute.input,
         signal: options?.signal,
         cwd: lease.cwd,           // From WorkspaceLease
         outdir: undefined,        // Optional, defaults to cwd/.kb/output
@@ -153,6 +167,7 @@ export class InProcessBackend implements ExecutionBackend {
           workspaceId: lease.workspaceId,
           // v5: Include execution meta for consumers who need it
           executionMeta: runResult.executionMeta,
+          target: resolvedTarget,
         },
       };
     } catch (error) {
@@ -166,6 +181,7 @@ export class InProcessBackend implements ExecutionBackend {
         metadata: {
           backend: 'in-process',
           workspaceId: lease?.workspaceId,
+          target: resolvedTarget,
         },
       };
     } finally {

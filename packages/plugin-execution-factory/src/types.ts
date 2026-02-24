@@ -27,10 +27,21 @@ import type {
   PermissionSpec,
   UIFacade,
   ExecutionMeta,
+  InvokeOptions,
+  ExecutionTarget,
 } from '@kb-labs/plugin-contracts';
 
 // Re-export runtime types for convenience (consumers use these, not custom types)
 export type { PluginContextDescriptor, HostContext, HostType, PermissionSpec };
+
+/**
+ * Plugin invoker callback for ctx.api.invoke wiring.
+ */
+export type PluginInvokerFn = <T = unknown>(
+  pluginId: string,
+  input?: unknown,
+  options?: InvokeOptions
+) => Promise<T>;
 
 // ============================================================================
 // Protocol Version
@@ -187,6 +198,11 @@ export interface ExecutionRequest {
    * Default: 30000 (30 seconds)
    */
   timeoutMs?: number;
+
+  /**
+   * Optional target affinity for execution context.
+   */
+  target?: ExecutionTarget;
 }
 
 // ============================================================================
@@ -353,6 +369,11 @@ export interface ExecutionMetadata {
    * This is the host-agnostic execution info from RunResult.
    */
   executionMeta?: ExecutionMeta;
+
+  /**
+   * Resolved execution target used for this run.
+   */
+  target?: ExecutionTarget;
 }
 
 // ============================================================================
@@ -408,6 +429,11 @@ export interface ExecutionBackend {
 export interface ExecuteOptions {
   /** Abort signal for cancellation */
   signal?: AbortSignal;
+  /**
+   * Optional per-execution plugin invoker.
+   * Currently used by InProcess backend.
+   */
+  pluginInvoker?: PluginInvokerFn;
 }
 
 /**
@@ -492,6 +518,12 @@ export interface BackendOptions {
    * ```
    */
   uiProvider?: (hostType: HostType) => UIFacade;
+
+  /**
+   * Optional default plugin invoker for ctx.api.invoke.
+   * Used by InProcess backend and can be overridden per execute() call.
+   */
+  pluginInvoker?: PluginInvokerFn;
 
   /**
    * Worker pool options (only for worker-pool mode).

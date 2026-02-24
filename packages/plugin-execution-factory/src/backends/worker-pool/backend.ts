@@ -21,6 +21,7 @@ import type { PlatformServices, UIFacade } from '@kb-labs/plugin-contracts';
 import { noopUI } from '@kb-labs/plugin-contracts';
 import { WorkerPool } from './pool.js';
 import type { WorkerPoolConfig } from './types.js';
+import { resolveExecutionTarget } from '../../target-resolver.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -154,10 +155,11 @@ export class WorkerPoolBackend implements ExecutionBackend {
     }
 
     const start = performance.now();
+    const requestToExecute = await resolveExecutionTarget(request, this.platform);
     this.totalExecutions++;
 
     try {
-      const result = await this.pool!.execute(request, {
+      const result = await this.pool!.execute(requestToExecute, {
         signal: options?.signal,
       });
 
@@ -177,6 +179,7 @@ export class WorkerPoolBackend implements ExecutionBackend {
       result.metadata = {
         ...result.metadata,
         backend: 'worker-pool',
+        target: requestToExecute.target,
       };
 
       return result;
@@ -194,6 +197,7 @@ export class WorkerPoolBackend implements ExecutionBackend {
         executionTimeMs,
         metadata: {
           backend: 'worker-pool',
+          target: requestToExecute.target,
         },
       };
     }
@@ -240,8 +244,6 @@ export class WorkerPoolBackend implements ExecutionBackend {
    * Get execution statistics.
    */
   async stats(): Promise<ExecutionStats> {
-    const poolStats = this.pool?.getStats();
-
     // Calculate percentiles
     let p95: number | undefined;
     let p99: number | undefined;
