@@ -16,23 +16,23 @@ function createMockPlatformServices(): PlatformServices {
       info: vi.fn(),
       warn: vi.fn(),
       error: vi.fn(),
-      child: vi.fn((context) => createMockPlatformServices().logger),
+      child: vi.fn((_context) => createMockPlatformServices().logger),
     } as any,
 
     llm: {
-      complete: vi.fn(async (prompt, options) => ({
+      complete: vi.fn(async (_prompt, options) => ({
         content: 'mock response',
         usage: { promptTokens: 10, completionTokens: 20 },
         model: options?.model || 'gpt-4o-mini',
       })),
-      stream: vi.fn(async function* (prompt, options) {
+      stream: vi.fn(async function* (_prompt, _options) {
         yield 'mock';
         yield ' response';
       }),
     } as any,
 
     embeddings: {
-      embed: vi.fn(async (text) => [0.1, 0.2, 0.3]),
+      embed: vi.fn(async (_text) => [0.1, 0.2, 0.3]),
       embedBatch: vi.fn(async (texts) => texts.map(() => [0.1, 0.2, 0.3])),
       dimensions: 1536,
       getDimensions: vi.fn(async () => 1536),
@@ -69,9 +69,17 @@ function createMockPlatformServices(): PlatformServices {
     } as any,
 
     eventBus: {
-      on: vi.fn(),
-      emit: vi.fn(async () => {}),
-      off: vi.fn(),
+      publish: vi.fn(async () => {}),
+      subscribe: vi.fn(() => () => {}),
+    } as any,
+
+    logs: {
+      query: vi.fn(async () => ({ logs: [], total: 0, hasMore: false, source: 'buffer' as const })),
+      getById: vi.fn(async () => null),
+      search: vi.fn(async () => ({ logs: [], total: 0, hasMore: false })),
+      subscribe: vi.fn(() => () => {}),
+      getStats: vi.fn(async () => ({})),
+      getCapabilities: vi.fn(() => ({ hasBuffer: false, hasPersistence: false, hasSearch: false, hasStreaming: false })),
     } as any,
   };
 }
@@ -207,7 +215,7 @@ describe('createGovernedPlatformServices', () => {
   describe('Cache', () => {
     it('should allow cache operations with namespace permission', async () => {
       const permissions: PermissionSpec = {
-        platform: { cache: ['test:'] },
+        platform: { cache: { namespaces: ['test:'] } },
       };
       const governed = createGovernedPlatformServices(rawPlatform, permissions, 'test-plugin');
 
@@ -222,7 +230,7 @@ describe('createGovernedPlatformServices', () => {
 
     it('should enforce namespace restrictions', async () => {
       const permissions: PermissionSpec = {
-        platform: { cache: ['test:'] },
+        platform: { cache: { namespaces: ['test:'] } },
       };
       const governed = createGovernedPlatformServices(rawPlatform, permissions, 'test-plugin');
 
@@ -236,7 +244,7 @@ describe('createGovernedPlatformServices', () => {
 
     it('should proxy sorted set operations with namespace check', async () => {
       const permissions: PermissionSpec = {
-        platform: { cache: ['queue:'] },
+        platform: { cache: { namespaces: ['queue:'] } },
       };
       const governed = createGovernedPlatformServices(rawPlatform, permissions, 'test-plugin');
 
@@ -251,7 +259,7 @@ describe('createGovernedPlatformServices', () => {
 
     it('should proxy setIfNotExists with namespace check', async () => {
       const permissions: PermissionSpec = {
-        platform: { cache: ['lock:'] },
+        platform: { cache: { namespaces: ['lock:'] } },
       };
       const governed = createGovernedPlatformServices(rawPlatform, permissions, 'test-plugin');
 
@@ -263,7 +271,7 @@ describe('createGovernedPlatformServices', () => {
 
     it('should require full permission for clear()', async () => {
       const permissions: PermissionSpec = {
-        platform: { cache: ['test:'] },
+        platform: { cache: { namespaces: ['test:'] } },
       };
       const governed = createGovernedPlatformServices(rawPlatform, permissions, 'test-plugin');
 
@@ -289,6 +297,35 @@ describe('createGovernedPlatformServices', () => {
       expect(rawPlatform.cache.clear).toHaveBeenCalledWith('test:*');
     });
 
+    it('should allow cache operations when permission is string[] (builder format)', async () => {
+      const permissions: PermissionSpec = {
+        platform: { cache: ['commit:'] as any },
+      };
+      const governed = createGovernedPlatformServices(rawPlatform, permissions, 'test-plugin');
+
+      await governed.cache.set('commit:plan', 'value', 1000);
+      await governed.cache.get('commit:plan');
+      await governed.cache.delete('commit:plan');
+
+      expect(rawPlatform.cache.set).toHaveBeenCalledWith('commit:plan', 'value', 1000);
+      expect(rawPlatform.cache.get).toHaveBeenCalledWith('commit:plan');
+      expect(rawPlatform.cache.delete).toHaveBeenCalledWith('commit:plan');
+    });
+
+    it('should enforce namespace restrictions when permission is string[]', async () => {
+      const permissions: PermissionSpec = {
+        platform: { cache: ['commit:'] as any },
+      };
+      const governed = createGovernedPlatformServices(rawPlatform, permissions, 'test-plugin');
+
+      // Allowed namespace
+      await governed.cache.set('commit:files-list:root', 'value');
+      expect(rawPlatform.cache.set).toHaveBeenCalled();
+
+      // Disallowed namespace
+      await expect(governed.cache.set('other:key', 'value')).rejects.toThrow(PermissionError);
+    });
+
     it('should deny access when permission not granted', () => {
       const permissions: PermissionSpec = {
         platform: {},
@@ -302,7 +339,7 @@ describe('createGovernedPlatformServices', () => {
   describe('Storage', () => {
     it('should allow storage operations within permitted paths', async () => {
       const permissions: PermissionSpec = {
-        platform: { storage: ['.kb/data/'] },
+        platform: { storage: { paths: ['.kb/data/'] } },
       };
       const governed = createGovernedPlatformServices(rawPlatform, permissions, 'test-plugin');
 
@@ -321,7 +358,7 @@ describe('createGovernedPlatformServices', () => {
 
     it('should enforce path restrictions', async () => {
       const permissions: PermissionSpec = {
-        platform: { storage: ['.kb/data/'] },
+        platform: { storage: { paths: ['.kb/data/'] } },
       };
       const governed = createGovernedPlatformServices(rawPlatform, permissions, 'test-plugin');
 
@@ -383,8 +420,8 @@ describe('createGovernedPlatformServices', () => {
       };
       const governed = createGovernedPlatformServices(rawPlatform, permissions, 'test-plugin');
 
-      await governed.eventBus.emit('test.event', { data: 123 });
-      expect(rawPlatform.eventBus.emit).toHaveBeenCalledWith('test.event', { data: 123 });
+      await governed.eventBus.publish('test.event', { data: 123 });
+      expect(rawPlatform.eventBus.publish).toHaveBeenCalledWith('test.event', { data: 123 });
     });
   });
 
@@ -434,8 +471,8 @@ describe('createGovernedPlatformServices', () => {
     it('should handle empty namespace/path arrays (deny all)', async () => {
       const permissions: PermissionSpec = {
         platform: {
-          cache: [],
-          storage: [],
+          cache: { namespaces: [] },
+          storage: { paths: [] },
         },
       };
       const governed = createGovernedPlatformServices(rawPlatform, permissions, 'test-plugin');
