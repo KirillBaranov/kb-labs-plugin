@@ -483,7 +483,7 @@ export class WorkerPool extends EventEmitter<PoolEvents> {
   private handleWorkerExit(
     worker: Worker,
     code: number | null,
-    signal: string | null
+    _signal: string | null
   ): void {
     this.workers.delete(worker.id);
     this.emit('workerExited', worker, code);

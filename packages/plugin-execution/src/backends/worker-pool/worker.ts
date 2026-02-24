@@ -335,7 +335,7 @@ export class Worker extends EventEmitter<WorkerEvents> {
     }
 
     // Reject all pending requests
-    for (const [id, pending] of this.pendingRequests) {
+    for (const [_id, pending] of this.pendingRequests) {
       clearTimeout(pending.timeoutId);
       pending.reject(new WorkerCrashedError(this.id));
     }
@@ -409,7 +409,7 @@ export class Worker extends EventEmitter<WorkerEvents> {
     this.process = null;
 
     // Reject all pending requests
-    for (const [id, pending] of this.pendingRequests) {
+    for (const [_id, pending] of this.pendingRequests) {
       clearTimeout(pending.timeoutId);
       pending.reject(new WorkerCrashedError(this.id, code ?? undefined, signal ?? undefined));
     }

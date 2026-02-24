@@ -7,7 +7,7 @@
  * ExecutionError interface in types.ts. This is intentional.
  */
 
-import type { ExecutionErrorCode } from './types.js';
+import type { ExecutionErrorCode, ExecutionError } from './types.js';
 
 /**
  * All known error codes for type guards.
@@ -61,7 +61,7 @@ export class ExecutionLayerError extends Error {
   /**
    * Convert to ExecutionError interface for serialization.
    */
-  toJSON(): import('./types.js').ExecutionError {
+  toJSON(): ExecutionError {
     return {
       message: this.message,
       code: this.code,

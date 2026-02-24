@@ -141,7 +141,7 @@ describe('ConnectionRegistry', () => {
 
       const connections = registry.getChannelConnections('/test');
       expect(connections).toHaveLength(1);
-      expect(connections[0].connectionId).toBe('conn-2');
+      expect(connections[0]?.connectionId).toBe('conn-2');
     });
 
     it('should handle unregistering non-existent connection gracefully', () => {

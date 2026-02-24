@@ -135,6 +135,12 @@ export async function mountRoutes(
           hostContext,
           // Note: config is loaded at runtime from kb.config.json using manifest.configSection
         };
+        Object.assign(descriptor as unknown as Record<string, unknown>, {
+          traceId,
+          spanId: executionId,
+          invocationId: executionId,
+          executionId,
+        });
 
         const result = await options.backend.execute(
           {

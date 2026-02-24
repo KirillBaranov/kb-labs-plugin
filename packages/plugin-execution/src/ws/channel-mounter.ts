@@ -145,23 +145,41 @@ export async function mountWebSocketChannels(
           permissions: channel.permissions || manifest.permissions || DEFAULT_PERMISSIONS,
           hostContext,
         };
+        Object.assign(descriptor as unknown as Record<string, unknown>, { traceId });
+
+        const executeChannelHandler = async (input: WSInput, timeoutMs?: number): Promise<void> => {
+          const executionId = createExecutionId();
+          const result = await options.backend.execute({
+            executionId,
+            descriptor: Object.assign({ ...descriptor }, {
+              executionId,
+              spanId: executionId,
+              invocationId: executionId,
+            }) as PluginContextDescriptor,
+            pluginRoot: options.pluginRoot,
+            handlerRef: channel.handler,
+            input,
+            workspace: {
+              type: 'local',
+              cwd: options.workspaceRoot,
+            },
+            timeoutMs,
+          });
+          // Propagate backend errors so onConnect catch block can close the socket
+          if (!result.ok) {
+            throw new Error(result.error?.message ?? 'Handler execution failed');
+          }
+        };
 
         // Call onConnect lifecycle
         try {
           const connectInput: WSInput = { event: 'connect', sender };
-
-          await options.backend.execute({
-            executionId: createExecutionId(),
-            descriptor,
-            pluginRoot: options.pluginRoot,
-            handlerRef: channel.handler,
-            input: connectInput,
-            workspace: {
-              type: 'local',
-            },
-          });
+          await executeChannelHandler(connectInput);
         } catch (error) {
-          console.error('WebSocket onConnect failed:', error);
+          server.log.error(
+            { err: error, plugin: manifest.id, channel: channel.path, connectionId },
+            `[ws] onConnect failed — plugin "${manifest.id}", channel "${channel.path}"`
+          );
           ws.close(1011, 'Handler error');
           connectionRegistry.unregister(connectionId);
           return;
@@ -181,20 +199,12 @@ export async function mountWebSocketChannels(
               },
               sender,
             };
-
-            await options.backend.execute({
-              executionId: createExecutionId(),
-              descriptor,
-              pluginRoot: options.pluginRoot,
-              handlerRef: channel.handler,
-              input: messageInput,
-              workspace: {
-                type: 'local',
-                
-              },
-            });
+            await executeChannelHandler(messageInput);
           } catch (error) {
-            console.error('WebSocket onMessage failed:', error);
+            server.log.error(
+              { err: error, plugin: manifest.id, channel: channel.path, connectionId },
+              `[ws] onMessage failed — plugin "${manifest.id}", channel "${channel.path}"`
+            );
 
             // Call onError handler
             const errorInput: WSInput = {
@@ -204,19 +214,12 @@ export async function mountWebSocketChannels(
             };
 
             try {
-              await options.backend.execute({
-                executionId: createExecutionId(),
-                descriptor,
-                pluginRoot: options.pluginRoot,
-                handlerRef: channel.handler,
-                input: errorInput,
-                workspace: {
-                  type: 'local',
-                  
-                },
-              });
+              await executeChannelHandler(errorInput);
             } catch (err) {
-              console.error('WebSocket onError failed:', err);
+              server.log.error(
+                { err, plugin: manifest.id, channel: channel.path, connectionId },
+                `[ws] onError handler also failed — plugin "${manifest.id}", channel "${channel.path}"`
+              );
             }
           }
         });
@@ -231,20 +234,12 @@ export async function mountWebSocketChannels(
               disconnectCode: code,
               disconnectReason: reason.toString(),
             };
-
-            await options.backend.execute({
-              executionId: createExecutionId(),
-              descriptor,
-              pluginRoot: options.pluginRoot,
-              handlerRef: channel.handler,
-              input: disconnectInput,
-              workspace: {
-                type: 'local',
-                
-              },
-            });
+            await executeChannelHandler(disconnectInput);
           } catch (error) {
-            console.error('WebSocket onDisconnect failed:', error);
+            server.log.error(
+              { err: error, plugin: manifest.id, channel: channel.path, connectionId, code },
+              `[ws] onDisconnect failed — plugin "${manifest.id}", channel "${channel.path}"`
+            );
           }
         });
 
@@ -256,20 +251,12 @@ export async function mountWebSocketChannels(
               error,
               sender,
             };
-
-            await options.backend.execute({
-              executionId: createExecutionId(),
-              descriptor,
-              pluginRoot: options.pluginRoot,
-              handlerRef: channel.handler,
-              input: errorInput,
-              workspace: {
-                type: 'local',
-                
-              },
-            });
+            await executeChannelHandler(errorInput);
           } catch (err) {
-            console.error('WebSocket onError handler failed:', err);
+            server.log.error(
+              { err, plugin: manifest.id, channel: channel.path, connectionId },
+              `[ws] onError handler failed — plugin "${manifest.id}", channel "${channel.path}"`
+            );
           }
         });
       };
@@ -279,11 +266,11 @@ export async function mountWebSocketChannels(
       server.get(fullPath, { websocket: true } as any, handler as any);
 
       mounted++;
-      console.log(`Mounted WebSocket channel: ${fullPath}`);
+      server.log.info({ plugin: manifest.id, channel: channel.path, fullPath }, `[ws] Mounted WebSocket channel: ${fullPath}`);
     } catch (error) {
-      const errorMsg = `Failed to mount channel ${channel.path}: ${error instanceof Error ? error.message : String(error)}`;
+      const errorMsg = `[ws] Failed to mount channel "${channel.path}" (plugin: ${manifest.id}): ${error instanceof Error ? error.message : String(error)}`;
       errors.push(errorMsg);
-      console.error(errorMsg, error);
+      server.log.error({ err: error, plugin: manifest.id, channel: channel.path }, errorMsg);
     }
   }
 

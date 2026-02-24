@@ -38,6 +38,7 @@ export type {
   ExecutionErrorCode,
   ExecutionMetadata,
   ExecuteOptions,
+  PluginInvokerFn,
 
   // Runtime types (re-exported from plugin-contracts)
   // NOTE: No custom ExecutionDescriptor or HostContext - use runtime types directly!

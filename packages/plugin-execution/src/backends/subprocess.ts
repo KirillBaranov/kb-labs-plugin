@@ -64,6 +64,7 @@ import type { ISubprocessRunner } from '@kb-labs/core-contracts';
 import { localWorkspaceManager } from '../workspace/local.js';
 import type { WorkspaceLease } from '../workspace/types.js';
 import { normalizeError } from '../utils.js';
+import { resolveExecutionTarget } from '../target-resolver.js';
 import {
   AbortError,
   HandlerNotFoundError,
@@ -249,6 +250,8 @@ export class SubprocessBackend implements ExecutionBackend {
     const start = performance.now();
     let lease: WorkspaceLease | undefined;
     let ipcServer: IPCServer | undefined;
+    let resolvedExecutionId = request.executionId;
+    let resolvedTarget = request.target;
 
     try {
       // 1. Check abort before starting
@@ -256,15 +259,19 @@ export class SubprocessBackend implements ExecutionBackend {
         throw new AbortError('Execution aborted before start');
       }
 
+      const requestToExecute = await resolveExecutionTarget(request, this.platform);
+      resolvedExecutionId = requestToExecute.executionId;
+      resolvedTarget = requestToExecute.target;
+
       // 2. Lease workspace (trivial for local)
-      lease = await localWorkspaceManager.lease(request.workspace, {
-        executionId: request.executionId,
-        pluginRoot: request.pluginRoot,
+      lease = await localWorkspaceManager.lease(requestToExecute.workspace, {
+        executionId: requestToExecute.executionId,
+        pluginRoot: requestToExecute.pluginRoot,
       });
 
       // 3. Resolve handler path and verify existence
-      const hashIndex = request.handlerRef.indexOf('#');
-      const relPath = hashIndex > 0 ? request.handlerRef.slice(0, hashIndex) : request.handlerRef;
+      const hashIndex = requestToExecute.handlerRef.indexOf('#');
+      const relPath = hashIndex > 0 ? requestToExecute.handlerRef.slice(0, hashIndex) : requestToExecute.handlerRef;
       const handlerPath = path.resolve(lease.pluginRoot, relPath);
 
       if (!fs.existsSync(handlerPath)) {
@@ -272,29 +279,29 @@ export class SubprocessBackend implements ExecutionBackend {
       }
 
       // 4. Create IPC server using factory (platform-specific)
-      ipcServer = await this.ipcServerFactory(this.platform, request.executionId);
+      ipcServer = await this.ipcServerFactory(this.platform, requestToExecute.executionId);
       await ipcServer.start();
 
       // Track active server
-      this.activeServers.set(request.executionId, ipcServer);
+      this.activeServers.set(requestToExecute.executionId, ipcServer);
 
       // 5. Get connection info for subprocess
       const socketPath = ipcServer.getConnectionInfo();
 
       // 6. Get timeout (from request or default)
-      const timeoutMs = request.timeoutMs ?? this.defaultTimeoutMs;
+      const timeoutMs = requestToExecute.timeoutMs ?? this.defaultTimeoutMs;
 
       // 7. Execute via subprocess runner (dependency injection)
       // NOTE: UI is not passed to subprocess - subprocess uses platform proxy
       // UI would need to be serialized and proxied, which is complex
       // For now, subprocess handlers use noopUI or log via platform.logger
       const runResult = await this.runner.runInSubprocess({
-        descriptor: request.descriptor,
+        descriptor: requestToExecute.descriptor,
         platformSocketPath: socketPath,
         platformAuthToken: '', // TODO: Add auth token from platform server
         handlerPath,
-        exportName: request.exportName,
-        input: request.input,
+        exportName: requestToExecute.exportName,
+        input: requestToExecute.input,
         timeoutMs,
         signal: options?.signal,
         cwd: lease.cwd,
@@ -312,7 +319,8 @@ export class SubprocessBackend implements ExecutionBackend {
         metadata: {
           backend: 'subprocess',
           workspaceId: lease.workspaceId,
-          executionMeta: runResult.meta,
+          executionMeta: runResult.executionMeta,
+          target: resolvedTarget,
         },
       };
     } catch (error) {
@@ -326,6 +334,7 @@ export class SubprocessBackend implements ExecutionBackend {
         metadata: {
           backend: 'subprocess',
           workspaceId: lease?.workspaceId,
+          target: resolvedTarget,
         },
       };
     } finally {
@@ -334,11 +343,11 @@ export class SubprocessBackend implements ExecutionBackend {
       if (ipcServer) {
         try {
           await ipcServer.close();
-          this.activeServers.delete(request.executionId);
+          this.activeServers.delete(resolvedExecutionId);
         } catch (cleanupError) {
           // Log but don't throw - already handling main error
           this.platform.logger.warn('Failed to close IPC server', {
-            executionId: request.executionId,
+            executionId: resolvedExecutionId,
             error: cleanupError,
           });
         }
