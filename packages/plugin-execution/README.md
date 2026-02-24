@@ -1,23 +1,72 @@
 # @kb-labs/plugin-execution
 
-Universal execution layer for KB Labs plugins
+Universal execution layer for KB Labs plugins — runs handlers in-process, subprocess, or worker pool.
 
-## Installation
+## Overview
 
-```bash
-pnpm add @kb-labs/plugin-execution
-```
+Provides a unified `IExecutionBackend` interface with pluggable backends, workspace isolation per execution, WebSocket channel support, and structured error handling. The backend is selected via `createExecutionBackend()` based on configuration.
 
-## Usage
+## Quick Start
 
 ```typescript
-import { ... } from '@kb-labs/plugin-execution';
+import { createExecutionBackend } from '@kb-labs/plugin-execution';
+
+const backend = createExecutionBackend({
+  platform,
+  type: 'in-process', // or 'worker-pool', 'subprocess'
+});
+
+const result = await backend.execute({
+  pluginId: '@my-org/my-plugin',
+  handlerId: 'run',
+  input: { args: ['--verbose'] },
+  context: contextDescriptor,
+});
 ```
 
-## API
+## Backends
 
-See TypeScript types for detailed API documentation.
+| Backend | Description | Use case |
+|---------|-------------|----------|
+| `InProcessBackend` | Runs handler in same Node.js process | Development, trusted plugins |
+| `WorkerPoolBackend` | Runs in Node.js worker threads | CPU-bound handlers, isolation |
+| `SubprocessBackend` | Spawns child process per execution | Full isolation, untrusted plugins |
+
+## Workspace Management
+
+Each execution gets an isolated artifact directory via `WorkspaceManager`:
+
+```typescript
+import { WorkspaceManager } from '@kb-labs/plugin-execution';
+
+const workspace = new WorkspaceManager({ root: '/tmp/kb-workspaces' });
+const lease = await workspace.acquire(executionId);
+
+// lease.dir — temporary directory for this execution
+// Automatically cleaned up on lease release
+await lease.release();
+```
+
+## WebSocket Channels
+
+For plugins that need real-time bidirectional communication:
+
+```typescript
+import { mountWebSocketChannels } from '@kb-labs/plugin-execution';
+
+mountWebSocketChannels(server, manifest, { backend, connectionRegistry });
+```
+
+## Errors
+
+| Error | Code | Description |
+|-------|------|-------------|
+| `HandlerNotFoundError` | `HANDLER_NOT_FOUND` | Plugin handler ID not registered |
+| `TimeoutError` | `TIMEOUT` | Execution exceeded time limit |
+| `PermissionDeniedError` | `PERMISSION_DENIED` | Handler lacks required permission |
+| `QueueFullError` | `QUEUE_FULL` | Worker pool queue at capacity |
+| `WorkerCrashedError` | `WORKER_CRASHED` | Worker thread/process died unexpectedly |
 
 ## License
 
-MIT
+KB Public License v1.1 © KB Labs

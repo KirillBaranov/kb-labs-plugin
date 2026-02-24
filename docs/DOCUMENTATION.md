@@ -1,27 +1,27 @@
-# KB Labs Product Template Documentation Standard
+# KB Labs Plugin System Documentation Standard
 
 > **This document is a project-specific copy of the KB Labs Documentation Standard.**  
 > See [Main Documentation Standard](https://github.com/KirillBaranov/kb-labs/blob/main/docs/DOCUMENTATION.md) for the complete ecosystem standard.
 
-This document defines the documentation standards for **KB Labs Product Template**. This project follows the [KB Labs Documentation Standard](https://github.com/KirillBaranov/kb-labs/blob/main/docs/DOCUMENTATION.md) with the following project-specific customizations:
+This document defines the documentation standards for **KB Labs Plugin System**. This project follows the [KB Labs Documentation Standard](https://github.com/KirillBaranov/kb-labs/blob/main/docs/DOCUMENTATION.md) with the following project-specific customizations:
 
 ## Project-Specific Customizations
 
-KB Labs Product Template is a zero-config starter powered by @kb-labs/devkit. Documentation should focus on:
+KB Labs Plugin System provides the sandboxed plugin execution infrastructure. Documentation should focus on:
 
-- Project scaffolding
-- Quick start guide
-- Template customization
-- Best practices for new projects
+- Plugin manifest format (V3) and contract types
+- Runtime context structure (`PluginContextV3`) and available APIs
+- Execution backends and their trade-offs (in-process vs subprocess vs worker-pool)
+- Plugin development workflow and testing
 
 ## Project Documentation Structure
 
 ```
 docs/
 ├── DOCUMENTATION.md       # This standard (REQUIRED)
-└── adr/                    # Architecture Decision Records
+└── adr/                   # Architecture Decision Records
     ├── 0000-template.md   # ADR template
-    └── *.md                # ADR files
+    └── *.md               # ADR files
 ```
 
 ## Required Documentation
@@ -33,14 +33,6 @@ This project requires:
 - [x] `docs/DOCUMENTATION.md` (this file)
 - [x] `docs/adr/0000-template.md` (ADR template exists)
 - [x] `LICENSE` in root
-
-## Optional Documentation
-
-Consider adding:
-
-- [ ] `docs/glossary.md` - Template-specific terms
-- [ ] `docs/examples.md` - Template usage examples
-- [ ] `docs/faq.md` - Frequently asked questions
 
 ## ADR Requirements
 
@@ -56,18 +48,19 @@ All ADRs must follow the format defined in the [main standard](https://github.co
 This project links to:
 
 **Dependencies:**
-- [@kb-labs/devkit](https://github.com/KirillBaranov/kb-labs-devkit) - DevKit presets
+- [@kb-labs/core-platform](https://github.com/KirillBaranov/kb-labs-core) — Platform adapters
+- [@kb-labs/core-ipc](https://github.com/KirillBaranov/kb-labs-core) — IPC transport
 
 **Used By:**
-- New KB Labs projects for scaffolding
+- [kb-labs-cli](https://github.com/KirillBaranov/kb-labs-cli) — CLI plugin execution
+- [kb-labs-rest-api](https://github.com/KirillBaranov/kb-labs-rest-api) — REST plugin mounting
+- [kb-labs-workflow](https://github.com/KirillBaranov/kb-labs-workflow) — Workflow step execution
 
 **Ecosystem:**
-- [KB Labs](https://github.com/KirillBaranov/kb-labs) - Main ecosystem repository
+- [KB Labs](https://github.com/KirillBaranov/kb-labs) — Main ecosystem repository
 
 ---
 
-**Last Updated:** 2025-11-03  
+**Last Updated:** 2026-02-24
 **Standard Version:** 1.0 (following KB Labs ecosystem standard)  
 **See Main Standard:** [KB Labs Documentation Standard](https://github.com/KirillBaranov/kb-labs/blob/main/docs/DOCUMENTATION.md)
-
-
