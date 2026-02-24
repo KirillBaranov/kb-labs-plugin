@@ -25,13 +25,12 @@ import type { PluginContextDescriptor } from '@kb-labs/plugin-contracts';
 
 describe('IPC Protocol', () => {
   const mockDescriptor: PluginContextDescriptor = {
-    host: 'cli',
+    hostType: 'cli',
     pluginId: '@kb-labs/test',
     pluginVersion: '1.0.0',
-    cwd: '/test',
+    requestId: 'test-req-123',
     permissions: {},
     hostContext: { host: 'cli', argv: [], flags: {} },
-    parentRequestId: undefined,
   };
 
   describe('ExecuteMessage', () => {
@@ -42,6 +41,7 @@ describe('IPC Protocol', () => {
         socketPath: '/tmp/kb-test.sock',
         handlerPath: '/test/handler.js',
         input: { foo: 'bar' },
+        cwd: '/test',
       };
 
       expect(msg.type).toBe('execute');
@@ -58,6 +58,7 @@ describe('IPC Protocol', () => {
         socketPath: '/tmp/kb-test.sock',
         handlerPath: '/test/handler.js',
         input: {},
+        cwd: '/test',
       };
 
       expect(isParentMessage(msg)).toBe(true);
@@ -107,29 +108,31 @@ describe('IPC Protocol', () => {
     it('should create valid result message with data', () => {
       const msg: ResultMessage = {
         type: 'result',
-        data: { success: true, output: 'test' },
+        exitCode: 0,
+        result: { success: true, output: 'test' },
         meta: { executionTime: 123 },
       };
 
       expect(msg.type).toBe('result');
-      expect(msg.data).toEqual({ success: true, output: 'test' });
+      expect(msg.result).toEqual({ success: true, output: 'test' });
       expect(msg.meta).toEqual({ executionTime: 123 });
     });
 
-    it('should allow undefined data (void handler)', () => {
+    it('should allow undefined result (void handler)', () => {
       const msg: ResultMessage = {
         type: 'result',
-        data: undefined,
+        exitCode: 0,
       };
 
       expect(msg.type).toBe('result');
-      expect(msg.data).toBeUndefined();
+      expect(msg.result).toBeUndefined();
     });
 
     it('should be recognized as ChildMessage', () => {
       const msg: ResultMessage = {
         type: 'result',
-        data: { test: 'data' },
+        exitCode: 0,
+        result: { test: 'data' },
       };
 
       expect(isChildMessage(msg)).toBe(true);
@@ -162,6 +165,7 @@ describe('IPC Protocol', () => {
         error: {
           name: 'Error',
           message: 'Test error',
+          code: 'UNKNOWN',
         },
       };
 
@@ -272,6 +276,7 @@ describe('IPC Protocol', () => {
         socketPath: '/tmp/test.sock',
         handlerPath: '/handler.js',
         input: { foo: 'bar', nested: { value: 123 } },
+        cwd: '/test',
       };
 
       const json = JSON.stringify(msg);
@@ -287,7 +292,8 @@ describe('IPC Protocol', () => {
     it('should serialize and deserialize ResultMessage', () => {
       const msg: ResultMessage = {
         type: 'result',
-        data: { success: true, output: [1, 2, 3] },
+        exitCode: 0,
+        result: { success: true, output: [1, 2, 3] },
         meta: { timing: 456 },
       };
 
@@ -295,7 +301,7 @@ describe('IPC Protocol', () => {
       const parsed = JSON.parse(json) as ResultMessage;
 
       expect(parsed.type).toBe('result');
-      expect(parsed.data).toEqual({ success: true, output: [1, 2, 3] });
+      expect(parsed.result).toEqual({ success: true, output: [1, 2, 3] });
       expect(parsed.meta).toEqual({ timing: 456 });
     });
 
@@ -332,6 +338,7 @@ describe('IPC Protocol', () => {
           socketPath: '/tmp/test.sock',
           handlerPath: '/test.js',
           input: {},
+          cwd: '/test',
         },
         {
           type: 'abort',
@@ -339,24 +346,24 @@ describe('IPC Protocol', () => {
       ];
 
       expect(messages).toHaveLength(2);
-      expect(messages[0].type).toBe('execute');
-      expect(messages[1].type).toBe('abort');
+      expect(messages[0]!.type).toBe('execute');
+      expect(messages[1]!.type).toBe('abort');
     });
 
     it('should allow ChildMessage union to accept ready, result, error', () => {
       const messages: ChildMessage[] = [
         { type: 'ready' },
-        { type: 'result', data: { test: 'data' } },
+        { type: 'result', exitCode: 0, result: { test: 'data' } },
         {
           type: 'error',
-          error: { name: 'Error', message: 'test' },
+          error: { name: 'Error', message: 'test', code: 'UNKNOWN' },
         },
       ];
 
       expect(messages).toHaveLength(3);
-      expect(messages[0].type).toBe('ready');
-      expect(messages[1].type).toBe('result');
-      expect(messages[2].type).toBe('error');
+      expect(messages[0]!.type).toBe('ready');
+      expect(messages[1]!.type).toBe('result');
+      expect(messages[2]!.type).toBe('error');
     });
   });
 });

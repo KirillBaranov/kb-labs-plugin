@@ -16,54 +16,19 @@
  * host-specific format using wrapCliResult, wrapRestResult, etc.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { runInProcess } from '../sandbox/runner.js';
 import { wrapCliResult } from '../host/cli-wrapper.js';
 import { PluginError } from '@kb-labs/plugin-contracts';
-import type { PluginContextDescriptor, UIFacade, PlatformServices } from '@kb-labs/plugin-contracts';
+import type { PluginContextDescriptor } from '@kb-labs/plugin-contracts';
+import { createMockUI, createMockPlatform } from './test-mocks.js';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { writeFileSync, mkdirSync } from 'node:fs';
 
 describe('Sandbox Runner', () => {
-  const mockUI: UIFacade = {
-    info: vi.fn(),
-    success: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn(),
-    spinner: vi.fn(),
-    table: vi.fn(),
-    json: vi.fn(),
-    newline: vi.fn(),
-    divider: vi.fn(),
-    box: vi.fn(),
-    confirm: vi.fn(async () => true),
-    prompt: vi.fn(async () => 'test'),
-  };
-
-  const mockLogger = {
-    trace: vi.fn(),
-    debug: vi.fn(),
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    fatal: vi.fn(),
-    child: vi.fn(function(this: unknown) {
-      return this;
-    }),
-  };
-
-  const mockPlatform: PlatformServices = {
-    logger: mockLogger as PlatformServices['logger'],
-    llm: {} as PlatformServices['llm'],
-    embeddings: {} as PlatformServices['embeddings'],
-    vectorStore: {} as PlatformServices['vectorStore'],
-    cache: {} as PlatformServices['cache'],
-    storage: {} as PlatformServices['storage'],
-    analytics: {} as PlatformServices['analytics'],
-    eventBus: {} as PlatformServices['eventBus'],
-  };
+  const mockUI = createMockUI();
+  const mockPlatform = createMockPlatform();
 
   let testDir: string;
 
@@ -222,7 +187,7 @@ describe('Sandbox Runner', () => {
         requestId: 'req-tenant',
         tenantId: 'acme-corp',
         permissions: {},
-        hostContext: { host: 'rest', method: 'GET', path: '/test', query: {}, headers: {} },
+        hostContext: { host: 'rest', method: 'GET', path: '/test', query: {}, headers: {}, requestId: 'req-tenant', traceId: 'trace-tenant' },
       };
 
       const result = await runInProcess({

@@ -13,45 +13,13 @@
 
 import { describe, it, expect } from 'vitest';
 import { createPluginContextV3 } from '../context/index.js';
-import type { PluginContextDescriptor, UIFacade, PlatformServices, PermissionSpec } from '@kb-labs/plugin-contracts';
+import type { PluginContextDescriptor, PermissionSpec } from '@kb-labs/plugin-contracts';
 import { PermissionError } from '@kb-labs/plugin-contracts';
 
-// Mock services
-const mockUI: UIFacade = {
-  info: () => {},
-  success: () => {},
-  warn: () => {},
-  error: () => {},
-  debug: () => {},
-  spinner: () => ({ stop: () => {}, succeed: () => {}, fail: () => {} }),
-  table: () => {},
-  json: () => {},
-  newline: () => {},
-  divider: () => {},
-  box: () => {},
-  confirm: async () => true,
-  prompt: async () => 'test',
-} as any;
+import { createMockUI, createMockPlatform } from './test-mocks.js';
 
-// Mock logger with all required methods
-const mockLogger = {
-  trace: () => {},
-  debug: () => {},
-  info: () => {},
-  warn: () => {},
-  error: () => {},
-  child: function() { return this; },
-};
-
-const mockPlatform: PlatformServices = {
-  logger: mockLogger as any,
-  llm: {} as any,
-  embeddings: {} as any,
-  vectorStore: {} as any,
-  cache: {} as any,
-  storage: {} as any,
-  analytics: {} as any,
-};
+const mockUI = createMockUI();
+const mockPlatform = createMockPlatform();
 
 describe('Permission Enforcement', () => {
   describe('fs.read - cwd always readable', () => {

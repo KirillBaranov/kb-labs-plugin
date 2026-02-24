@@ -28,13 +28,14 @@ describe('Host Wrappers', () => {
     requestId: 'req-123',
     handlerId: 'test:command',
     permissions: {},
-    hostContext: { hostType: 'cli', argv: [], flags: {} },
+    hostContext: { host: 'cli', argv: [], flags: {} },
     tenantId: 'tenant-456',
   };
 
   describe('wrapCliResult', () => {
     it('should wrap CommandResult with exitCode', () => {
       const runResult: RunResult<{ exitCode: number; result: { data: string }; meta?: Record<string, unknown> }> = {
+        ok: true,
         data: {
           exitCode: 0,
           result: { data: 'success' },

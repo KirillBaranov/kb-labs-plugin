@@ -593,16 +593,16 @@ describe('JobsAPI', () => {
   });
 
   describe('createNoopJobsAPI', () => {
-    it('should throw on submit/schedule/wait operations', async () => {
+    it('should throw on submit/schedule/wait operations', () => {
       const api = createNoopJobsAPI();
 
-      await expect(api.submit({ type: 'test', payload: {} })).rejects.toThrow(
+      expect(() => api.submit({ type: 'test', payload: {} })).toThrow(
         /Job scheduler not available/
       );
-      await expect(api.schedule({ type: 'test', payload: {} }, '0 * * * *')).rejects.toThrow(
+      expect(() => api.schedule({ type: 'test', payload: {} }, '0 * * * *')).toThrow(
         /Job scheduler not available/
       );
-      await expect(api.wait('job-123')).rejects.toThrow(/Job scheduler not available/);
+      expect(() => api.wait('job-123')).toThrow(/Job scheduler not available/);
     });
 
     it('should return null/false for status/cancel operations', async () => {

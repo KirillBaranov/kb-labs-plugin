@@ -35,7 +35,7 @@ describe('Bootstrap Dynamic Import Tests', () => {
     process.env = originalEnv;
     try {
       rmSync(testDir, { recursive: true, force: true });
-    } catch (error) {
+    } catch {
       // Ignore cleanup errors
     }
   });
@@ -105,14 +105,8 @@ describe('Bootstrap Dynamic Import Tests', () => {
     });
 
     let stdout = '';
-    let stderr = '';
-
     child.stdout?.on('data', (data) => {
       stdout += data.toString();
-    });
-
-    child.stderr?.on('data', (data) => {
-      stderr += data.toString();
     });
 
     // Wait for process to exit
@@ -252,14 +246,8 @@ describe('Bootstrap Dynamic Import Tests', () => {
     });
 
     let stdout = '';
-    let stderr = '';
-
     child.stdout?.on('data', (data) => {
       stdout += data.toString();
-    });
-
-    child.stderr?.on('data', (data) => {
-      stderr += data.toString();
     });
 
     const exitCode = await new Promise<number>((resolve) => {
@@ -302,14 +290,8 @@ describe('Bootstrap Dynamic Import Tests', () => {
     });
 
     let stdout = '';
-    let stderr = '';
-
     child.stdout?.on('data', (data) => {
       stdout += data.toString();
-    });
-
-    child.stderr?.on('data', (data) => {
-      stderr += data.toString();
     });
 
     const exitCode = await new Promise<number>((resolve) => {
@@ -362,14 +344,8 @@ describe('Bootstrap Dynamic Import Tests', () => {
     });
 
     let stdout = '';
-    let stderr = '';
-
     child.stdout?.on('data', (data) => {
       stdout += data.toString();
-    });
-
-    child.stderr?.on('data', (data) => {
-      stderr += data.toString();
     });
 
     const exitCode = await new Promise<number>((resolve) => {

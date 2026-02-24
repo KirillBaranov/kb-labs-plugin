@@ -90,8 +90,6 @@ describe('Metadata Injection', () => {
         startTime,
       };
 
-      const result = undefined; // void return
-
       // Simulate injectStandardMeta with void
       const endTime = Date.now();
       const duration = endTime - startTime;
@@ -107,7 +105,7 @@ describe('Metadata Injection', () => {
         requestId: context.requestId,
       };
 
-      const finalResult = {
+      const finalResult: { exitCode: number; result?: unknown; meta: typeof standardMeta } = {
         exitCode: 0,
         meta: standardMeta,
       };
@@ -129,10 +127,9 @@ describe('Metadata Injection', () => {
         startTime,
       };
 
-      const result = {
+      const result: { exitCode: number; result?: unknown; meta?: Record<string, unknown> } = {
         exitCode: 0,
         result: { message: 'success' },
-        // No meta field
       };
 
       // Simulate injectStandardMeta
@@ -234,7 +231,7 @@ describe('Metadata Injection', () => {
         // No commandId, no tenantId
       };
 
-      const result = {
+      const result: { exitCode: number; result?: unknown; meta?: Record<string, unknown> } = {
         exitCode: 0,
         result: { webhook: 'received' },
       };
@@ -286,7 +283,7 @@ describe('Metadata Injection', () => {
         startTime,
       };
 
-      const result = {
+      const result: { exitCode: number; result?: unknown; meta?: Record<string, unknown> } = {
         exitCode: 0,
         result: { timing: 'test' },
       };
@@ -330,7 +327,7 @@ describe('Metadata Injection', () => {
         startTime,
       };
 
-      const result = {
+      const result: { exitCode: number; result?: unknown; meta?: Record<string, unknown> } = {
         exitCode: 0,
         result: { test: 'data' },
       };

@@ -10,69 +10,15 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { runInProcess } from '../sandbox/runner.js';
 import { wrapCliResult } from '../host/cli-wrapper.js';
-import type { PluginContextDescriptor, UIFacade, PlatformServices, CommandResult } from '@kb-labs/plugin-contracts';
+import type { PluginContextDescriptor, CommandResult } from '@kb-labs/plugin-contracts';
+import { createMockUI, createMockPlatform } from './test-mocks.js';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { writeFileSync, mkdirSync, rmSync } from 'node:fs';
-import { vi } from 'vitest';
 
 describe('E2E Context Tests', () => {
-  const mockColor = (text: string) => text;
-  const mockColors = {
-    success: mockColor,
-    error: mockColor,
-    warning: mockColor,
-    info: mockColor,
-    primary: mockColor,
-    accent: mockColor,
-    highlight: mockColor,
-    secondary: mockColor,
-    emphasis: mockColor,
-    muted: mockColor,
-    foreground: mockColor,
-    dim: mockColor,
-    bold: mockColor,
-    underline: mockColor,
-    inverse: mockColor,
-  };
-
-  const mockUI: UIFacade = {
-    colors: mockColors,
-    write: vi.fn(),
-    info: vi.fn(),
-    success: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn(),
-    spinner: vi.fn(),
-    table: vi.fn(),
-    json: vi.fn(),
-    newline: vi.fn(),
-    divider: vi.fn(),
-    box: vi.fn(),
-    confirm: vi.fn(async () => true),
-    prompt: vi.fn(async () => 'test'),
-  };
-
-  const mockLogger = {
-    trace: vi.fn(),
-    debug: vi.fn(),
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    fatal: vi.fn(),
-    child: vi.fn(function(this: any) { return this; }),
-  };
-
-  const mockPlatform: PlatformServices = {
-    logger: mockLogger as any,
-    llm: {} as any,
-    embeddings: {} as any,
-    vectorStore: {} as any,
-    cache: {} as any,
-    storage: {} as any,
-    analytics: {} as any,
-  };
+  const mockUI = createMockUI();
+  const mockPlatform = createMockPlatform();
 
   let testDir: string;
 
@@ -114,13 +60,12 @@ describe('E2E Context Tests', () => {
     writeFileSync(handlerPath, handlerCode);
 
     const descriptor: PluginContextDescriptor = {
-      requestId: 'test-request-id',
       hostType: 'cli',
       pluginId: '@kb-labs/test',
       pluginVersion: '1.0.0',
       requestId: 'e2e-test-123',
       permissions: {},
-      hostContext: { hostType: 'cli', argv: [], flags: {} },
+      hostContext: { host: 'cli', argv: [], flags: {} },
     };
 
     const runResult = await runInProcess<CommandResult<unknown>>({
@@ -175,13 +120,12 @@ describe('E2E Context Tests', () => {
     writeFileSync(handlerPath, handlerCode);
 
     const descriptor: PluginContextDescriptor = {
-      requestId: 'test-request-id',
       hostType: 'cli',
       pluginId: '@kb-labs/test',
       pluginVersion: '1.0.0',
       requestId: 'e2e-fs-test',
       permissions: {},
-      hostContext: { hostType: 'cli', argv: [], flags: {} },
+      hostContext: { host: 'cli', argv: [], flags: {} },
     };
 
     const runResult = await runInProcess<CommandResult<unknown>>({
@@ -222,13 +166,12 @@ describe('E2E Context Tests', () => {
     writeFileSync(handlerPath, handlerCode);
 
     const descriptor: PluginContextDescriptor = {
-      requestId: 'test-request-id',
       hostType: 'cli',
       pluginId: '@kb-labs/test',
       pluginVersion: '1.0.0',
       requestId: 'e2e-trace-test',
       permissions: {},
-      hostContext: { hostType: 'cli', argv: [], flags: {} },
+      hostContext: { host: 'cli', argv: [], flags: {} },
     };
 
     const runResult = await runInProcess<CommandResult<unknown>>({
@@ -266,13 +209,12 @@ describe('E2E Context Tests', () => {
     writeFileSync(handlerPath, handlerCode);
 
     const descriptor: PluginContextDescriptor = {
-      requestId: 'test-request-id',
       hostType: 'cli',
       pluginId: '@kb-labs/test',
       pluginVersion: '1.0.0',
       requestId: 'e2e-exit-test',
       permissions: {},
-      hostContext: { hostType: 'cli', argv: [], flags: {} },
+      hostContext: { host: 'cli', argv: [], flags: {} },
     };
 
     const runResult = await runInProcess<CommandResult<unknown>>({
@@ -314,13 +256,12 @@ describe('E2E Context Tests', () => {
     writeFileSync(handlerPath, handlerCode);
 
     const descriptor: PluginContextDescriptor = {
-      requestId: 'test-request-id',
       hostType: 'cli',
       pluginId: '@kb-labs/test',
       pluginVersion: '1.0.0',
       requestId: 'e2e-platform-test',
       permissions: {},
-      hostContext: { hostType: 'cli', argv: [], flags: {} },
+      hostContext: { host: 'cli', argv: [], flags: {} },
     };
 
     const runResult = await runInProcess<CommandResult<unknown>>({
@@ -385,13 +326,12 @@ describe('E2E Context Tests', () => {
     writeFileSync(handlerPath, handlerCode);
 
     const descriptor: PluginContextDescriptor = {
-      requestId: 'test-request-id',
       hostType: 'cli',
       pluginId: '@kb-labs/test',
       pluginVersion: '1.0.0',
       requestId: 'e2e-ui-api-test',
       permissions: {},
-      hostContext: { hostType: 'cli', argv: [], flags: {} },
+      hostContext: { host: 'cli', argv: [], flags: {} },
     };
 
     const runResult = await runInProcess<CommandResult<unknown>>({

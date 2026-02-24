@@ -13,6 +13,9 @@ import type { PluginContextDescriptor, UIFacade, PlatformServices } from '@kb-la
 
 describe('createPluginContextV3', () => {
   const mockUI: UIFacade = {
+    colors: { success: (t: string) => t, error: (t: string) => t, warning: (t: string) => t, info: (t: string) => t, primary: (t: string) => t, accent: (t: string) => t, highlight: (t: string) => t, secondary: (t: string) => t, emphasis: (t: string) => t, muted: (t: string) => t, foreground: (t: string) => t, dim: (t: string) => t, bold: (t: string) => t, underline: (t: string) => t, inverse: (t: string) => t },
+    symbols: { success: '✓', error: '✗', warning: '⚠', info: 'ℹ', bullet: '•', clock: '◷', folder: '📁', package: '📦', pointer: '›', section: '§', separator: '─', border: '│', topLeft: '┌', topRight: '┐', bottomLeft: '└', bottomRight: '┘', leftT: '├', rightT: '┤' },
+    write: vi.fn(),
     info: vi.fn(),
     success: vi.fn(),
     warn: vi.fn(),
@@ -24,6 +27,7 @@ describe('createPluginContextV3', () => {
     newline: vi.fn(),
     divider: vi.fn(),
     box: vi.fn(),
+    sideBox: vi.fn(),
     confirm: vi.fn(async () => true),
     prompt: vi.fn(async () => 'test'),
   };
@@ -48,6 +52,8 @@ describe('createPluginContextV3', () => {
     cache: {} as any,
     storage: {} as any,
     analytics: {} as any,
+    eventBus: {} as any,
+    logs: {} as any,
   };
 
   it('should pass platform services directly without wrapping', () => {
@@ -66,13 +72,14 @@ describe('createPluginContextV3', () => {
           analytics: true,
         },
       },
-      hostContext: { hostType: 'cli', argv: [], flags: {} },
+      hostContext: { host: 'cli', argv: [], flags: {} },
     };
 
     const { context } = createPluginContextV3({
       descriptor,
       platform: mockPlatform,
       ui: mockUI,
+      cwd: "/test",
     });
 
     // Platform services should be accessible (may be wrapped by governed proxy or prefixed logger)
@@ -101,7 +108,7 @@ describe('createPluginContextV3', () => {
       pluginId: '@kb-labs/test',
       pluginVersion: '1.0.0',
       permissions: {},
-      hostContext: { hostType: 'cli', argv: [], flags: {} },
+      hostContext: { host: 'cli', argv: [], flags: {} },
     };
 
     const { context } = createPluginContextV3({
@@ -137,13 +144,14 @@ describe('createPluginContextV3', () => {
       pluginId: '@kb-labs/test',
       pluginVersion: '1.0.0',
       permissions: { fs: { read: ['/test'] } },
-      hostContext: { hostType: 'cli', argv: [], flags: {} },
+      hostContext: { host: 'cli', argv: [], flags: {} },
     };
 
     const { context } = createPluginContextV3({
       descriptor,
       platform: mockPlatform,
       ui: mockUI,
+      cwd: "/test",
     });
 
     // Runtime API must have fs, fetch, env
@@ -178,13 +186,14 @@ describe('createPluginContextV3', () => {
       pluginId: '@kb-labs/test',
       pluginVersion: '1.0.0',
       permissions: {},
-      hostContext: { hostType: 'cli', argv: [], flags: {} },
+      hostContext: { host: 'cli', argv: [], flags: {} },
     };
 
     const { context } = createPluginContextV3({
       descriptor,
       platform: mockPlatform,
       ui: mockUI,
+      cwd: "/test",
     });
 
     // Plugin API must have all modules
@@ -195,6 +204,7 @@ describe('createPluginContextV3', () => {
     expect(context.api.shell).toBeDefined();
     expect(context.api.events).toBeDefined();
     expect(context.api.invoke).toBeDefined();
+    expect(context.api.environment).toBeDefined();
 
     // Lifecycle should have onCleanup
     expect(typeof context.api.lifecycle.onCleanup).toBe('function');
@@ -207,13 +217,14 @@ describe('createPluginContextV3', () => {
       pluginId: '@kb-labs/test',
       pluginVersion: '1.0.0',
       permissions: {},
-      hostContext: { hostType: 'cli', argv: [], flags: {} },
+      hostContext: { host: 'cli', argv: [], flags: {} },
     };
 
     const { cleanupStack } = createPluginContextV3({
       descriptor,
       platform: mockPlatform,
       ui: mockUI,
+      cwd: "/test",
     });
 
     expect(cleanupStack).toBeDefined();
@@ -227,7 +238,7 @@ describe('createPluginContextV3', () => {
       pluginId: '@kb-labs/test',
       pluginVersion: '1.0.0',
       permissions: {},
-      hostContext: { hostType: 'cli', argv: [], flags: {} },
+      hostContext: { host: 'cli', argv: [], flags: {} },
     };
 
     const abortController = new AbortController();
@@ -236,6 +247,7 @@ describe('createPluginContextV3', () => {
       platform: mockPlatform,
       ui: mockUI,
       signal: abortController.signal,
+      cwd: "/test",
     });
 
     expect(context.signal).toBe(abortController.signal);
@@ -249,7 +261,7 @@ describe('createPluginContextV3', () => {
       pluginVersion: '1.0.0',
       tenantId: 'acme-corp',
       permissions: {},
-      hostContext: { hostType: 'cli', argv: [], flags: {} },
+      hostContext: { host: 'cli', argv: [], flags: {} },
     };
 
     const { context } = createPluginContextV3({
@@ -265,53 +277,82 @@ describe('createPluginContextV3', () => {
     expect(context.outdir).toBe('/test/output');
   });
 
-  it('should create unique requestId for each context', () => {
+  it('should preserve requestId from descriptor', () => {
     const descriptor: PluginContextDescriptor = {
       requestId: 'test-request-id',
       hostType: 'cli',
       pluginId: '@kb-labs/test',
       pluginVersion: '1.0.0',
       permissions: {},
-      hostContext: { hostType: 'cli', argv: [], flags: {} },
+      hostContext: { host: 'cli', argv: [], flags: {} },
     };
 
     const { context: context1 } = createPluginContextV3({
       descriptor,
       platform: mockPlatform,
       ui: mockUI,
+      cwd: "/test",
     });
 
     const { context: context2 } = createPluginContextV3({
       descriptor,
       platform: mockPlatform,
       ui: mockUI,
+      cwd: "/test",
     });
 
-    expect(context1.requestId).not.toBe(context2.requestId);
+    expect(context1.requestId).toBe('test-request-id');
+    expect(context2.requestId).toBe('test-request-id');
   });
 
-  it('should create trace context with valid IDs', () => {
+  it('should derive traceId from requestId when host context has no trace', () => {
     const descriptor: PluginContextDescriptor = {
       requestId: 'test-request-id',
       hostType: 'cli',
       pluginId: '@kb-labs/test',
       pluginVersion: '1.0.0',
       permissions: {},
-      hostContext: { hostType: 'cli', argv: [], flags: {} },
+      hostContext: { host: 'cli', argv: [], flags: {} },
     };
 
     const { context } = createPluginContextV3({
       descriptor,
       platform: mockPlatform,
       ui: mockUI,
+      cwd: "/test",
     });
 
-    expect(context.trace.traceId).toBeDefined();
+    expect(context.trace.traceId).toBe('test-request-id');
     expect(context.trace.spanId).toBeDefined();
-    expect(typeof context.trace.traceId).toBe('string');
     expect(typeof context.trace.spanId).toBe('string');
-    expect(context.trace.traceId.length).toBeGreaterThan(0);
     expect(context.trace.spanId.length).toBeGreaterThan(0);
+  });
+
+  it('should preserve traceId from host context when available', () => {
+    const descriptor: PluginContextDescriptor = {
+      requestId: 'rest-request-id',
+      hostType: 'rest',
+      pluginId: '@kb-labs/test',
+      pluginVersion: '1.0.0',
+      permissions: {},
+      hostContext: {
+        host: 'rest',
+        method: 'GET',
+        path: '/test',
+        requestId: 'rest-request-id',
+        traceId: 'rest-trace-id',
+      },
+    };
+
+    const { context } = createPluginContextV3({
+      descriptor,
+      platform: mockPlatform,
+      ui: mockUI,
+      cwd: "/test",
+    });
+
+    expect(context.trace.traceId).toBe('rest-trace-id');
+    expect(context.requestId).toBe('rest-request-id');
   });
 
   it('should allow reading all context fields', () => {
@@ -321,13 +362,14 @@ describe('createPluginContextV3', () => {
       pluginId: '@kb-labs/test',
       pluginVersion: '1.0.0',
       permissions: {},
-      hostContext: { hostType: 'cli', argv: [], flags: {} },
+      hostContext: { host: 'cli', argv: [], flags: {} },
     };
 
     const { context } = createPluginContextV3({
       descriptor,
       platform: mockPlatform,
       ui: mockUI,
+      cwd: "/test",
     });
 
     // All fields should be readable

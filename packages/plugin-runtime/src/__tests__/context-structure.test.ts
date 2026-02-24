@@ -12,6 +12,9 @@ import type { PluginContextDescriptor, UIFacade, PlatformServices } from '@kb-la
 
 describe('Context Structure (Runtime Verification)', () => {
   const mockUI: UIFacade = {
+    colors: { success: (t: string) => t, error: (t: string) => t, warning: (t: string) => t, info: (t: string) => t, primary: (t: string) => t, accent: (t: string) => t, highlight: (t: string) => t, secondary: (t: string) => t, emphasis: (t: string) => t, muted: (t: string) => t, foreground: (t: string) => t, dim: (t: string) => t, bold: (t: string) => t, underline: (t: string) => t, inverse: (t: string) => t },
+    symbols: { success: '✓', error: '✗', warning: '⚠', info: 'ℹ', bullet: '•', clock: '◷', folder: '📁', package: '📦', pointer: '›', section: '§', separator: '─', border: '│', topLeft: '┌', topRight: '┐', bottomLeft: '└', bottomRight: '┘', leftT: '├', rightT: '┤' },
+    write: vi.fn(),
     info: vi.fn(),
     success: vi.fn(),
     warn: vi.fn(),
@@ -23,6 +26,7 @@ describe('Context Structure (Runtime Verification)', () => {
     newline: vi.fn(),
     divider: vi.fn(),
     box: vi.fn(),
+    sideBox: vi.fn(),
     confirm: vi.fn(async () => true),
     prompt: vi.fn(async () => 'test'),
   };
@@ -45,16 +49,17 @@ describe('Context Structure (Runtime Verification)', () => {
     cache: {} as any,
     storage: {} as any,
     analytics: {} as any,
+    eventBus: {} as any,
+    logs: {} as any,
   };
 
   const descriptor: PluginContextDescriptor = {
-      requestId: 'test-request-id',
     hostType: 'cli',
     pluginId: '@kb-labs/test',
     pluginVersion: '1.0.0',
     requestId: 'test-req-123',
     permissions: {},
-    hostContext: { hostType: 'cli', argv: [], flags: {} },
+    hostContext: { host: 'cli', argv: [], flags: {} },
   };
 
   it('should provide complete context structure to handlers', () => {
@@ -139,6 +144,7 @@ describe('Context Structure (Runtime Verification)', () => {
 
     expect(context.api.lifecycle).toBeDefined();
     expect(context.api.state).toBeDefined();
+    expect(context.api.environment).toBeDefined();
     expect(typeof context.api.lifecycle.onCleanup).toBe('function');
   });
 

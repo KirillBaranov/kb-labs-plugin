@@ -15,48 +15,16 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createPluginContextV3 } from '../context/index.js';
-import type { PluginContextDescriptor, UIFacade, PlatformServices, PermissionSpec } from '@kb-labs/plugin-contracts';
+import type { PluginContextDescriptor, PermissionSpec } from '@kb-labs/plugin-contracts';
 import { PermissionError } from '@kb-labs/plugin-contracts';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
 
-// Mock services
-const mockUI: UIFacade = {
-  info: () => {},
-  success: () => {},
-  warn: () => {},
-  error: () => {},
-  debug: () => {},
-  spinner: () => ({ stop: () => {}, succeed: () => {}, fail: () => {} }),
-  table: () => {},
-  json: () => {},
-  newline: () => {},
-  divider: () => {},
-  box: () => {},
-  confirm: async () => true,
-  prompt: async () => 'test',
-} as any;
+import { createMockUI, createMockPlatform } from './test-mocks.js';
 
-// Mock logger with all required methods
-const mockLogger = {
-  trace: () => {},
-  debug: () => {},
-  info: () => {},
-  warn: () => {},
-  error: () => {},
-  child: function() { return this; },
-};
-
-const mockPlatform: PlatformServices = {
-  logger: mockLogger as any,
-  llm: {} as any,
-  embeddings: {} as any,
-  vectorStore: {} as any,
-  cache: {} as any,
-  storage: {} as any,
-  analytics: {} as any,
-};
+const mockUI = createMockUI();
+const mockPlatform = createMockPlatform();
 
 describe('Wildcard Permissions - fs.read', () => {
   let tempDir: string;
@@ -92,13 +60,12 @@ describe('Wildcard Permissions - fs.read', () => {
     };
 
     const descriptor: PluginContextDescriptor = {
-      host: 'cli',
+      hostType: 'cli',
       pluginId: '@kb-labs/test',
       pluginVersion: '1.0.0',
-      cwd: tempDir,
+      requestId: 'test-req-wildcards',
       permissions,
       hostContext: { host: 'cli', argv: [], flags: {} },
-      parentRequestId: undefined,
     };
 
     const { context } = createPluginContextV3({
@@ -143,13 +110,12 @@ describe('Wildcard Permissions - fs.read', () => {
     };
 
     const descriptor: PluginContextDescriptor = {
-      host: 'cli',
+      hostType: 'cli',
       pluginId: '@kb-labs/test',
       pluginVersion: '1.0.0',
-      cwd: tempDir,
+      requestId: 'test-req-wildcards',
       permissions,
       hostContext: { host: 'cli', argv: [], flags: {} },
-      parentRequestId: undefined,
     };
 
     const { context } = createPluginContextV3({
@@ -190,13 +156,12 @@ describe('Wildcard Permissions - fs.read', () => {
     };
 
     const descriptor: PluginContextDescriptor = {
-      host: 'cli',
+      hostType: 'cli',
       pluginId: '@kb-labs/test',
       pluginVersion: '1.0.0',
-      cwd: tempDir,
+      requestId: 'test-req-wildcards',
       permissions,
       hostContext: { host: 'cli', argv: [], flags: {} },
-      parentRequestId: undefined,
     };
 
     const { context } = createPluginContextV3({
@@ -242,14 +207,12 @@ describe('Wildcard Permissions - fs.write', () => {
     };
 
     const descriptor: PluginContextDescriptor = {
-      host: 'cli',
+      hostType: 'cli',
       pluginId: '@kb-labs/test',
       pluginVersion: '1.0.0',
-      cwd: tempDir,
-      outdir: path.join(tempDir, 'output'),
+      requestId: 'test-req-wildcards',
       permissions,
       hostContext: { host: 'cli', argv: [], flags: {} },
-      parentRequestId: undefined,
     };
 
     const { context } = createPluginContextV3({
@@ -257,6 +220,7 @@ describe('Wildcard Permissions - fs.write', () => {
       platform: mockPlatform,
       ui: mockUI,
       cwd: tempDir,
+      outdir: path.join(tempDir, 'output'),
     });
 
     // Should allow writing to cwd (not just outdir)
@@ -295,13 +259,12 @@ describe('Wildcard Permissions - fs.write', () => {
     };
 
     const descriptor: PluginContextDescriptor = {
-      host: 'cli',
+      hostType: 'cli',
       pluginId: '@kb-labs/test',
       pluginVersion: '1.0.0',
-      cwd: tempDir,
+      requestId: 'test-req-wildcards',
       permissions,
       hostContext: { host: 'cli', argv: [], flags: {} },
-      parentRequestId: undefined,
     };
 
     const { context } = createPluginContextV3({
@@ -340,13 +303,12 @@ describe('Wildcard Permissions - network.fetch', () => {
     };
 
     const descriptor: PluginContextDescriptor = {
-      host: 'cli',
+      hostType: 'cli',
       pluginId: '@kb-labs/test',
       pluginVersion: '1.0.0',
-      cwd: '/test',
+      requestId: 'test-req-wildcards',
       permissions,
       hostContext: { host: 'cli', argv: [], flags: {} },
-      parentRequestId: undefined,
     };
 
     const { context } = createPluginContextV3({
@@ -387,13 +349,12 @@ describe('Wildcard Permissions - network.fetch', () => {
     };
 
     const descriptor: PluginContextDescriptor = {
-      host: 'cli',
+      hostType: 'cli',
       pluginId: '@kb-labs/test',
       pluginVersion: '1.0.0',
-      cwd: '/test',
+      requestId: 'test-req-wildcards',
       permissions,
       hostContext: { host: 'cli', argv: [], flags: {} },
-      parentRequestId: undefined,
     };
 
     const { context } = createPluginContextV3({
@@ -425,13 +386,12 @@ describe('Wildcard Permissions - env', () => {
     };
 
     const descriptor: PluginContextDescriptor = {
-      host: 'cli',
+      hostType: 'cli',
       pluginId: '@kb-labs/test',
       pluginVersion: '1.0.0',
-      cwd: '/test',
+      requestId: 'test-req-wildcards',
       permissions,
       hostContext: { host: 'cli', argv: [], flags: {} },
-      parentRequestId: undefined,
     };
 
     const { context } = createPluginContextV3({
@@ -465,13 +425,12 @@ describe('Wildcard Permissions - env', () => {
     };
 
     const descriptor: PluginContextDescriptor = {
-      host: 'cli',
+      hostType: 'cli',
       pluginId: '@kb-labs/test',
       pluginVersion: '1.0.0',
-      cwd: '/test',
+      requestId: 'test-req-wildcards',
       permissions,
       hostContext: { host: 'cli', argv: [], flags: {} },
-      parentRequestId: undefined,
     };
 
     const { context } = createPluginContextV3({
@@ -539,13 +498,12 @@ describe('SYSTEM_UNRESTRICTED_PERMISSIONS', () => {
     };
 
     const descriptor: PluginContextDescriptor = {
-      host: 'cli',
+      hostType: 'cli',
       pluginId: '@kb-labs/system',
       pluginVersion: '1.0.0',
-      cwd: tempTestDir,
+      requestId: 'test-req-wildcards',
       permissions: SYSTEM_UNRESTRICTED_PERMISSIONS,
       hostContext: { host: 'cli', argv: [], flags: {} },
-      parentRequestId: undefined,
     };
 
     const { context } = createPluginContextV3({
@@ -598,13 +556,12 @@ describe('SYSTEM_UNRESTRICTED_PERMISSIONS', () => {
     };
 
     const descriptor: PluginContextDescriptor = {
-      host: 'cli',
+      hostType: 'cli',
       pluginId: '@kb-labs/system',
       pluginVersion: '1.0.0',
-      cwd: tempTestDir,
+      requestId: 'test-req-wildcards',
       permissions: SYSTEM_UNRESTRICTED_PERMISSIONS,
       hostContext: { host: 'cli', argv: [], flags: {} },
-      parentRequestId: undefined,
     };
 
     const { context } = createPluginContextV3({

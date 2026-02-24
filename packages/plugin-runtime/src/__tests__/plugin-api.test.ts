@@ -34,8 +34,8 @@ describe('Plugin API', () => {
     // Mock cache adapter
     const storage = new Map<string, unknown>();
     mockCache = {
-      async get<T>(key: string): Promise<T | undefined> {
-        return storage.get(key) as T | undefined;
+      async get<T>(key: string): Promise<T | null> {
+        return (storage.get(key) as T) ?? null;
       },
       async set<T>(key: string, value: T): Promise<void> {
         storage.set(key, value);
@@ -43,9 +43,11 @@ describe('Plugin API', () => {
       async delete(key: string): Promise<void> {
         storage.delete(key);
       },
-      async has(key: string): Promise<boolean> {
-        return storage.has(key);
-      },
+      async clear(): Promise<void> { storage.clear(); },
+      async zadd(_key: string, _score: number, _member: string): Promise<void> {},
+      async zrangebyscore(_key: string, _min: number, _max: number): Promise<string[]> { return []; },
+      async zrem(_key: string, _member: string): Promise<void> {},
+      async setIfNotExists<T>(_key: string, _value: T): Promise<boolean> { return false; },
     };
 
     // Fresh cleanup stack
@@ -92,10 +94,12 @@ describe('Plugin API', () => {
       cleanupStack.push(cleanup1, cleanup2, cleanup3);
 
       const mockLogger: Logger = {
+        trace: vi.fn(),
         debug: vi.fn(),
         info: vi.fn(),
         warn: vi.fn(),
         error: vi.fn(),
+        fatal: vi.fn(),
         child: vi.fn(() => mockLogger),
       };
 
@@ -113,10 +117,12 @@ describe('Plugin API', () => {
       cleanupStack.push(cleanup1, cleanup2, cleanup3);
 
       const mockLogger: Logger = {
+        trace: vi.fn(),
         debug: vi.fn(),
         info: vi.fn(),
         warn: vi.fn(),
         error: vi.fn(),
+        fatal: vi.fn(),
         child: vi.fn(() => mockLogger),
       };
 
@@ -630,6 +636,126 @@ describe('Plugin API', () => {
       await expect(
         api.invoke.call('@kb-labs/forbidden-plugin', { data: 'test' })
       ).rejects.toThrow(PermissionError);
+    });
+
+    it('should deny targeted invoke when execution target permission is missing', async () => {
+      const mockInvoker = vi.fn().mockResolvedValue({ result: 'success' });
+
+      const permissions: PermissionSpec = {
+        invoke: {
+          allow: ['*'],
+        },
+      };
+      const api = createPluginAPI({
+        pluginId: '@kb-labs/test',
+        cwd: testDir,
+        outdir: path.join(testDir, 'output'),
+        permissions,
+        cache: mockCache,
+        cleanupStack,
+        pluginInvoker: mockInvoker,
+      });
+
+      await expect(
+        api.invoke.call('@kb-labs/allowed-plugin', { ping: true }, {
+          target: { environmentId: 'env-1', namespace: 'demo/local' },
+        })
+      ).rejects.toThrow(PermissionError);
+    });
+
+    it('should allow targeted invoke when execution target scope is granted', async () => {
+      const mockInvoker = vi.fn().mockResolvedValue({ result: 'success' });
+
+      const permissions: PermissionSpec = {
+        invoke: {
+          allow: ['*'],
+        },
+        platform: {
+          execution: {
+            targetUse: true,
+            namespaces: ['demo/*'],
+          },
+        },
+      };
+      const api = createPluginAPI({
+        pluginId: '@kb-labs/test',
+        cwd: testDir,
+        outdir: path.join(testDir, 'output'),
+        permissions,
+        cache: mockCache,
+        cleanupStack,
+        pluginInvoker: mockInvoker,
+      });
+
+      await api.invoke.call('@kb-labs/allowed-plugin', { ping: true }, {
+        target: { environmentId: 'env-1', namespace: 'demo/local' },
+      });
+
+      expect(mockInvoker).toHaveBeenCalledWith(
+        '@kb-labs/allowed-plugin',
+        { ping: true },
+        { target: { environmentId: 'env-1', namespace: 'demo/local' } }
+      );
+    });
+
+    it('should emit target execution audit event for targeted invoke', async () => {
+      const mockInvoker = vi.fn().mockResolvedValue({ result: 'success' });
+      const track = vi.fn(async () => undefined);
+      const publish = vi.fn(async () => undefined);
+
+      const permissions: PermissionSpec = {
+        invoke: {
+          allow: ['*'],
+        },
+        platform: {
+          execution: {
+            targetUse: true,
+            namespaces: ['demo/*'],
+          },
+        },
+      };
+      const api = createPluginAPI({
+        pluginId: '@kb-labs/test',
+        handlerId: 'invoke-handler',
+        tenantId: 'tenant-a',
+        cwd: testDir,
+        outdir: path.join(testDir, 'output'),
+        permissions,
+        cache: mockCache,
+        cleanupStack,
+        pluginInvoker: mockInvoker,
+        analytics: { track },
+        eventBus: { publish },
+      });
+
+      await api.invoke.call('@kb-labs/allowed-plugin', { ping: true }, {
+        target: { environmentId: 'env-1', namespace: 'demo/local' },
+      });
+
+      expect(track).toHaveBeenCalledWith(
+        'plugin.target_execution.requested',
+        expect.objectContaining({
+          method: 'invoke',
+          sourcePluginId: '@kb-labs/test',
+          sourceHandlerId: 'invoke-handler',
+          tenantId: 'tenant-a',
+          targetPluginId: '@kb-labs/allowed-plugin',
+          target: {
+            environmentId: 'env-1',
+            namespace: 'demo/local',
+          },
+        })
+      );
+      expect(publish).toHaveBeenCalledWith(
+        'plugin.target-execution.requested',
+        expect.objectContaining({
+          method: 'invoke',
+          sourcePluginId: '@kb-labs/test',
+          sourceHandlerId: 'invoke-handler',
+          tenantId: 'tenant-a',
+          targetPluginId: '@kb-labs/allowed-plugin',
+        })
+      );
     });
   });
 });

@@ -66,11 +66,10 @@ function createTestUI(): UIFacade {
 
     // Interactive methods
     spinner: vi.fn(() => ({
-      start: vi.fn(),
+      update: vi.fn(),
       stop: vi.fn(),
       succeed: vi.fn(),
       fail: vi.fn(),
-      text: '',
     })),
     table: vi.fn(),
     json: vi.fn(),
@@ -205,7 +204,7 @@ describe('UIFacade', () => {
     });
 
     it('should accept message with options', () => {
-      const options: MessageOptions = { icon: '🔵' };
+      const options: MessageOptions = {};
       ui.info('info with icon', options);
       expect(ui.info).toHaveBeenCalledWith('info with icon', options);
     });
@@ -223,7 +222,7 @@ describe('UIFacade', () => {
     });
 
     it('should accept message with options', () => {
-      const options: MessageOptions = { icon: '✓' };
+      const options: MessageOptions = {};
       ui.success('done', options);
       expect(ui.success).toHaveBeenCalledWith('done', options);
     });
@@ -236,7 +235,7 @@ describe('UIFacade', () => {
     });
 
     it('should accept message with options', () => {
-      const options: MessageOptions = { icon: '⚠️' };
+      const options: MessageOptions = {};
       ui.warn('be careful', options);
       expect(ui.warn).toHaveBeenCalledWith('be careful', options);
     });
@@ -249,7 +248,7 @@ describe('UIFacade', () => {
     });
 
     it('should accept message with options', () => {
-      const options: MessageOptions = { icon: '✗' };
+      const options: MessageOptions = {};
       ui.error('failed', options);
       expect(ui.error).toHaveBeenCalledWith('failed', options);
     });
@@ -261,32 +260,31 @@ describe('UIFacade', () => {
       expect(ui.debug).toHaveBeenCalledWith('debug info');
     });
 
-    it('should accept message with options', () => {
-      const options: MessageOptions = { icon: '🐛' };
-      ui.debug('debugging', options);
-      expect(ui.debug).toHaveBeenCalledWith('debugging', options);
+    it('should accept message', () => {
+      ui.debug('debugging');
+      expect(ui.debug).toHaveBeenCalledWith('debugging');
     });
   });
 
   describe('table method', () => {
     it('should accept columns and rows', () => {
       const columns: TableColumn[] = [
-        { key: 'name', label: 'Name' },
-        { key: 'value', label: 'Value' },
+        { key: 'name', header: 'Name' },
+        { key: 'value', header: 'Value' },
       ];
       const rows = [
         { name: 'foo', value: 'bar' },
         { name: 'baz', value: 'qux' },
       ];
 
-      ui.table(columns, rows);
-      expect(ui.table).toHaveBeenCalledWith(columns, rows);
+      ui.table(rows, columns);
+      expect(ui.table).toHaveBeenCalledWith(rows, columns);
     });
 
     it('should handle empty rows', () => {
-      const columns: TableColumn[] = [{ key: 'name', label: 'Name' }];
-      ui.table(columns, []);
-      expect(ui.table).toHaveBeenCalledWith(columns, []);
+      const columns: TableColumn[] = [{ key: 'name', header: 'Name' }];
+      ui.table([], columns);
+      expect(ui.table).toHaveBeenCalledWith([], columns);
     });
   });
 
@@ -395,9 +393,10 @@ describe('UIFacade', () => {
       expect(ui.newline).toHaveBeenCalled();
     });
 
-    it('should accept optional count', () => {
-      ui.newline(3);
-      expect(ui.newline).toHaveBeenCalledWith(3);
+    it('should be callable multiple times', () => {
+      ui.newline();
+      ui.newline();
+      expect(ui.newline).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -408,8 +407,8 @@ describe('UIFacade', () => {
     });
 
     it('should accept optional title', () => {
-      ui.divider('Section');
-      expect(ui.divider).toHaveBeenCalledWith('Section');
+      ui.divider();
+      expect(ui.divider).toHaveBeenCalled();
     });
   });
 
@@ -417,7 +416,7 @@ describe('UIFacade', () => {
     it('should return spinner object', () => {
       const spinner = ui.spinner('Loading...');
       expect(spinner).toBeDefined();
-      expect(typeof spinner.start).toBe('function');
+      expect(typeof spinner.update).toBe('function');
       expect(typeof spinner.stop).toBe('function');
       expect(typeof spinner.succeed).toBe('function');
       expect(typeof spinner.fail).toBe('function');
@@ -432,8 +431,8 @@ describe('UIFacade', () => {
     });
 
     it('should accept message with default value', async () => {
-      await ui.confirm('Continue?', true);
-      expect(ui.confirm).toHaveBeenCalledWith('Continue?', true);
+      await ui.confirm('Continue?');
+      expect(ui.confirm).toHaveBeenCalledWith('Continue?');
     });
   });
 

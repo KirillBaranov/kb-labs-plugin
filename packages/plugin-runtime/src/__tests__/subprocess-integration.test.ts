@@ -12,10 +12,10 @@
  * NOTE: These require built bootstrap.js and are slower than unit tests.
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { runInSubprocess } from '../sandbox/runner.js';
 import { wrapCliResult } from '../host/cli-wrapper.js';
-import type { PluginContextDescriptor, UIFacade, PlatformServices, CommandResult } from '@kb-labs/plugin-contracts';
+import type { PluginContextDescriptor, CommandResult } from '@kb-labs/plugin-contracts';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { writeFileSync, mkdirSync } from 'node:fs';
@@ -23,42 +23,6 @@ import { createServer } from 'node:net';
 import { rmSync } from 'node:fs';
 
 describe('Subprocess Integration Tests', () => {
-  const mockUI: UIFacade = {
-    info: vi.fn(),
-    success: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn(),
-    spinner: vi.fn(),
-    table: vi.fn(),
-    json: vi.fn(),
-    newline: vi.fn(),
-    divider: vi.fn(),
-    box: vi.fn(),
-    confirm: vi.fn(async () => true),
-    prompt: vi.fn(async () => 'test'),
-  };
-
-  const mockLogger = {
-    trace: vi.fn(),
-    debug: vi.fn(),
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    fatal: vi.fn(),
-    child: vi.fn(function(this: any) { return this; }),
-  };
-
-  const mockPlatform: PlatformServices = {
-    logger: mockLogger as any,
-    llm: {} as any,
-    embeddings: {} as any,
-    vectorStore: {} as any,
-    cache: {} as any,
-    storage: {} as any,
-    analytics: {} as any,
-  };
-
   it('should execute handler in real subprocess and inject metadata', async () => {
     // This test requires:
     // 1. Built bootstrap.js
