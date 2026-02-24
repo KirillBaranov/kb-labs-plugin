@@ -85,6 +85,12 @@ export interface PlatformServices {
    * Requires platform.eventBus permission
    */
   readonly eventBus: IEventBus;
+
+  /**
+   * Log reader for querying and subscribing to logs (core ILogReader)
+   * Available in system contexts (workflow, rest). May not be available in sandboxed plugins.
+   */
+  readonly logs: ILogReader;
 }
 
 // Import types for PlatformServices fields
@@ -97,4 +103,5 @@ import type {
   IStorage,
   IAnalytics,
   IEventBus,
+  ILogReader,
 } from '@kb-labs/core-platform/adapters';

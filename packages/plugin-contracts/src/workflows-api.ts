@@ -4,6 +4,7 @@
  * Simplified API for running background workflows in separate processes.
  * Workflows persist in distributed cache (ICache), enabling fire-and-forget execution.
  */
+import type { ExecutionTarget } from './execution-target.js';
 
 // ============================================================================
 // Workflow Run Options
@@ -32,6 +33,12 @@ export interface WorkflowRunOptions {
    * Custom tags for tracking
    */
   tags?: Record<string, string>;
+
+  /**
+   * Optional execution target affinity.
+   * When provided, platform should execute workflow in this target context.
+   */
+  target?: ExecutionTarget;
 }
 
 /**

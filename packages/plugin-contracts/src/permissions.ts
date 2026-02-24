@@ -93,6 +93,60 @@ export interface PermissionSpec {
       /** Can resume cron jobs */
       resume?: boolean;
     };
+    /** Environment lifecycle access */
+    environment?: boolean | {
+      /** Can create/provision environments */
+      create?: boolean;
+      /** Can read environment status */
+      read?: boolean;
+      /** Can destroy environments */
+      destroy?: boolean;
+      /** Can renew environment leases */
+      renewLease?: boolean;
+      /** Allowed environment templates (glob patterns, optional scope for create) */
+      templates?: string[];
+      /** Allowed namespaces for environment operations */
+      namespaces?: string[];
+    };
+    /** Workspace lifecycle access */
+    workspace?: boolean | {
+      /** Can materialize workspaces */
+      materialize?: boolean;
+      /** Can attach workspaces to environments */
+      attach?: boolean;
+      /** Can release workspace attachments */
+      release?: boolean;
+      /** Can read workspace status */
+      read?: boolean;
+      /** Allowed workspace sources (glob patterns, optional scope for materialize) */
+      sources?: string[];
+      /** Allowed workspace paths (glob patterns, optional scope for materialize/attach) */
+      paths?: string[];
+      /** Allowed namespaces for workspace operations */
+      namespaces?: string[];
+    };
+    /** Snapshot lifecycle access */
+    snapshot?: boolean | {
+      /** Can capture snapshots */
+      capture?: boolean;
+      /** Can restore snapshots */
+      restore?: boolean;
+      /** Can delete snapshots */
+      delete?: boolean;
+      /** Can read snapshot status */
+      read?: boolean;
+      /** Can run snapshot garbage collection */
+      garbageCollect?: boolean;
+      /** Allowed snapshot namespaces (glob patterns for capture/gc) */
+      namespaces?: string[];
+    };
+    /** Execution target access */
+    execution?: boolean | {
+      /** Can use explicit execution target affinity */
+      targetUse?: boolean;
+      /** Allowed target namespaces (glob patterns) */
+      namespaces?: string[];
+    };
   };
 
   /**
@@ -166,6 +220,10 @@ export const DEFAULT_PERMISSIONS: PermissionSpec = {
     workflows: false,
     jobs: false,
     cron: false,
+    environment: false,
+    workspace: false,
+    snapshot: false,
+    execution: false,
   },
   shell: {
     allow: [], // No shell by default

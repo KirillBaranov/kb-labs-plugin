@@ -39,6 +39,7 @@ export { DEFAULT_PERMISSIONS } from './permissions.js';
 
 // Execution
 export type { ExecutionMeta, RunResult } from './execution.js';
+export type { ExecutionTarget } from './execution-target.js';
 
 // Plugin Context Descriptor
 export type { PluginContextDescriptor } from './descriptor.js';
@@ -158,6 +159,43 @@ export type {
   CronStatus,
   CronInfo,
 } from './cron-api.js';
+
+// Environment API
+export type {
+  EnvironmentAPI,
+  EnvironmentStatus,
+  EnvironmentResources,
+  EnvironmentLeaseInfo,
+  EnvironmentEndpointInfo,
+  EnvironmentCreateRequest,
+  EnvironmentInfo,
+  EnvironmentStatusInfo,
+} from './environment-api.js';
+
+// Workspace API
+export type {
+  WorkspaceAPI,
+  WorkspaceStatus,
+  WorkspaceMountInfo,
+  WorkspaceMaterializeRequest,
+  WorkspaceInfo,
+  WorkspaceAttachRequest,
+  WorkspaceAttachmentInfo,
+  WorkspaceStatusInfo,
+} from './workspace-api.js';
+
+// Snapshot API
+export type {
+  SnapshotAPI,
+  SnapshotStatus,
+  SnapshotCaptureRequest,
+  SnapshotInfo,
+  SnapshotRestoreRequest,
+  SnapshotRestoreInfo,
+  SnapshotStatusInfo,
+  SnapshotGarbageCollectRequest,
+  SnapshotGarbageCollectInfo,
+} from './snapshot-api.js';
 
 // Job Context
 export type { JobContext, JobHandler } from './job-context.js';

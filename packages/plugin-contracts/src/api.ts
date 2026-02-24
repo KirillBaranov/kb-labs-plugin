@@ -3,6 +3,7 @@
  *
  * High-level APIs for plugin functionality: invoke, state, artifacts, shell, events, output, lifecycle.
  */
+import type { ExecutionTarget } from './execution-target.js';
 
 // ============================================================================
 // Invoke API
@@ -21,6 +22,12 @@ export interface InvokeOptions {
    * Whether to propagate abort signal
    */
   propagateAbort?: boolean;
+
+  /**
+   * Optional execution target affinity.
+   * When provided, platform should execute invocation in this target context.
+   */
+  target?: ExecutionTarget;
 }
 
 /**
@@ -295,6 +302,9 @@ export interface LifecycleAPI {
 import type { WorkflowsAPI } from './workflows-api.js';
 import type { JobsAPI } from './jobs-api.js';
 import type { CronAPI } from './cron-api.js';
+import type { EnvironmentAPI } from './environment-api.js';
+import type { WorkspaceAPI } from './workspace-api.js';
+import type { SnapshotAPI } from './snapshot-api.js';
 
 /**
  * Combined Plugin API interface
@@ -344,4 +354,19 @@ export interface PluginAPI {
    * Recurring scheduled tasks (cron jobs)
    */
   readonly cron: CronAPI;
+
+  /**
+   * Long-lived execution environments
+   */
+  readonly environment: EnvironmentAPI;
+
+  /**
+   * Workspace lifecycle operations
+   */
+  readonly workspace: WorkspaceAPI;
+
+  /**
+   * Snapshot lifecycle operations
+   */
+  readonly snapshot: SnapshotAPI;
 }
