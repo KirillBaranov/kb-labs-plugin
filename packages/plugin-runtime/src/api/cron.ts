@@ -38,12 +38,10 @@ function checkCronPermission(
   }
 
   // If cron is object, check specific operation
-  if (typeof cronPerms === 'object') {
-    if (!cronPerms[operation]) {
-      throw new Error(
-        `Cron operation '${operation}' denied: missing platform.cron.${operation} permission`
-      );
-    }
+  if (typeof cronPerms === 'object' && !cronPerms[operation]) {
+    throw new Error(
+      `Cron operation '${operation}' denied: missing platform.cron.${operation} permission`
+    );
   }
 }
 

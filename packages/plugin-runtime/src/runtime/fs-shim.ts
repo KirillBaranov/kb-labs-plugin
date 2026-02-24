@@ -270,11 +270,9 @@ export function createFSShim(options: CreateFSShimOptions): FSShim {
 
           if (entry.isDirectory()) {
             await walk(fullPath);
-          } else if (entry.isFile()) {
+          } else if (entry.isFile() && matchesGlobPattern(fullPath, pattern, searchCwd)) {
             // Check if file matches pattern
-            if (matchesGlobPattern(fullPath, pattern, searchCwd)) {
-              matches.push(options?.absolute ? fullPath : relativePath);
-            }
+            matches.push(options?.absolute ? fullPath : relativePath);
           }
         }
       }

@@ -97,10 +97,25 @@ export function createPluginContextV3<TConfig = unknown>(
 ): CreateContextResult<TConfig> {
   const { descriptor, platform, ui, signal, eventEmitter, pluginInvoker, cwd, outdir } = options;
 
-  // 1. Generate IDs (no parent tracking in V3)
-  const spanId = createId();
-  const traceId = createId();
-  const requestId = `${traceId}:${spanId}`;
+  // 1. Build stable correlation IDs.
+  // Preserve incoming request/trace when available to keep cross-node correlation intact.
+  const requestId = descriptor.requestId || createId();
+  const hostTraceId =
+    'traceId' in descriptor.hostContext && typeof descriptor.hostContext.traceId === 'string'
+      ? descriptor.hostContext.traceId
+      : undefined;
+  const descriptorMeta = descriptor as unknown as Record<string, unknown>;
+  const traceId =
+    (typeof descriptorMeta.traceId === 'string' ? descriptorMeta.traceId : undefined) ||
+    hostTraceId ||
+    requestId;
+  const spanId =
+    (typeof descriptorMeta.spanId === 'string' ? descriptorMeta.spanId : undefined) || createId();
+  const invocationId =
+    (typeof descriptorMeta.invocationId === 'string' ? descriptorMeta.invocationId : undefined) ||
+    spanId;
+  const executionId =
+    typeof descriptorMeta.executionId === 'string' ? descriptorMeta.executionId : undefined;
 
   // 2. Create cleanup stack
   const cleanupStack: Array<CleanupFn> = [];
@@ -131,7 +146,17 @@ export function createPluginContextV3<TConfig = unknown>(
 
   // 5.1. Enrich logger with host context (observability fields)
   const loggerMeta = getLoggerMetadataFromHost(descriptor.hostContext);
-  const enrichedLogger = governedPlatform.logger.child(loggerMeta);
+  const enrichedLogger = governedPlatform.logger.child({
+    ...loggerMeta,
+    reqId: requestId,
+    requestId,
+    traceId,
+    spanId,
+    invocationId,
+    executionId,
+    pluginId: descriptor.pluginId,
+    handlerId: descriptor.handlerId,
+  });
 
   // 5.2. Wrap logger with prefix protection to prevent plugins from overriding system fields
   const protectedLogger = createPrefixedLogger(enrichedLogger);
@@ -146,6 +171,7 @@ export function createPluginContextV3<TConfig = unknown>(
   const finalOutdir = outdir ?? `${cwd}/.kb/output`;
   const api = createPluginAPI({
     pluginId: descriptor.pluginId,
+    handlerId: descriptor.handlerId,
     tenantId: descriptor.tenantId,
     cwd,
     outdir: finalOutdir,
@@ -158,6 +184,13 @@ export function createPluginContextV3<TConfig = unknown>(
     workflowEngine: (platform as any).workflows,
     // Jobs/Cron use HTTP client to Workflow Service (microservices architecture)
     workflowServiceUrl: process.env.KB_WORKFLOW_SERVICE_URL,
+    // Environment lifecycle goes through runtime EnvironmentManager when available.
+    environmentManager: (platform as any).environmentManager,
+    workspaceManager: (platform as any).workspaceManager,
+    snapshotManager: (platform as any).snapshotManager,
+    analytics: enrichedPlatform.analytics,
+    eventBus: enrichedPlatform.eventBus,
+    logger: enrichedPlatform.logger,
     cleanupStack,
   });
 

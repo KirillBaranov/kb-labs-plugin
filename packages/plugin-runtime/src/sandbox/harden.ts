@@ -358,8 +358,8 @@ function patchFetch(
  */
 function patchProcessEnv(
   permissions: PermissionSpec,
-  mode: SandboxMode,
-  emitViolation: (event: SandboxViolationEvent) => void
+  _mode: SandboxMode,
+  _emitViolation: (event: SandboxViolationEvent) => void
 ): PatchRestore {
   const originalEnv = process.env;
   const allowedEnvKeys = permissions?.env?.read ?? [];

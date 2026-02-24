@@ -5,6 +5,7 @@
  */
 
 import type {
+  ExecutionTarget,
   WorkflowsAPI,
   WorkflowRunOptions,
   WorkflowWaitOptions,
@@ -18,6 +19,63 @@ export interface CreateWorkflowsAPIOptions {
   tenantId?: string;
   engine: IWorkflowEngine;
   permissions?: PermissionSpec;
+  auditTargetExecution?: (params: {
+    method: 'workflow';
+    target: ExecutionTarget;
+    workflowId: string;
+  }) => Promise<void> | void;
+}
+
+function matchesPattern(value: string, pattern: string): boolean {
+  if (pattern === '*') {
+    return true;
+  }
+  if (pattern.endsWith('*')) {
+    return value.startsWith(pattern.slice(0, -1));
+  }
+  return value === pattern;
+}
+
+function checkTargetPermission(
+  permissions: PermissionSpec | undefined,
+  options?: WorkflowRunOptions
+): void {
+  const target = options?.target;
+  if (!target) {
+    return;
+  }
+
+  if (!target.namespace) {
+    throw new Error('Target namespace is required when workflow target is specified');
+  }
+
+  const executionPerms = permissions?.platform?.execution;
+  if (executionPerms === false || executionPerms === undefined) {
+    throw new Error(
+      "Target execution denied: missing platform.execution.targetUse permission"
+    );
+  }
+
+  if (executionPerms === true) {
+    return;
+  }
+
+  if (!executionPerms.targetUse) {
+    throw new Error(
+      "Target execution denied: missing platform.execution.targetUse permission"
+    );
+  }
+
+  if (executionPerms.namespaces?.length) {
+    const allowed = executionPerms.namespaces.some(pattern =>
+      matchesPattern(target.namespace!, pattern)
+    );
+    if (!allowed) {
+      throw new Error(
+        `Target namespace '${target.namespace}' denied: not in allowed execution namespaces scope`
+      );
+    }
+  }
 }
 
 /**
@@ -74,7 +132,7 @@ function checkWorkflowPermission(
  * Maps simplified plugin API to full workflow engine interface.
  */
 export function createWorkflowsAPI(options: CreateWorkflowsAPIOptions): WorkflowsAPI {
-  const { tenantId, engine, permissions } = options;
+  const { tenantId, engine, permissions, auditTargetExecution } = options;
 
   return {
     async run(
@@ -83,12 +141,27 @@ export function createWorkflowsAPI(options: CreateWorkflowsAPIOptions): Workflow
       options?: WorkflowRunOptions
     ): Promise<string> {
       checkWorkflowPermission(permissions, 'run', workflowId);
+      checkTargetPermission(permissions, options);
+
+      const target = options?.target;
+      if (target) {
+        try {
+          await auditTargetExecution?.({
+            method: 'workflow',
+            target,
+            workflowId,
+          });
+        } catch {
+          // Audit failures must never block execution.
+        }
+      }
 
       const run = await engine.execute(workflowId, input, {
         tenantId,
         priority: options?.priority,
         timeout: options?.timeout,
         tags: options?.tags,
+        ...(options?.target ? { target: options.target } : {}),
       });
 
       return run.id;

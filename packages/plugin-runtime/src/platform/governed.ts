@@ -16,7 +16,10 @@ import { PermissionError } from '@kb-labs/plugin-contracts';
 /**
  * Check if cache key matches allowed namespaces
  */
-function checkCacheNamespace(key: string, permission: string[] | boolean | undefined): void {
+function checkCacheNamespace(
+  key: string,
+  permission: boolean | string[] | { namespaces?: string[] } | undefined
+): void {
   if (permission === false || permission === undefined) {
     throw new PermissionError('Cache access denied');
   }
@@ -25,9 +28,13 @@ function checkCacheNamespace(key: string, permission: string[] | boolean | undef
     return; // All namespaces allowed
   }
 
+  // Support both string[] (from shared-perm-presets builder) and { namespaces: string[] }
+  const allowed = Array.isArray(permission)
+    ? permission
+    : (permission as { namespaces?: string[] }).namespaces ?? [];
+
   // Check if key starts with any allowed namespace
   // Note: namespaces already include trailing ':' (e.g., 'git-status:')
-  const allowed = permission as string[];
   const hasMatch = allowed.some((ns) => key.startsWith(ns));
 
   if (!hasMatch) {
@@ -40,7 +47,10 @@ function checkCacheNamespace(key: string, permission: string[] | boolean | undef
 /**
  * Check if storage path is within allowed paths
  */
-function checkStoragePath(path: string, permission: string[] | boolean | undefined): void {
+function checkStoragePath(
+  path: string,
+  permission: boolean | { paths?: string[] } | undefined
+): void {
   if (permission === false || permission === undefined) {
     throw new PermissionError('Storage access denied');
   }
@@ -49,8 +59,9 @@ function checkStoragePath(path: string, permission: string[] | boolean | undefin
     return; // All paths allowed
   }
 
+  const allowed = (permission as { paths?: string[] }).paths ?? [];
+
   // Check if path starts with any allowed base path
-  const allowed = permission as string[];
   const hasMatch = allowed.some((basePath) => path.startsWith(basePath));
 
   if (!hasMatch) {
@@ -350,5 +361,8 @@ export function createGovernedPlatformServices(
 
     // EventBus: always allowed (no permission check currently)
     eventBus: raw.eventBus,
+
+    // Logs: pass through (system-level, restricted by runtime context)
+    logs: raw.logs,
   };
 }

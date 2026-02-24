@@ -226,7 +226,7 @@ export class UnixSocketClient {
     }
 
     // Reject all pending requests
-    for (const [requestId, pending] of this.pending) {
+    for (const [_requestId, pending] of this.pending) {
       clearTimeout(pending.timer);
       pending.reject(new Error('Client closed'));
     }

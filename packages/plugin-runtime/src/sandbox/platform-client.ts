@@ -10,11 +10,12 @@ import { UnixSocketClient } from './unix-socket-client.js';
 /**
  * Create a subprocess logger that writes to console
  */
-function createSubprocessLogger(): Logger {
+function createSubprocessLogger(bindings: Record<string, unknown> = {}): Logger {
   const log = (level: string, msg: string, meta?: Record<string, unknown>) => {
+    const mergedMeta = { ...bindings, ...(meta ?? {}) };
     const prefix = `[${level.toUpperCase()}]`;
-    if (meta) {
-      console.log(`${prefix} ${msg}`, meta);
+    if (Object.keys(mergedMeta).length > 0) {
+      console.log(`${prefix} ${msg}`, mergedMeta);
     } else {
       console.log(`${prefix} ${msg}`);
     }
@@ -27,7 +28,7 @@ function createSubprocessLogger(): Logger {
     error: (msg, _error?, meta?) => log('error', msg, meta),
     fatal: (msg, _error?, meta?) => log('fatal', msg, meta),
     trace: (msg, meta?) => log('trace', msg, meta),
-    child: (_bindings) => createSubprocessLogger(),
+    child: (childBindings) => createSubprocessLogger({ ...bindings, ...childBindings }),
   };
 }
 
@@ -165,6 +166,30 @@ export async function connectToPlatform(socketPath?: string): Promise<PlatformSe
         // TODO: Implement proper cross-process event subscription via IPC
         console.warn(`[eventBus] Subprocess subscription is not supported yet`);
         return () => {}; // Return noop unsubscribe
+      },
+    },
+
+    // Log reader via RPC (limited in subprocess context)
+    logs: {
+      query: async (filters, options?) => {
+        return rpcClient!.call('logs', 'query', [filters, options]);
+      },
+      getById: async (id) => {
+        return rpcClient!.call('logs', 'getById', [id]);
+      },
+      search: async (searchText, options?) => {
+        return rpcClient!.call('logs', 'search', [searchText, options]);
+      },
+      subscribe: (_callback, _filters?) => {
+        // Real-time log subscription is not supported in subprocess context
+        console.warn(`[logs] Subprocess log subscription is not supported`);
+        return () => {};
+      },
+      getStats: async () => {
+        return rpcClient!.call('logs', 'getStats', []);
+      },
+      getCapabilities: () => {
+        return { hasBuffer: false, hasPersistence: false, hasSearch: false, hasStreaming: false };
       },
     },
   };

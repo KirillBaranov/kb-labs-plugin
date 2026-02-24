@@ -22,7 +22,7 @@ import type {
 import { PluginError, TimeoutError, AbortError, createExecutionMeta } from '@kb-labs/plugin-contracts';
 import type { ParentMessage, ChildMessage, ResultMessage, ErrorMessage } from './ipc-protocol.js';
 import { createPluginContextV3 } from '../context/index.js';
-import { executeCleanup } from '../api/index.js';
+import { executeCleanup, type PluginInvokerFn } from '../api/index.js';
 
 /**
  * Create execution metadata from descriptor and timing
@@ -45,6 +45,7 @@ export interface RunInProcessOptions {
   descriptor: PluginContextDescriptor;
   platform: PlatformServices;
   ui: UIFacade;
+  pluginInvoker?: PluginInvokerFn;
   handlerPath: string;
   input: unknown;
   signal?: AbortSignal;
@@ -74,7 +75,7 @@ export interface RunInSubprocessOptions {
 export async function runInProcess<T = unknown>(
   options: RunInProcessOptions
 ): Promise<RunResult<T>> {
-  const { descriptor, platform, ui, handlerPath, input, signal, cwd, outdir } = options;
+  const { descriptor, platform, ui, pluginInvoker, handlerPath, input, signal, cwd, outdir } = options;
   const startTime = Date.now();
 
   // Create context
@@ -83,6 +84,7 @@ export async function runInProcess<T = unknown>(
     platform,
     ui,
     signal,
+    pluginInvoker,
     cwd,
     outdir,
   });
@@ -186,13 +188,14 @@ export async function runInSubprocess<T = unknown>(
     // 2. Sandbox subdir (development: runtime-v3/dist/sandbox/bootstrap.js)
     // 3. Relative to cwd (fallback)
 
+    const BOOTSTRAP = 'bootstrap.js';
     const currentDir = path.dirname(new URL(import.meta.url).pathname);
     const possiblePaths = [
-      path.join(currentDir, 'bootstrap.js'),           // Production (same dir)
-      path.join(currentDir, 'sandbox', 'bootstrap.js'), // Nested sandbox dir
-      path.join(process.cwd(), 'dist', 'sandbox', 'bootstrap.js'), // Test/dev mode
-      path.join(process.cwd(), 'dist', 'bootstrap.js'), // Fallback
-      path.join(process.cwd(), 'packages', 'plugin-runtime', 'dist', 'sandbox', 'bootstrap.js'), // Monorepo test mode
+      path.join(currentDir, BOOTSTRAP),                    // Production (same dir)
+      path.join(currentDir, 'sandbox', BOOTSTRAP),         // Nested sandbox dir
+      path.join(process.cwd(), 'dist', 'sandbox', BOOTSTRAP), // Test/dev mode
+      path.join(process.cwd(), 'dist', BOOTSTRAP),         // Fallback
+      path.join(process.cwd(), 'packages', 'plugin-runtime', 'dist', 'sandbox', BOOTSTRAP), // Monorepo test mode
     ];
 
     let bootstrapPath: string | undefined;
