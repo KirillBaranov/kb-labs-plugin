@@ -13,8 +13,9 @@ const mockPlatform = {} as PlatformServices;
 
 function makeRequest(overrides: Partial<ExecutionRequest> = {}): ExecutionRequest {
   return {
-    pluginId: '@kb-labs/test',
-    handlerPath: '/dist/handler.js',
+    executionId: 'exec-1',
+    pluginRoot: '/dist',
+    handlerRef: 'handler.js',
     descriptor: {
       hostType: 'cli',
       pluginId: '@kb-labs/test',
@@ -65,7 +66,7 @@ describe('resolveExecutionTarget()', () => {
     });
     // platform has no environmentManager — should succeed without error
     const result = await resolveExecutionTarget(req, mockPlatform);
-    expect(result.pluginId).toBe('@kb-labs/test');
+    expect(result.descriptor.pluginId).toBe('@kb-labs/test');
   });
 
   it('throws when environmentManager reports terminated status', async () => {
@@ -109,7 +110,7 @@ describe('resolveExecutionTarget()', () => {
     } as unknown as PlatformServices;
 
     const result = await resolveExecutionTarget(req, platformWithEnv);
-    expect(result.pluginId).toBe('@kb-labs/test');
+    expect(result.descriptor.pluginId).toBe('@kb-labs/test');
   });
 
   it('throws when workspaceManager reports released status', async () => {

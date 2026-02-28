@@ -31,8 +31,8 @@
   },
   "dependencies": {
     "@fastify/websocket": "^11.0.1",
-    "@kb-labs/core-contracts": "link:../../../kb-labs-core/packages/core-contracts",
-    "@kb-labs/core-ipc": "link:../../../kb-labs-core/packages/core-ipc",
+    "@kb-labs/core-contracts": "^1.0.0",
+    "@kb-labs/core-ipc": "^1.0.0",
     "@kb-labs/core-runtime": "workspace:*",
     "@kb-labs/plugin-contracts": "workspace:*",
     "@kb-labs/plugin-execution-factory": "workspace:*",
@@ -47,7 +47,7 @@
     "typescript": "^5.6.3",
     "vitest": "^3.2.4",
     "ws": "^8.18.0",
-    "@kb-labs/devkit": "link:../../../kb-labs-devkit"
+    "@kb-labs/devkit": "^1.0.0"
   },
   "peerDependencies": {
     "fastify": "^4.0.0"
@@ -57,9 +57,11 @@
       "optional": true
     }
   },
-  "private": true,
   "engines": {
     "node": ">=20.0.0",
     "pnpm": ">=9.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

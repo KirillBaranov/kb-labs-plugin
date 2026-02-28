@@ -29,14 +29,14 @@
     "lint:fix": "eslint . --fix"
   },
   "dependencies": {
-    "@kb-labs/core-contracts": "link:../../../kb-labs-core/packages/core-contracts",
-    "@kb-labs/core-ipc": "link:../../../kb-labs-core/packages/core-ipc",
-    "@kb-labs/core-platform": "link:../../../kb-labs-core/packages/core-platform",
+    "@kb-labs/core-contracts": "^1.0.0",
+    "@kb-labs/core-ipc": "^1.0.0",
+    "@kb-labs/core-platform": "^1.0.0",
     "@kb-labs/plugin-contracts": "workspace:*",
     "@kb-labs/plugin-runtime": "workspace:*"
   },
   "devDependencies": {
-    "@kb-labs/devkit": "link:../../../kb-labs-devkit",
+    "@kb-labs/devkit": "^1.0.0",
     "@types/node": "^24.3.3",
     "rimraf": "^6.0.1",
     "tsup": "^8.5.0",
@@ -51,9 +51,11 @@
     "factory"
   ],
   "license": "MIT",
-  "private": true,
   "engines": {
     "node": ">=20.0.0",
     "pnpm": ">=9.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
