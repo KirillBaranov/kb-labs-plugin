@@ -22,7 +22,7 @@ import type {
 import { PluginError, TimeoutError, AbortError, createExecutionMeta } from '@kb-labs/plugin-contracts';
 import type { ParentMessage, ChildMessage, ResultMessage, ErrorMessage } from './ipc-protocol.js';
 import { createPluginContextV3 } from '../context/index.js';
-import { executeCleanup, type PluginInvokerFn } from '../api/index.js';
+import { executeCleanup, type PluginInvokerFn, type EventEmitterFn } from '../api/index.js';
 
 /**
  * Create execution metadata from descriptor and timing
@@ -46,6 +46,7 @@ export interface RunInProcessOptions {
   platform: PlatformServices;
   ui: UIFacade;
   pluginInvoker?: PluginInvokerFn;
+  eventEmitter?: EventEmitterFn;
   handlerPath: string;
   input: unknown;
   signal?: AbortSignal;
@@ -56,12 +57,14 @@ export interface RunInProcessOptions {
 export interface RunInSubprocessOptions {
   descriptor: PluginContextDescriptor;
   socketPath: string;
+  platformAuthToken?: string;
   handlerPath: string;
   input: unknown;
   timeoutMs?: number;
   signal?: AbortSignal;
   cwd: string;
   outdir?: string;
+  onLog?: (entry: { level: string; message: string; stream: 'stdout' | 'stderr'; lineNo: number; timestamp: string; meta?: Record<string, unknown> }) => void;
 }
 
 /**
@@ -75,7 +78,7 @@ export interface RunInSubprocessOptions {
 export async function runInProcess<T = unknown>(
   options: RunInProcessOptions
 ): Promise<RunResult<T>> {
-  const { descriptor, platform, ui, pluginInvoker, handlerPath, input, signal, cwd, outdir } = options;
+  const { descriptor, platform, ui, pluginInvoker, eventEmitter, handlerPath, input, signal, cwd, outdir } = options;
   const startTime = Date.now();
 
   // Create context
@@ -85,13 +88,15 @@ export async function runInProcess<T = unknown>(
     ui,
     signal,
     pluginInvoker,
+    eventEmitter,
     cwd,
     outdir,
   });
 
   // Set __KB_CONFIG_SECTION__ for useConfig() auto-detection (in-process mode)
   if (descriptor.configSection) {
-    (globalThis as any).__KB_CONFIG_SECTION__ = descriptor.configSection;
+    const globalWithConfig = globalThis as typeof globalThis & { __KB_CONFIG_SECTION__?: string };
+    globalWithConfig.__KB_CONFIG_SECTION__ = descriptor.configSection;
   }
 
   // Analytics scope injection for plugin execution
@@ -167,6 +172,7 @@ export async function runInSubprocess<T = unknown>(
   const {
     descriptor,
     socketPath,
+    platformAuthToken,
     handlerPath,
     input,
     timeoutMs = 30000,
@@ -216,6 +222,9 @@ export async function runInSubprocess<T = unknown>(
         ...process.env,
         NODE_ENV: process.env.NODE_ENV,
         KB_SOCKET_PATH: socketPath,
+        KB_PLATFORM_SOCKET_TOKEN: platformAuthToken,
+        KB_EXECUTION_ID: descriptor.requestId,
+        KB_TENANT_ID: descriptor.tenantId,
       },
     });
 
@@ -267,6 +276,9 @@ export async function runInSubprocess<T = unknown>(
           outdir: options.outdir,
         };
         child.send(executeMsg);
+      } else if (msg.type === 'log') {
+        // Forward log entry to onLog callback
+        options.onLog?.(msg.entry);
       } else if (msg.type === 'result') {
         completed = true;
         clearTimeout(timeoutId);
@@ -274,19 +286,11 @@ export async function runInSubprocess<T = unknown>(
 
         const resultMsg = msg as ResultMessage;
 
-        // Reconstruct CommandResult from IPC message fields
-        // Bootstrap sends: exitCode, result, meta as separate fields
-        // We need to reassemble into CommandResult for wrapCliResult to process
-        const commandResult = {
-          exitCode: resultMsg.exitCode,
-          result: resultMsg.result,
-          meta: resultMsg.meta,
-        };
-
-        // Return reconstructed CommandResult with execution metadata
+        // IPC sends raw handler return value — pass through as-is.
+        // Host layer (CLI, REST, Workflow) handles interpretation.
         resolve({
           ok: true,
-          data: commandResult as T,
+          data: resultMsg.data as T,
           executionMeta: buildExecutionMeta(descriptor, startTime),
         });
       } else if (msg.type === 'error') {

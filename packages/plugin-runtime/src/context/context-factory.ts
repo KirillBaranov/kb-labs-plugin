@@ -19,6 +19,7 @@ import { createTraceContext } from './trace.js';
 import { createRuntimeAPI } from '../runtime/index.js';
 import { createPluginAPI, type EventEmitterFn, type PluginInvokerFn } from '../api/index.js';
 import { createGovernedPlatformServices } from '../platform/governed.js';
+import { createStreamingLogger } from './streaming-logger.js';
 
 export interface CreateContextOptions {
   /**
@@ -161,9 +162,14 @@ export function createPluginContextV3<TConfig = unknown>(
   // 5.2. Wrap logger with prefix protection to prevent plugins from overriding system fields
   const protectedLogger = createPrefixedLogger(enrichedLogger);
 
+  // 5.3. If eventEmitter provided (workflow host), wrap logger to also stream log calls as events
+  const finalLogger = eventEmitter
+    ? createStreamingLogger(protectedLogger, eventEmitter)
+    : protectedLogger;
+
   const enrichedPlatform: PlatformServices = {
     ...governedPlatform,
-    logger: protectedLogger,
+    logger: finalLogger,
   };
 
   // 6. Create plugin API

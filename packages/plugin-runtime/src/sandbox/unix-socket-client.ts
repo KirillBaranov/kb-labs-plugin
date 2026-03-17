@@ -16,15 +16,24 @@ export interface UnixSocketClientConfig {
   maxReconnectAttempts?: number;
   /** Request timeout in ms (default: 30000) */
   timeout?: number;
+  /** Optional auth token for parent-side IPC authorization */
+  authToken?: string;
 }
 
 export interface RPCRequest {
+  version: number;
   type: 'adapter:call';
   requestId: string;
   adapter: string;
   method: string;
   args: unknown[];
   timeout?: number;
+  context?: {
+    authToken?: string;
+    executionId?: string;
+    tenantId?: string;
+    traceId?: string;
+  };
 }
 
 export interface RPCResponse {
@@ -53,9 +62,11 @@ export class UnixSocketClient {
   private buffer = '';
   private reconnectAttempts = 0;
   private socketPath: string;
+  private readonly authToken?: string;
 
   constructor(config: UnixSocketClientConfig = {}) {
     this.socketPath = config.socketPath ?? '/tmp/kb-ipc.sock';
+    this.authToken = config.authToken;
   }
 
   /**
@@ -143,12 +154,19 @@ export class UnixSocketClient {
 
       // Send RPC request (newline-delimited JSON)
       const request: RPCRequest = {
+        version: 2,
         type: 'adapter:call',
         requestId,
         adapter,
         method,
         args,
         timeout: timeoutMs,
+        context: {
+          authToken: this.authToken,
+          executionId: process.env.KB_EXECUTION_ID,
+          tenantId: process.env.KB_TENANT_ID,
+          traceId: process.env.KB_TRACE_ID,
+        },
       };
 
       const message = JSON.stringify(request) + '\n';

@@ -23,6 +23,8 @@ import { WorkerPool } from './pool.js';
 import type { WorkerPoolConfig } from './types.js';
 import { resolveExecutionTarget } from '../../target-resolver.js';
 
+// When bundled by tsup into dist/index.js, import.meta.url points to dist/index.js.
+// worker-script.ts is emitted as a separate entry at dist/backends/worker-pool/worker-script.js.
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
@@ -79,7 +81,7 @@ export class WorkerPoolBackend implements ExecutionBackend {
 
     // Default worker script (to be created)
     this.workerScript = options.workerScript ??
-      path.join(__dirname, 'worker-script.js');
+      path.join(__dirname, 'backends', 'worker-pool', 'worker-script.js');
 
     this.config = {
       min: options.min ?? 2,
@@ -161,6 +163,7 @@ export class WorkerPoolBackend implements ExecutionBackend {
     try {
       const result = await this.pool!.execute(requestToExecute, {
         signal: options?.signal,
+        onLog: options?.onLog,
       });
 
       const executionTimeMs = performance.now() - start;

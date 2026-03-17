@@ -48,6 +48,7 @@ import type {
   PluginInvokerFn,
 } from '../types.js';
 import type { PlatformServices, UIFacade } from '@kb-labs/plugin-contracts';
+import type { IWorkspaceProvider, WorkspaceDescriptor } from '@kb-labs/core-platform';
 import { noopUI } from '@kb-labs/plugin-contracts';
 import { runInProcess } from '@kb-labs/plugin-runtime';
 import { localWorkspaceManager } from '../workspace/local.js';
@@ -105,6 +106,8 @@ export class InProcessBackend implements ExecutionBackend {
     const start = performance.now();
     let lease: WorkspaceLease | undefined;
     let resolvedTarget = request.target;
+    let workspaceDescriptor: WorkspaceDescriptor | undefined;
+    const workspaceProvider = (this.platform as any).getAdapter?.('workspace') as IWorkspaceProvider | undefined;
 
     try {
       // 1. Check abort before starting
@@ -112,8 +115,27 @@ export class InProcessBackend implements ExecutionBackend {
         throw new AbortError('Execution aborted before start');
       }
 
-      const requestToExecute = await resolveExecutionTarget(request, this.platform);
+      let requestToExecute = await resolveExecutionTarget(request, this.platform);
       resolvedTarget = requestToExecute.target;
+
+      // Workspace materialize: если зарегистрирован IWorkspaceProvider (e.g. AgentWorkspaceAdapter),
+      // fetches файлы плагина с удалённого хоста перед выполнением.
+      // При отсутствии provider или ошибке — fallback к оригинальному pluginRoot.
+      if (workspaceProvider?.materialize) {
+        try {
+          workspaceDescriptor = await workspaceProvider.materialize({
+            sourceRef: requestToExecute.pluginRoot,
+            basePath: requestToExecute.pluginRoot,
+            metadata: { executionId: requestToExecute.executionId },
+          });
+          if (workspaceDescriptor.rootPath) {
+            requestToExecute = { ...requestToExecute, pluginRoot: workspaceDescriptor.rootPath };
+          }
+        } catch {
+          // Best-effort: fall back to original pluginRoot if materialize fails
+          workspaceDescriptor = undefined;
+        }
+      }
 
       // 2. Lease workspace (trivial for local)
       // NOTE: Uses request.executionId, NOT descriptor.requestId (v4 fix)
@@ -136,7 +158,25 @@ export class InProcessBackend implements ExecutionBackend {
       const ui = this.uiProvider(request.descriptor.hostType);
       const pluginInvoker = options?.pluginInvoker ?? this.pluginInvoker;
 
-      // 5. Execute via runtime
+      // 5. Create eventEmitter from onLog callback (if provided)
+      const onLog = options?.onLog;
+      const eventEmitter = onLog
+        ? async (name: string, payload?: unknown) => {
+            if ((name === 'log.line' || name.endsWith(':log.line')) && payload && typeof payload === 'object') {
+              const p = payload as Record<string, unknown>;
+              onLog({
+                level: (p.level as string) ?? 'info',
+                message: (p.line as string) ?? '',
+                stream: (p.stream as 'stdout' | 'stderr') ?? 'stdout',
+                lineNo: (p.lineNo as number) ?? 0,
+                timestamp: new Date().toISOString(),
+                meta: p.meta as Record<string, unknown>,
+              });
+            }
+          }
+        : undefined;
+
+      // 6. Execute via runtime
       // NOTE: request.descriptor is PluginContextDescriptor - passed AS-IS!
       // No conversion needed (v3 unified types).
       // v5: runInProcess returns RunResult<T> with raw data
@@ -145,6 +185,7 @@ export class InProcessBackend implements ExecutionBackend {
         platform: this.platform,
         ui,
         pluginInvoker,
+        eventEmitter,
         handlerPath,
         input: requestToExecute.input,
         signal: options?.signal,
@@ -185,6 +226,10 @@ export class InProcessBackend implements ExecutionBackend {
         },
       };
     } finally {
+      // Release materialized workspace (best-effort)
+      if (workspaceDescriptor?.workspaceId && workspaceProvider?.release) {
+        await workspaceProvider.release(workspaceDescriptor.workspaceId).catch(() => {});
+      }
       // CRITICAL: Always release workspace (even on error)
       if (lease) {
         await localWorkspaceManager.release(lease).catch(() => {

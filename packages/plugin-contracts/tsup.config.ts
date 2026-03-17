@@ -1,5 +1,5 @@
 import { defineConfig } from 'tsup'
-import dualPreset from '@kb-labs/devkit/tsup/node.js'
+import dualPreset from '@kb-labs/devkit/tsup/node'
 
 export default defineConfig({
   ...dualPreset,

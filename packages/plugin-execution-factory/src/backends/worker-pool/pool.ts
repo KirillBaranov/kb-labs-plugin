@@ -144,7 +144,7 @@ export class WorkerPool extends EventEmitter<PoolEvents> {
    */
   async execute(
     request: ExecutionRequest,
-    options?: { signal?: AbortSignal }
+    options?: { signal?: AbortSignal; onLog?: (entry: { level: string; message: string; stream: 'stdout' | 'stderr'; lineNo: number; timestamp: string; meta?: Record<string, unknown> }) => void }
   ): Promise<ExecutionResult> {
     if (this.lifecycleManager.isShuttingDownState()) {
       return {
@@ -194,7 +194,8 @@ export class WorkerPool extends EventEmitter<PoolEvents> {
           worker,
           request,
           timeoutMs,
-          startTime
+          startTime,
+          options?.onLog,
         );
       }
 

@@ -45,7 +45,10 @@ export async function connectToPlatform(socketPath?: string): Promise<PlatformSe
   }
 
   // Create and connect RPC client
-  rpcClient = new UnixSocketClient({ socketPath });
+  rpcClient = new UnixSocketClient({
+    socketPath,
+    authToken: process.env.KB_PLATFORM_SOCKET_TOKEN,
+  });
   await rpcClient.connect();
 
   // Create platform services using RPC client

@@ -38,6 +38,8 @@ export type {
   ExecutionErrorCode,
   ExecutionMetadata,
   ExecuteOptions,
+  LogEntry,
+  OnLogCallback,
   PluginInvokerFn,
 
   // Runtime types (re-exported from plugin-contracts)
@@ -86,7 +88,7 @@ export {
   type WorkspaceLease,
   LocalWorkspaceManager,
   localWorkspaceManager,
-} from './workspace/index.js';
+} from '@kb-labs/plugin-execution-factory';
 
 // Error classes (note: ExecutionLayerError, not ExecutionError - to avoid collision with interface)
 export {

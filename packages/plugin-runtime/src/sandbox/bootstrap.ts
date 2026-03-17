@@ -5,12 +5,12 @@
  * It receives the descriptor via IPC and creates the context.
  */
 
-import type { ParentMessage, ChildMessage, ExecuteMessage } from './ipc-protocol.js';
+import type { ParentMessage, ChildMessage, ExecuteMessage, LogMessage } from './ipc-protocol.js';
 import type { UIFacade, MessageOptions } from '@kb-labs/plugin-contracts';
 import { PluginError, wrapError } from '@kb-labs/plugin-contracts';
 import { sideBorderBox, safeColors, safeSymbols } from '@kb-labs/shared-cli-ui';
 import { createPluginContextV3 } from '../context/index.js';
-import { executeCleanup } from '../api/index.js';
+import { executeCleanup, type EventEmitterFn } from '../api/index.js';
 import { applySandboxPatches, type SandboxMode } from './harden.js';
 import { setGlobalContext, clearGlobalContext } from './context-holder.js';
 
@@ -56,15 +56,12 @@ function createStdoutUI(): UIFacade {
       console.log(boxOutput);
     },
     success: (msg: string, options?: MessageOptions) => {
-      console.log('[bootstrap] success called with:', { msg, options });
       const boxOutput = sideBorderBox({
         title: options?.title || 'Success',
         sections: options?.sections || [{ items: [msg] }],
         status: 'success',
         timing: options?.timing,
       });
-      console.log('[bootstrap] boxOutput length:', boxOutput.length);
-      console.log('[bootstrap] boxOutput:', boxOutput);
       console.log(boxOutput);
     },
     warn: (msg: string, options?: MessageOptions) => {
@@ -156,12 +153,32 @@ process.on('message', async (msg: ParentMessage) => {
   // Create stdout UI (plain text output)
   const ui = createStdoutUI();
 
+  // Create eventEmitter that sends log messages to parent via IPC
+  const eventEmitter: EventEmitterFn = async (name, payload) => {
+    if ((name === 'log.line' || name.endsWith(':log.line')) && payload && typeof payload === 'object') {
+      const p = payload as Record<string, unknown>;
+      const logMsg: LogMessage = {
+        type: 'log',
+        entry: {
+          level: (p.level as string) ?? 'info',
+          message: (p.line as string) ?? '',
+          stream: (p.stream as 'stdout' | 'stderr') ?? 'stdout',
+          lineNo: (p.lineNo as number) ?? 0,
+          timestamp: new Date().toISOString(),
+          meta: p.meta as Record<string, unknown> | undefined,
+        },
+      };
+      process.send?.(logMsg);
+    }
+  };
+
   // Create context
   const { context, cleanupStack } = createPluginContextV3({
     descriptor,
     platform,
     ui,
     signal: abortController.signal,
+    eventEmitter,
     cwd,
     outdir,
   });
@@ -169,15 +186,9 @@ process.on('message', async (msg: ParentMessage) => {
   // Set global context for sandbox proxying (used in compat mode)
   setGlobalContext(context);
 
-  // DEBUG: Log descriptor.configSection
-  console.log('[BOOTSTRAP DEBUG] descriptor.configSection:', descriptor.configSection);
-
   // Set __KB_CONFIG_SECTION__ for useConfig() auto-detection (subprocess mode)
   if (descriptor.configSection) {
     (globalThis as any).__KB_CONFIG_SECTION__ = descriptor.configSection;
-    console.log('[BOOTSTRAP DEBUG] Set __KB_CONFIG_SECTION__ to:', descriptor.configSection);
-  } else {
-    console.log('[BOOTSTRAP DEBUG] No configSection in descriptor, not setting global');
   }
 
   // Analytics scope injection for plugin execution
@@ -224,12 +235,11 @@ process.on('message', async (msg: ParentMessage) => {
     // Execute handler with merged input
     const handlerResult = await handler.execute(context, finalInput);
 
-    // Send result to parent
+    // Send raw handler result to parent — no host-specific wrapping.
+    // Host layer (CLI, REST, Workflow) is responsible for interpreting the data.
     const resultMsg: ChildMessage = {
       type: 'result',
-      exitCode: handlerResult?.exitCode ?? 0,
-      result: handlerResult ? 'result' in handlerResult ? handlerResult.result : undefined : undefined,
-      meta: handlerResult ? 'meta' in handlerResult ? handlerResult.meta : undefined : undefined,
+      data: handlerResult,
     };
     process.send?.(resultMsg);
   } catch (error) {

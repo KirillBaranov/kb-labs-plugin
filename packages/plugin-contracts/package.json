@@ -28,11 +28,11 @@
     "lint:fix": "eslint . --fix"
   },
   "dependencies": {
-    "@kb-labs/core-platform": "^1.0.0",
-    "@kb-labs/studio-contracts": "link:../../../kb-labs-studio/packages/studio-contracts"
+    "@kb-labs/core-platform": "workspace:*",
+    "@kb-labs/studio-contracts": "workspace:*"
   },
   "devDependencies": {
-    "@kb-labs/devkit": "^1.0.0",
+    "@kb-labs/devkit": "workspace:*",
     "@types/node": "^24.3.3",
     "rimraf": "^6.0.1",
     "tsup": "^8.5.0",

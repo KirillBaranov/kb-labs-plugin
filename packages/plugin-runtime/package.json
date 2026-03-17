@@ -37,14 +37,14 @@
     "lint:fix": "eslint . --fix"
   },
   "dependencies": {
-    "@kb-labs/core-contracts": "^1.0.0",
-    "@kb-labs/core-platform": "^1.0.0",
+    "@kb-labs/core-contracts": "workspace:*",
+    "@kb-labs/core-platform": "workspace:*",
     "@kb-labs/plugin-contracts": "workspace:*",
-    "@kb-labs/shared-cli-ui": "^1.0.0",
-    "@kb-labs/studio-contracts": "link:../../../kb-labs-studio/packages/studio-contracts"
+    "@kb-labs/shared-cli-ui": "workspace:*",
+    "@kb-labs/studio-contracts": "workspace:*"
   },
   "devDependencies": {
-    "@kb-labs/devkit": "^1.0.0",
+    "@kb-labs/devkit": "workspace:*",
     "@types/node": "^24.3.3",
     "@vitest/ui": "^3.0.0",
     "rimraf": "^6.0.1",

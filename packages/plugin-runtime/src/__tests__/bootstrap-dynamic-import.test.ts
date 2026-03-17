@@ -28,6 +28,8 @@ describe('Bootstrap Dynamic Import Tests', () => {
   beforeEach(() => {
     testDir = join(tmpdir(), `bootstrap-test-${Date.now()}`);
     mkdirSync(testDir, { recursive: true });
+    // Mark the temp dir as ESM so .js files in test scripts use ESM module syntax
+    writeFileSync(join(testDir, 'package.json'), JSON.stringify({ type: 'module' }));
     originalEnv = { ...process.env };
   });
 

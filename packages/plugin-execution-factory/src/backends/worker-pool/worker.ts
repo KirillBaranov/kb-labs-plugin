@@ -15,6 +15,7 @@ import type {
   ExecuteMessage,
   ResultMessage,
   ErrorMessage,
+  LogWorkerMessage,
   ReadyMessage,
 } from './types.js';
 import type { ExecutionRequest, ExecutionResult } from '../../types.js';
@@ -71,6 +72,7 @@ export class Worker extends EventEmitter<WorkerEvents> {
     resolve: (result: ExecutionResult) => void;
     reject: (error: Error) => void;
     timeoutId: ReturnType<typeof setTimeout>;
+    onLog?: (entry: { level: string; message: string; stream: 'stdout' | 'stderr'; lineNo: number; timestamp: string; meta?: Record<string, unknown> }) => void;
   }>();
 
   // Health check tracking
@@ -137,7 +139,7 @@ export class Worker extends EventEmitter<WorkerEvents> {
       try {
         // Fork the worker process
         this.process = fork(this.options.workerScript, [], {
-          stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
+          stdio: ['pipe', 'inherit', 'inherit', 'ipc'],
           env: {
             ...process.env,
             KB_WORKER_ID: this.id,
@@ -190,7 +192,7 @@ export class Worker extends EventEmitter<WorkerEvents> {
   /**
    * Execute a request on this worker.
    */
-  async execute(request: ExecutionRequest, timeoutMs: number): Promise<ExecutionResult> {
+  async execute(request: ExecutionRequest, timeoutMs: number, onLog?: (entry: { level: string; message: string; stream: 'stdout' | 'stderr'; lineNo: number; timestamp: string; meta?: Record<string, unknown> }) => void): Promise<ExecutionResult> {
     if (this._state !== 'idle') {
       throw new Error(`Worker ${this.id} is not available (state: ${this._state})`);
     }
@@ -231,6 +233,7 @@ export class Worker extends EventEmitter<WorkerEvents> {
           reject(error);
         },
         timeoutId,
+        onLog,
       });
 
       // Send execute message
@@ -383,6 +386,15 @@ export class Worker extends EventEmitter<WorkerEvents> {
           (error as any).code = msg.error.code;
           error.stack = msg.error.stack;
           pending.reject(error);
+        }
+        break;
+      }
+
+      case 'log': {
+        const msg = message as LogWorkerMessage;
+        const pending = this.pendingRequests.get(msg.requestId);
+        if (pending?.onLog) {
+          pending.onLog(msg.entry);
         }
         break;
       }

@@ -38,6 +38,7 @@ import type {
   SubprocessRunOptions,
   RunResult,
 } from '@kb-labs/core-contracts';
+import type { PluginContextDescriptor } from '@kb-labs/plugin-contracts';
 import { runInSubprocess } from '@kb-labs/plugin-runtime';
 
 /**
@@ -55,7 +56,7 @@ export class SubprocessRunnerAdapter implements ISubprocessRunner {
     // The types are already aligned, so we can pass through directly
     // SubprocessRunOptions from contracts matches RunInSubprocessOptions from runtime
     return runInSubprocess<T>({
-      descriptor: options.descriptor,
+      descriptor: options.descriptor as PluginContextDescriptor,
       socketPath: options.platformSocketPath,
       handlerPath: options.handlerPath,
       input: options.input,
@@ -63,6 +64,7 @@ export class SubprocessRunnerAdapter implements ISubprocessRunner {
       signal: options.signal,
       cwd: options.cwd,
       outdir: options.outdir,
+      onLog: options.onLog,
     });
   }
 }

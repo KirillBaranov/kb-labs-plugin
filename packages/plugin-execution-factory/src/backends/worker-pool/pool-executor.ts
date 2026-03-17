@@ -78,12 +78,13 @@ export class PoolExecutor {
     worker: Worker,
     request: ExecutionRequest,
     timeoutMs: number,
-    startTime: number
+    startTime: number,
+    onLog?: (entry: { level: string; message: string; stream: 'stdout' | 'stderr'; lineNo: number; timestamp: string; meta?: Record<string, unknown> }) => void,
   ): Promise<ExecutionResult> {
     this.onTotalRequests();
 
     try {
-      const result = await worker.execute(request, timeoutMs);
+      const result = await worker.execute(request, timeoutMs, onLog);
 
       if (result.ok) {
         this.onSuccessCount();

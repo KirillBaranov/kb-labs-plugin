@@ -1,164 +1,306 @@
-# KB Labs Plugin System (@kb-labs/plugin)
+# Standard Configuration Templates
 
-> **Plugin system infrastructure for KB Labs ecosystem.** Manifest definitions, sandboxed runtime, and execution backends for CLI, REST, and Workflow adapters.
+This directory contains canonical configuration templates for all `@kb-labs` packages.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Node.js](https://img.shields.io/badge/Node.js-18.18.0+-green.svg)](https://nodejs.org/)
-[![pnpm](https://img.shields.io/badge/pnpm-9.0.0+-orange.svg)](https://pnpm.io/)
+## 📋 Available Templates
 
-## 🎯 Vision
+### Core Configs (All Packages)
 
-KB Labs Plugin System provides the infrastructure for creating, managing, and executing plugins across the KB Labs ecosystem. It defines the plugin manifest format (V3), provides a sandboxed runtime execution engine, and supplies execution backends for CLI, REST API, and Workflow adapters.
+| File | Purpose | Required | Customizable |
+|------|---------|----------|--------------|
+| **eslint.config.js** | Linting rules | ✅ Yes | ⚠️ Minimal |
+| **tsconfig.json** | TypeScript IDE config | ✅ Yes | ❌ No |
+| **tsconfig.build.json** | TypeScript build config | ✅ Yes | ❌ No |
 
-This project is the foundation for all plugin development in the **@kb-labs** ecosystem.
+### Tsup Configs (Choose ONE based on package type)
 
-## 🚀 Quick Start
+| Template | Package Type | Use Cases |
+|----------|--------------|-----------|
+| **tsup.config.ts** | 📦 **Library** (default) | Most packages, importable libraries |
+| **tsup.config.bin.ts** | 🔧 **Binary** | Standalone executables, CLI bins |
+| **tsup.config.cli.ts** | ⌨️ **CLI** | CLI packages with commands |
+| **tsup.config.dual.ts** | 📦🔧 **Library + Binary** | Packages with both API and bin |
+
+### Package.json Examples
+
+| Template | Purpose |
+|----------|---------|
+| **package.json.lib** | Library package example |
+| **package.json.bin** | Binary package example |
+
+## 🎯 Philosophy
+
+**Convention over Configuration**
+
+All `@kb-labs` packages MUST use these exact templates with minimal customization. This ensures:
+
+- ✅ Consistent build output across all packages
+- ✅ Predictable dependency resolution
+- ✅ Unified linting standards
+- ✅ Easy maintenance and upgrades
+
+## 📦 Usage
+
+### For New Packages
+
+#### Step 1: Choose Package Type
+
+**Library Package** (most common):
+```bash
+cp kb-labs-devkit/templates/configs/tsup.config.ts your-package/
+cp kb-labs-devkit/templates/configs/eslint.config.js your-package/
+cp kb-labs-devkit/templates/configs/tsconfig*.json your-package/
+cp kb-labs-devkit/templates/configs/package.json.lib your-package/package.json
+```
+
+**Binary Package** (standalone executables):
+```bash
+cp kb-labs-devkit/templates/configs/tsup.config.bin.ts your-package/tsup.config.ts
+cp kb-labs-devkit/templates/configs/eslint.config.js your-package/
+cp kb-labs-devkit/templates/configs/tsconfig*.json your-package/
+cp kb-labs-devkit/templates/configs/package.json.bin your-package/package.json
+```
+
+**CLI Package** (command handlers):
+```bash
+cp kb-labs-devkit/templates/configs/tsup.config.cli.ts your-package/tsup.config.ts
+cp kb-labs-devkit/templates/configs/eslint.config.js your-package/
+cp kb-labs-devkit/templates/configs/tsconfig*.json your-package/
+cp kb-labs-devkit/templates/configs/package.json.lib your-package/package.json
+```
+
+**Dual Package** (library + binary):
+```bash
+cp kb-labs-devkit/templates/configs/tsup.config.dual.ts your-package/tsup.config.ts
+cp kb-labs-devkit/templates/configs/eslint.config.js your-package/
+cp kb-labs-devkit/templates/configs/tsconfig*.json your-package/
+cp kb-labs-devkit/templates/configs/package.json.lib your-package/package.json
+# Then add "bin" field to package.json
+```
+
+#### Step 2: Customize Package Name
+```bash
+# Edit package.json and update name, description
+```
+
+### For Existing Packages
 
 ```bash
-# From KB Labs monorepo root
-cd kb-labs-plugin
-pnpm install
-pnpm build
-pnpm test
+# Check for drift
+npx kb-devkit-check-configs
+
+# Auto-fix drift
+npx kb-devkit-check-configs --fix
 ```
 
-## 📁 Repository Structure
+## 🔧 Customization Rules
 
-```
-kb-labs-plugin/
-├── packages/
-│   ├── plugin-contracts/          # Pure types and interfaces (0 runtime deps)
-│   ├── plugin-runtime/            # Context factory, sandboxed execution, runtime APIs
-│   ├── plugin-execution-factory/  # Execution backends (in-process, subprocess, worker-pool)
-│   └── plugin-execution/          # Re-exports from execution-factory (backward compat)
-└── docs/                          # Documentation and ADRs
-```
+### tsup.config.ts
 
-## 📦 Packages
-
-| Package | Description |
-|---------|-------------|
-| [@kb-labs/plugin-contracts](./packages/plugin-contracts/) | Pure TypeScript types and interfaces — 0 runtime dependencies |
-| [@kb-labs/plugin-runtime](./packages/plugin-runtime/) | Context factory (`PluginContextV3`), sandboxed execution, runtime shims (fs, fetch, env) |
-| [@kb-labs/plugin-execution-factory](./packages/plugin-execution-factory/) | Execution backends: `InProcessBackend`, `SubprocessBackend`, `WorkerPoolBackend` |
-| [@kb-labs/plugin-execution](./packages/plugin-execution/) | Re-exports from `plugin-execution-factory` for backward compatibility |
-
-## 🏗️ Architecture
-
-### Plugin Manifest (V3)
-
-Plugins declare capabilities via `manifest.ts` using `defineManifest`:
+**Allowed customizations:**
 
 ```typescript
-import { defineManifest } from '@kb-labs/sdk';
+export default defineConfig({
+  ...nodePreset,
+  tsconfig: 'tsconfig.build.json', // ✅ Always required
 
-export default defineManifest({
-  schema: 'kb.plugin/3',
-  id: '@acme/my-plugin',
-  version: '1.0.0',
-  permissions: combine(minimal, llmAccess),
-  cli: {
-    commands: [{ id: 'greet', handler: './cli/greet.js#run' }]
-  },
+  // ✅ OK: Multiple entry points
+  entry: ['src/index.ts', 'src/cli.ts'],
+
+  // ✅ OK: Extra external deps (if really needed)
+  external: ['special-native-module'],
+
+  dts: true, // ✅ Always required
 });
 ```
 
-### Plugin Context (V3)
-
-Handlers receive a unified `PluginContextV3`:
+**NOT allowed:**
 
 ```typescript
-export async function run(ctx, input) {
-  ctx.ui.info('Starting...');
-  const file = await ctx.runtime.fs.readFile('config.json');
-  const reply = await ctx.platform.llm.generate({ prompt: 'Hello' });
-  return { exitCode: 0, result: { reply } };
+// ❌ WRONG: Don't override preset settings
+export default defineConfig({
+  format: ['esm'],        // Already in preset!
+  target: 'es2022',       // Already in preset!
+  sourcemap: true,        // Already in preset!
+  // ...
+});
+
+// ❌ WRONG: Don't disable types
+dts: false,
+
+// ❌ WRONG: Don't duplicate external deps
+external: [
+  '@kb-labs/core',  // Already in preset!
+  '@kb-labs/cli',   // Already in preset!
+],
+```
+
+### eslint.config.js
+
+**Allowed customizations:**
+
+```javascript
+export default [
+  ...nodePreset,
+  {
+    // ✅ OK: Project-specific ignores only
+    ignores: ['**/*.generated.ts']
+  }
+];
+```
+
+**NOT allowed:**
+
+```javascript
+// ❌ WRONG: Don't duplicate preset ignores
+export default [
+  ...nodePreset,
+  {
+    ignores: [
+      '**/dist/**',        // Already in preset!
+      '**/node_modules/**', // Already in preset!
+    ]
+  }
+];
+```
+
+### tsconfig.json & tsconfig.build.json
+
+**NOT customizable!**
+
+These files MUST remain identical to templates. All TypeScript configuration is standardized in DevKit presets.
+
+```json
+// ❌ WRONG: Don't override extends
+{
+  "extends": "./my-custom-base.json"
+}
+
+// ❌ WRONG: Don't add compilerOptions
+{
+  "extends": "@kb-labs/devkit/tsconfig/node.json",
+  "compilerOptions": {
+    "strict": false  // Don't override preset!
+  }
 }
 ```
 
-Context structure:
-- `ctx.host` — `'cli' | 'rest' | 'workflow'`
-- `ctx.cwd` / `ctx.outdir` — working directories
-- `ctx.ui` — 13 output methods (info, warn, table, spinner, etc.)
-- `ctx.runtime.fs` — sandboxed filesystem (17 methods)
-- `ctx.runtime.fetch` — sandboxed network
-- `ctx.runtime.env` — sandboxed env vars
-- `ctx.platform` — LLM, embeddings, vector store, cache, analytics
-- `ctx.api` — lifecycle, state
+## 🔍 Drift Detection
 
-### Execution Backends
+DevKit automatically detects configuration drift:
 
-`plugin-execution-factory` provides three backends:
+```bash
+# Check all packages
+npx kb-devkit-check-configs
+
+# Check specific package
+npx kb-devkit-check-configs --package=@kb-labs/core
+
+# Auto-fix (creates backup)
+npx kb-devkit-check-configs --fix
+
+# CI mode (fail on drift)
+npx kb-devkit-check-configs --ci
+```
+
+### Drift Detection Rules
+
+| Issue | Severity | Auto-fix |
+|-------|----------|----------|
+| Missing `dts: true` | 🔴 Error | ✅ Yes |
+| Using `dts: false` | 🔴 Error | ✅ Yes |
+| Not using `nodePreset` | 🔴 Error | ⚠️ Manual |
+| Duplicate `external` | 🟡 Warning | ✅ Yes |
+| Duplicate `ignores` | 🟡 Warning | ✅ Yes |
+| Missing templates | 🔴 Error | ✅ Yes |
+| Modified templates | 🔴 Error | ⚠️ Manual |
+
+## 📚 Examples
+
+### ✅ Good Example (Minimal Package)
 
 ```typescript
-import { createExecutionBackend } from '@kb-labs/plugin-execution-factory';
+// tsup.config.ts
+import { defineConfig } from 'tsup';
+import nodePreset from '@kb-labs/devkit/tsup/node.js';
 
-// Fast, no isolation (dev mode)
-const backend = createExecutionBackend({ type: 'in-process' });
-
-// Isolated subprocess via IPC (production)
-const backend = createExecutionBackend({ type: 'subprocess' });
-
-// Pool of workers for parallel execution
-const backend = createExecutionBackend({
-  type: 'worker-pool',
-  options: { minWorkers: 2, maxWorkers: 10 }
+export default defineConfig({
+  ...nodePreset,
+  tsconfig: 'tsconfig.build.json',
+  entry: ['src/index.ts'],
+  dts: true,
 });
 ```
 
-### Circular Dependency Resolution
+### ✅ Good Example (CLI Package with Multiple Entries)
 
-`plugin-execution-factory` was extracted to eliminate a circular dependency:
+```typescript
+// tsup.config.ts
+import { defineConfig } from 'tsup';
+import nodePreset from '@kb-labs/devkit/tsup/node.js';
 
+export default defineConfig({
+  ...nodePreset,
+  tsconfig: 'tsconfig.build.json',
+  entry: [
+    'src/index.ts',
+    'src/cli/index.ts',
+    'src/cli/commands/build.ts',
+    'src/cli/commands/test.ts',
+  ],
+  dts: true,
+});
 ```
-Before: core-runtime → plugin-execution → plugin-runtime → core-runtime ❌
-After:  plugin-runtime → plugin-execution-factory → core-runtime ✅
+
+### ❌ Bad Example (Over-configured)
+
+```typescript
+// tsup.config.ts
+import { defineConfig } from 'tsup';
+
+// ❌ Not using preset!
+export default defineConfig({
+  format: ['esm'],
+  target: 'es2022',
+  sourcemap: true,
+  clean: true,
+  dts: true,
+  entry: ['src/index.ts'],
+  external: [/^@kb-labs\/.*/],  // Manual external
+});
 ```
 
-## 🛠️ Available Scripts
+## 🚀 Migration Guide
 
-| Script | Description |
-|--------|-------------|
-| `pnpm build` | Build all packages |
-| `pnpm test` | Run all tests |
-| `pnpm lint` | Lint all code |
-| `pnpm type-check` | TypeScript type checking |
+### From Custom Config to Standard Template
 
-## 📋 Requirements
+1. **Backup your current config**
+   ```bash
+   cp tsup.config.ts tsup.config.ts.backup
+   ```
 
-- **Node.js**: >= 18.18.0
-- **pnpm**: >= 9.0.0
+2. **Copy standard template**
+   ```bash
+   cp kb-labs-devkit/templates/configs/tsup.config.ts .
+   ```
 
-## 📚 Documentation
+3. **Migrate customizations** (only if needed)
+   - Compare your backup with template
+   - Extract only truly necessary customizations
+   - Add them with comments explaining why
 
-- [Architecture](./ARCHITECTURE.md) — Runtime V2 context flow and adapter types
-- [Plugin Contracts](./packages/plugin-contracts/README.md) — Type definitions
-- [Plugin Runtime](./packages/plugin-runtime/README.md) — Context factory and sandbox
-- [Execution Factory](./packages/plugin-execution-factory/README.md) — Execution backends
-- [Architecture Decisions](./docs/adr/) — ADRs for this project
+4. **Test build**
+   ```bash
+   pnpm run build
+   ```
 
-## 🔗 Related Packages
+5. **Verify types**
+   ```bash
+   npx kb-devkit-check-types
+   ```
 
-**Dependencies:**
-- [@kb-labs/core-platform](https://github.com/KirillBaranov/kb-labs-core) — Platform adapters (LLM, cache, etc.)
-- [@kb-labs/core-ipc](https://github.com/KirillBaranov/kb-labs-core) — IPC transport for subprocess execution
+## 🔗 Related
 
-**Used By:**
-- [kb-labs-cli](https://github.com/KirillBaranov/kb-labs-cli) — CLI implementation
-- [kb-labs-rest-api](https://github.com/KirillBaranov/kb-labs-rest-api) — REST API plugin mounting
-- [kb-labs-workflow](https://github.com/KirillBaranov/kb-labs-workflow) — Workflow step execution
-
-**Ecosystem:**
-- [KB Labs](https://github.com/KirillBaranov/kb-labs) — Main ecosystem repository
-
-## 🤝 Contributing
-
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for development guidelines and contribution process.
-
-## 📄 License
-
-KB Public License v1.1 © KB Labs
-
----
-
-**See [CONTRIBUTING.md](./CONTRIBUTING.md) for development guidelines and contribution process.**
+- [DevKit README](../../README.md)
+- [DevKit Usage Guide](../../USAGE_GUIDE.md)
+- [ADR-0009: Unified Build Convention](../../docs/adr/0009-unified-build-convention.md)

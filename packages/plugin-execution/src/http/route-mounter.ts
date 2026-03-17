@@ -133,7 +133,7 @@ export async function mountRoutes(
           requestId,
           permissions: manifest.permissions ?? DEFAULT_PERMISSIONS,
           hostContext,
-          // Note: config is loaded at runtime from kb.config.json using manifest.configSection
+          configSection: manifest.configSection,
         };
         Object.assign(descriptor as unknown as Record<string, unknown>, {
           traceId,

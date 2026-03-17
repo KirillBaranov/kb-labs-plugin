@@ -105,34 +105,48 @@ describe('IPC Protocol', () => {
   });
 
   describe('ResultMessage', () => {
-    it('should create valid result message with data', () => {
+    it('should carry raw handler output as data', () => {
       const msg: ResultMessage = {
         type: 'result',
-        exitCode: 0,
-        result: { success: true, output: 'test' },
-        meta: { executionTime: 123 },
+        data: { success: true, output: 'test' },
       };
 
       expect(msg.type).toBe('result');
-      expect(msg.result).toEqual({ success: true, output: 'test' });
-      expect(msg.meta).toEqual({ executionTime: 123 });
+      expect(msg.data).toEqual({ success: true, output: 'test' });
     });
 
-    it('should allow undefined result (void handler)', () => {
+    it('should carry CommandResult as data when handler returns it', () => {
       const msg: ResultMessage = {
         type: 'result',
-        exitCode: 0,
+        data: { exitCode: 0, result: { foo: 'bar' }, meta: { custom: true } },
+      };
+
+      expect(msg.data).toEqual({ exitCode: 0, result: { foo: 'bar' }, meta: { custom: true } });
+    });
+
+    it('should allow undefined data (void handler)', () => {
+      const msg: ResultMessage = {
+        type: 'result',
+        data: undefined,
       };
 
       expect(msg.type).toBe('result');
-      expect(msg.result).toBeUndefined();
+      expect(msg.data).toBeUndefined();
+    });
+
+    it('should allow primitive data', () => {
+      const msg: ResultMessage = {
+        type: 'result',
+        data: 'hello',
+      };
+
+      expect(msg.data).toBe('hello');
     });
 
     it('should be recognized as ChildMessage', () => {
       const msg: ResultMessage = {
         type: 'result',
-        exitCode: 0,
-        result: { test: 'data' },
+        data: { test: 'data' },
       };
 
       expect(isChildMessage(msg)).toBe(true);
@@ -292,17 +306,14 @@ describe('IPC Protocol', () => {
     it('should serialize and deserialize ResultMessage', () => {
       const msg: ResultMessage = {
         type: 'result',
-        exitCode: 0,
-        result: { success: true, output: [1, 2, 3] },
-        meta: { timing: 456 },
+        data: { success: true, output: [1, 2, 3] },
       };
 
       const json = JSON.stringify(msg);
       const parsed = JSON.parse(json) as ResultMessage;
 
       expect(parsed.type).toBe('result');
-      expect(parsed.result).toEqual({ success: true, output: [1, 2, 3] });
-      expect(parsed.meta).toEqual({ timing: 456 });
+      expect(parsed.data).toEqual({ success: true, output: [1, 2, 3] });
     });
 
     it('should serialize and deserialize ErrorMessage', () => {
@@ -353,7 +364,7 @@ describe('IPC Protocol', () => {
     it('should allow ChildMessage union to accept ready, result, error', () => {
       const messages: ChildMessage[] = [
         { type: 'ready' },
-        { type: 'result', exitCode: 0, result: { test: 'data' } },
+        { type: 'result', data: { test: 'data' } },
         {
           type: 'error',
           error: { name: 'Error', message: 'test', code: 'UNKNOWN' },

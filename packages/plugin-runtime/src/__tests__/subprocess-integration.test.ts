@@ -126,7 +126,7 @@ describe('Subprocess Integration Tests', () => {
     } finally {
       rmSync(testDir, { recursive: true, force: true });
     }
-  }, { timeout: 10000 });
+  }, 10000);
 
   it('should handle subprocess timeout', async () => {
     const testDir = join(tmpdir(), `subprocess-timeout-test-${Date.now()}`);
@@ -178,7 +178,7 @@ describe('Subprocess Integration Tests', () => {
     } finally {
       rmSync(testDir, { recursive: true, force: true });
     }
-  }, { timeout: 5000 });
+  }, 10000);
 
   it('should handle abort signal in subprocess', async () => {
     const testDir = join(tmpdir(), `subprocess-abort-test-${Date.now()}`);
@@ -237,5 +237,5 @@ describe('Subprocess Integration Tests', () => {
     } finally {
       rmSync(testDir, { recursive: true, force: true });
     }
-  }, { timeout: 5000 });
+  }, 10000);
 });

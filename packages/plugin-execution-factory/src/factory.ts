@@ -5,10 +5,11 @@
  * Simple by default, enterprise when needed.
  */
 
-import type { BackendOptions, ExecutionBackend } from './types.js';
+import type { BackendOptions, ExecutionBackend, ExecutionRequest } from './types.js';
 import { InProcessBackend } from './backends/in-process.js';
 import { SubprocessBackend } from './backends/subprocess.js';
 import { WorkerPoolBackend } from './backends/worker-pool/backend.js';
+import { RemoteBackend } from './backends/remote.js';
 import { SubprocessRunnerAdapter } from './adapters/index.js';
 
 /**
@@ -66,13 +67,16 @@ export function createExecutionBackend(options: BackendOptions): ExecutionBacken
         warmup: options.workerPool?.warmup ?? { mode: 'none', topN: 5, maxHandlers: 20 },
       });
 
-    case 'remote':
-      // Phase 3: Uncomment when implemented
-      // if (!options.remote?.endpoint) {
-      //   throw new Error('Remote mode requires EXECUTOR_SERVICE_ENDPOINT');
-      // }
-      // return new RemoteExecutionBackend(options.remote);
-      throw new Error('Remote execution backend not yet implemented (Phase 3)');
+    case 'remote': {
+      if (!options.remote?.transport) {
+        throw new Error('Remote mode requires options.remote.transport (IExecutionTransport)');
+      }
+      const remoteBackend = new RemoteBackend({
+        transport: options.remote.transport,
+        workspaceRootOnHost: options.remote.workspaceRootOnHost,
+      });
+      return createRoutingBackend(options, remoteBackend);
+    }
 
     default:
       throw new Error(`Unknown execution mode: ${mode}`);
@@ -80,7 +84,7 @@ export function createExecutionBackend(options: BackendOptions): ExecutionBacken
 }
 
 /**
- * Detect execution mode based on environment.
+ * Detect execution mode based on environment (may include 'remote').
  */
 function detectMode(): BackendOptions['mode'] {
   // Remote if executor endpoint is configured
@@ -98,4 +102,86 @@ function detectMode(): BackendOptions['mode'] {
 
   // Default: in-process (simplest)
   return 'in-process';
+}
+
+/**
+ * Detect local execution mode — never returns 'remote'.
+ */
+function detectLocalMode(): 'in-process' | 'subprocess' | 'worker-pool' {
+  if (
+    process.env.EXECUTION_MODE === 'worker-pool' ||
+    process.env.KUBERNETES_SERVICE_HOST
+  ) {
+    return 'worker-pool';
+  }
+  if (process.env.EXECUTION_MODE === 'subprocess') {
+    return 'subprocess';
+  }
+  return 'in-process';
+}
+
+/**
+ * Wrap a local backend with routing logic:
+ * if request.target.environmentId is set → RemoteBackend,
+ * otherwise → local backend.
+ *
+ * This allows isolation: strict to coexist with isolation: relaxed/balanced
+ * without changing call sites — the backend decides dynamically.
+ */
+function createRoutingBackend(options: BackendOptions, remoteBackend: RemoteBackend): ExecutionBackend {
+  const localBackend = createLocalBackend(options);
+
+  return {
+    async execute(request: ExecutionRequest, execOptions?) {
+      if (request.target?.environmentId) {
+        return remoteBackend.execute(request, execOptions);
+      }
+      return localBackend.execute(request, execOptions);
+    },
+    health: () => localBackend.health(),
+    stats: () => localBackend.stats(),
+    shutdown: async () => {
+      await Promise.all([localBackend.shutdown(), remoteBackend.shutdown()]);
+    },
+  };
+}
+
+/**
+ * Create a local (non-remote) backend based on options.
+ * Used internally by createRoutingBackend.
+ * Never returns remote — remote routing is handled by createRoutingBackend.
+ */
+function createLocalBackend(options: BackendOptions): ExecutionBackend {
+  const mode = detectLocalMode();
+  switch (mode) {
+    case 'in-process':
+      return new InProcessBackend({
+        platform: options.platform,
+        uiProvider: options.uiProvider,
+        pluginInvoker: options.pluginInvoker,
+      });
+    case 'subprocess':
+      return new SubprocessBackend({
+        platform: options.platform,
+        runner: new SubprocessRunnerAdapter(),
+        uiProvider: options.uiProvider,
+      });
+    case 'worker-pool':
+      return new WorkerPoolBackend({
+        platform: options.platform,
+        uiProvider: options.uiProvider,
+        min: options.workerPool?.min ?? 2,
+        max: options.workerPool?.max ?? 10,
+        maxRequestsPerWorker: options.workerPool?.maxRequestsPerWorker ?? 1000,
+        maxUptimeMsPerWorker: options.workerPool?.maxUptimeMsPerWorker ?? 30 * 60 * 1000,
+        maxConcurrentPerPlugin: options.workerPool?.maxConcurrentPerPlugin,
+        warmup: options.workerPool?.warmup ?? { mode: 'none', topN: 5, maxHandlers: 20 },
+      });
+    default:
+      return new InProcessBackend({
+        platform: options.platform,
+        uiProvider: options.uiProvider,
+        pluginInvoker: options.pluginInvoker,
+      });
+  }
 }

@@ -49,6 +49,8 @@
 
 import * as path from 'node:path';
 import * as fs from 'node:fs';
+import { randomBytes } from 'node:crypto';
+import type { IPlatformAdapters } from '@kb-labs/core-platform';
 import type {
   ExecutionBackend,
   ExecutionRequest,
@@ -61,6 +63,7 @@ import type {
 import type { PlatformServices, UIFacade } from '@kb-labs/plugin-contracts';
 import { noopUI } from '@kb-labs/plugin-contracts';
 import type { ISubprocessRunner } from '@kb-labs/core-contracts';
+import type { UnixSocketServerConfig } from '@kb-labs/core-ipc';
 import { localWorkspaceManager } from '../workspace/local.js';
 import type { WorkspaceLease } from '../workspace/types.js';
 import { normalizeError } from '../utils.js';
@@ -83,6 +86,9 @@ export interface IPCServer {
 
   /** Get connection info for child process (socket path or 'ipc') */
   getConnectionInfo(): string;
+
+  /** Get auth token for child process platform calls */
+  getAuthToken(): string;
 }
 
 /**
@@ -95,23 +101,8 @@ export type IPCServerFactory = (platform: PlatformServices, executionId: string)
  * Ensure platform is a PlatformContainer.
  * If it's just PlatformServices, wrap it.
  */
-function ensurePlatformContainer(platform: PlatformServices): any {
-  // Check if it already has the container interface
-  if ('getLLM' in platform && 'getEmbeddings' in platform) {
-    return platform;
-  }
-
-  // Wrap PlatformServices as PlatformContainer
-  // This is a minimal adapter - UnixSocketServer needs the adapter getter methods
-  return {
-    logger: platform.logger,
-    getLLM: () => platform.llm,
-    getEmbeddings: () => platform.embeddings,
-    getVectorStore: () => platform.vectorStore,
-    getStorage: () => platform.storage,
-    getCache: () => platform.cache,
-    getAnalytics: () => platform.analytics,
-  };
+function ensurePlatformContainer(platform: PlatformServices): IPlatformAdapters {
+  return platform as unknown as IPlatformAdapters;
 }
 
 /**
@@ -119,11 +110,17 @@ function ensurePlatformContainer(platform: PlatformServices): any {
  */
 class UnixSocketIPCServer implements IPCServer {
   private socketPath: string;
-  private server: any; // UnixSocketServer type from dynamic import
+  private authToken: string;
+  private server: { start(): Promise<void>; close(): Promise<void> };
 
-  constructor(server: any, socketPath: string) {
+  constructor(
+    server: { start(): Promise<void>; close(): Promise<void> },
+    socketPath: string,
+    authToken: string
+  ) {
     this.server = server;
     this.socketPath = socketPath;
+    this.authToken = authToken;
   }
 
   async start(): Promise<void> {
@@ -136,6 +133,10 @@ class UnixSocketIPCServer implements IPCServer {
 
   getConnectionInfo(): string {
     return this.socketPath;
+  }
+
+  getAuthToken(): string {
+    return this.authToken;
   }
 }
 
@@ -155,14 +156,20 @@ function createDefaultIPCServerFactory(): IPCServerFactory {
       // For now, fall back to Unix sockets (works on Windows via WSL/named pipes in Node.js)
       const { UnixSocketServer } = await import('@kb-labs/core-ipc');
       const socketPath = `/tmp/kb-subprocess-${executionId}.sock`;
-      const server = new UnixSocketServer(platformContainer, { socketPath });
-      return new UnixSocketIPCServer(server, socketPath);
+      const authToken = randomBytes(32).toString('hex');
+      const serverConfig: UnixSocketServerConfig = { socketPath };
+      (serverConfig as unknown as Record<string, unknown>).authToken = authToken;
+      const server = new UnixSocketServer(platformContainer, serverConfig);
+      return new UnixSocketIPCServer(server, socketPath, authToken);
     } else {
       // Unix/Linux/macOS: Use Unix domain sockets (fastest)
       const { UnixSocketServer } = await import('@kb-labs/core-ipc');
       const socketPath = `/tmp/kb-subprocess-${executionId}.sock`;
-      const server = new UnixSocketServer(platformContainer, { socketPath });
-      return new UnixSocketIPCServer(server, socketPath);
+      const authToken = randomBytes(32).toString('hex');
+      const serverConfig: UnixSocketServerConfig = { socketPath };
+      (serverConfig as unknown as Record<string, unknown>).authToken = authToken;
+      const server = new UnixSocketServer(platformContainer, serverConfig);
+      return new UnixSocketIPCServer(server, socketPath, authToken);
     }
   };
 }
@@ -287,6 +294,7 @@ export class SubprocessBackend implements ExecutionBackend {
 
       // 5. Get connection info for subprocess
       const socketPath = ipcServer.getConnectionInfo();
+      const platformAuthToken = ipcServer.getAuthToken();
 
       // 6. Get timeout (from request or default)
       const timeoutMs = requestToExecute.timeoutMs ?? this.defaultTimeoutMs;
@@ -295,18 +303,57 @@ export class SubprocessBackend implements ExecutionBackend {
       // NOTE: UI is not passed to subprocess - subprocess uses platform proxy
       // UI would need to be serialized and proxied, which is complex
       // For now, subprocess handlers use noopUI or log via platform.logger
-      const runResult = await this.runner.runInSubprocess({
-        descriptor: requestToExecute.descriptor,
-        platformSocketPath: socketPath,
-        platformAuthToken: '', // TODO: Add auth token from platform server
-        handlerPath,
-        exportName: requestToExecute.exportName,
-        input: requestToExecute.input,
-        timeoutMs,
-        signal: options?.signal,
-        cwd: lease.cwd,
-        outdir: undefined, // Optional, defaults to ${cwd}/.kb/output
-      });
+      const previousToken = process.env.KB_PLATFORM_SOCKET_TOKEN;
+      const previousExecutionId = process.env.KB_EXECUTION_ID;
+      const previousTenantId = process.env.KB_TENANT_ID;
+      const previousTraceId = process.env.KB_TRACE_ID;
+
+      process.env.KB_PLATFORM_SOCKET_TOKEN = platformAuthToken;
+      process.env.KB_EXECUTION_ID = requestToExecute.executionId;
+      if (requestToExecute.context?.tenantId) {
+        process.env.KB_TENANT_ID = requestToExecute.context.tenantId;
+      }
+      if (requestToExecute.context?.traceId) {
+        process.env.KB_TRACE_ID = requestToExecute.context.traceId;
+      }
+
+      let runResult;
+      try {
+        runResult = await this.runner.runInSubprocess({
+          descriptor: requestToExecute.descriptor,
+          platformSocketPath: socketPath,
+          platformAuthToken,
+          handlerPath,
+          exportName: requestToExecute.exportName,
+          input: requestToExecute.input,
+          timeoutMs,
+          signal: options?.signal,
+          cwd: lease.cwd,
+          outdir: undefined, // Optional, defaults to ${cwd}/.kb/output
+          onLog: options?.onLog,
+        });
+      } finally {
+        if (previousToken === undefined) {
+          delete process.env.KB_PLATFORM_SOCKET_TOKEN;
+        } else {
+          process.env.KB_PLATFORM_SOCKET_TOKEN = previousToken;
+        }
+        if (previousExecutionId === undefined) {
+          delete process.env.KB_EXECUTION_ID;
+        } else {
+          process.env.KB_EXECUTION_ID = previousExecutionId;
+        }
+        if (previousTenantId === undefined) {
+          delete process.env.KB_TENANT_ID;
+        } else {
+          process.env.KB_TENANT_ID = previousTenantId;
+        }
+        if (previousTraceId === undefined) {
+          delete process.env.KB_TRACE_ID;
+        } else {
+          process.env.KB_TRACE_ID = previousTraceId;
+        }
+      }
 
       // 7. Success - handler completed without throwing
       const executionTimeMs = performance.now() - start;

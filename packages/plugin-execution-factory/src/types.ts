@@ -26,10 +26,21 @@ import type {
   HostType,
   PermissionSpec,
   UIFacade,
-  ExecutionMeta,
   InvokeOptions,
-  ExecutionTarget,
 } from '@kb-labs/plugin-contracts';
+import type {
+  ExecutionRequest as CoreExecutionRequest,
+  WorkspaceConfig as CoreWorkspaceConfig,
+  ArtifactsConfig as CoreArtifactsConfig,
+  ExecutionResult as CoreExecutionResult,
+  ExecutionResponse as CoreExecutionResponse,
+  ExecutionError as CoreExecutionError,
+  ExecutionErrorCode as CoreExecutionErrorCode,
+  ExecutionMetadata as CoreExecutionMetadata,
+  IExecutionBackend as CoreExecutionBackend,
+  HealthStatus as CoreHealthStatus,
+  ExecutionStats as CoreExecutionStats,
+} from '@kb-labs/core-contracts';
 
 // Re-export runtime types for convenience (consumers use these, not custom types)
 export type { PluginContextDescriptor, HostContext, HostType, PermissionSpec };
@@ -126,84 +137,7 @@ export interface HandlerSchema {
  * Note: descriptor.requestId is for request correlation in distributed tracing.
  * executionId is for this specific execution attempt (may retry same requestId).
  */
-export interface ExecutionRequest {
-  /**
-   * Unique execution ID for this attempt.
-   *
-   * NOT same as descriptor.requestId:
-   * - requestId: correlates requests across services (e.g., from HTTP header)
-   * - executionId: identifies this specific execution attempt
-   *
-   * Same request can be retried = same requestId, different executionId.
-   *
-   * @example "exec_12345_1703088000000_a1b2c3d4"
-   */
-  executionId: string;
-
-  /**
-   * Runtime descriptor - passed to runInProcess() directly.
-   * Contains all data needed for PluginContextV3 creation.
-   *
-   * NOTE: This is PluginContextDescriptor from @kb-labs/plugin-contracts.
-   * No conversion needed - backend passes it as-is to runtime.
-   */
-  descriptor: PluginContextDescriptor;
-
-  /**
-   * Where plugin files live (absolute path).
-   * Handler path resolved as: path.resolve(pluginRoot, handlerRef)
-   *
-   * Execution-layer concern: runtime doesn't need this after handler is loaded.
-   */
-  pluginRoot: string;
-
-  /**
-   * Handler reference - relative path inside plugin.
-   * NOT absolute path! Resolved via pluginRoot.
-   *
-   * @example "dist/handlers/release.js"
-   */
-  handlerRef: string;
-
-  /**
-   * Export name from handler file (default: "default").
-   * Used for handlers that export multiple functions.
-   *
-   * @example "generatePlan" for named export
-   */
-  exportName?: string;
-
-  /**
-   * Input data passed to handler.execute(ctx, input).
-   */
-  input: unknown;
-
-  /**
-   * Workspace configuration.
-   * Defaults to local workspace if not specified.
-   *
-   * NOTE: For remote executor (Phase 3), workspace.type must be 'ephemeral'
-   * with repo info for materialization.
-   */
-  workspace?: WorkspaceConfig;
-
-  /**
-   * Artifacts configuration.
-   * Where to store output files.
-   */
-  artifacts?: ArtifactsConfig;
-
-  /**
-   * Timeout in milliseconds.
-   * Default: 30000 (30 seconds)
-   */
-  timeoutMs?: number;
-
-  /**
-   * Optional target affinity for execution context.
-   */
-  target?: ExecutionTarget;
-}
+export type ExecutionRequest = CoreExecutionRequest<PluginContextDescriptor>;
 
 // ============================================================================
 // Workspace Configuration
@@ -213,42 +147,7 @@ export interface ExecutionRequest {
  * Workspace configuration.
  * Defaults to 'local' type with process.cwd().
  */
-export interface WorkspaceConfig {
-  /**
-   * Workspace type.
-   * - 'local': Use local filesystem (default)
-   * - 'ephemeral': Create temporary workspace (for remote executor)
-   */
-  type?: 'local' | 'ephemeral';
-
-  /**
-   * Current working directory.
-   * Where handler executes (may differ from pluginRoot).
-   */
-  cwd?: string;
-
-  /**
-   * Repository info (for ephemeral workspaces).
-   */
-  repo?: {
-    url: string;
-    ref: string;
-    commit?: string;
-  };
-
-  /**
-   * Filter for partial checkout (ephemeral only).
-   */
-  filter?: {
-    include?: string[];
-    exclude?: string[];
-  };
-
-  /**
-   * Snapshot ID for reuse (optimization).
-   */
-  snapshotId?: string;
-}
+export type WorkspaceConfig = CoreWorkspaceConfig;
 
 // ============================================================================
 // Artifacts Configuration
@@ -257,16 +156,7 @@ export interface WorkspaceConfig {
 /**
  * Artifacts configuration.
  */
-export interface ArtifactsConfig {
-  /** Output directory for artifacts */
-  outdir?: string;
-
-  /** Upload artifacts to storage after execution */
-  upload?: boolean;
-
-  /** Artifact patterns to collect */
-  patterns?: string[];
-}
+export type ArtifactsConfig = CoreArtifactsConfig;
 
 // ============================================================================
 // Execution Result
@@ -275,51 +165,13 @@ export interface ArtifactsConfig {
 /**
  * Execution result - returned by backend.execute().
  */
-export interface ExecutionResult {
-  /** Success flag */
-  ok: boolean;
-
-  /** Result data (if ok) */
-  data?: unknown;
-
-  /** Error details (if !ok) */
-  error?: ExecutionError;
-
-  /** Execution time in milliseconds */
-  executionTimeMs: number;
-
-  /** Artifact IDs produced (if any) */
-  artifactIds?: string[];
-
-  /** Metadata for observability */
-  metadata?: ExecutionMetadata;
-
-  /** Allow additional fields for extensibility */
-  [key: string]: unknown;
-}
+export type ExecutionResult = CoreExecutionResult;
+export type ExecutionResponse = CoreExecutionResponse;
 
 /**
  * Structured error with code and details.
  */
-export interface ExecutionError {
-  /** Human-readable error message */
-  message: string;
-
-  /**
-   * Error code for programmatic handling.
-   * Use standardized codes for consistency.
-   */
-  code?: ExecutionErrorCode;
-
-  /** Stack trace (if available) */
-  stack?: string;
-
-  /** Additional error details */
-  details?: Record<string, unknown>;
-
-  /** Allow additional fields for extensibility */
-  [key: string]: unknown;
-}
+export type ExecutionError = CoreExecutionError;
 
 /**
  * Standardized error codes.
@@ -327,54 +179,12 @@ export interface ExecutionError {
  * Phase 1: Core codes (all implemented)
  * Phase 2: Pool-specific codes (reserved, not yet implemented)
  */
-export type ExecutionErrorCode =
-  // Phase 1: Core codes
-  | 'TIMEOUT'               // Handler execution timed out
-  | 'ABORTED'               // Execution aborted via signal
-  | 'PERMISSION_DENIED'     // Handler lacks required permissions
-  | 'HANDLER_ERROR'         // Handler threw an error
-  | 'HANDLER_CONTRACT_ERROR'// Handler doesn't export execute()
-  | 'HANDLER_NOT_FOUND'     // Handler file doesn't exist
-  | 'WORKSPACE_ERROR'       // Failed to lease/release workspace
-  | 'VALIDATION_ERROR'      // Input/output schema violation
-  | 'UNKNOWN_ERROR'         // Unexpected error
-  // Phase 2: Pool-specific codes (reserved)
-  | 'QUEUE_FULL'            // 429 - Queue at capacity
-  | 'ACQUIRE_TIMEOUT'       // 503 - No worker available in time
-  | 'WORKER_CRASHED'        // 500 - Worker process died
-  | 'WORKER_UNHEALTHY';     // 503 - Worker health check failed
+export type ExecutionErrorCode = CoreExecutionErrorCode;
 
 /**
  * Execution metadata for observability.
  */
-export interface ExecutionMetadata {
-  /** Worker ID (for pool backends) */
-  workerId?: string;
-
-  /** Workspace ID used */
-  workspaceId?: string;
-
-  /** Peak memory usage in MB */
-  memoryUsedMB?: number;
-
-  /** Whether handler was pre-warmed */
-  handlerWasWarmed?: boolean;
-
-  /** Backend type used */
-  backend?: 'in-process' | 'subprocess' | 'worker-pool' | 'remote';
-
-  /**
-   * Execution metadata from runner layer (v5).
-   * Contains timing, plugin info, and request correlation data.
-   * This is the host-agnostic execution info from RunResult.
-   */
-  executionMeta?: ExecutionMeta;
-
-  /**
-   * Resolved execution target used for this run.
-   */
-  target?: ExecutionTarget;
-}
+export type ExecutionMetadata = CoreExecutionMetadata;
 
 // ============================================================================
 // Execution Backend Interface
@@ -388,10 +198,11 @@ export interface ExecutionMetadata {
  * - WorkerPoolBackend (Level 1)
  * - RemoteExecutionBackend (Level 2)
  */
-export interface ExecutionBackend {
+type CoreExecutionBackendLifecycle = Pick<CoreExecutionBackend<PluginContextDescriptor>, 'health' | 'stats' | 'shutdown'>;
+
+export interface ExecutionBackend extends CoreExecutionBackendLifecycle {
   /**
-   * Execute handler.
-   * This is the main entry point for all execution.
+   * Execute plugin request with plugin-typed descriptor.
    */
   execute(
     request: ExecutionRequest,
@@ -399,88 +210,62 @@ export interface ExecutionBackend {
   ): Promise<ExecutionResult>;
 
   /**
-   * Health check.
-   * Returns current health status of backend.
-   */
-  health(): Promise<HealthStatus>;
-
-  /**
-   * Execution statistics.
-   * Returns aggregated stats for monitoring.
-   */
-  stats(): Promise<ExecutionStats>;
-
-  /**
-   * Graceful shutdown.
-   * Clean up resources, wait for pending executions.
-   */
-  shutdown(): Promise<void>;
-
-  /**
-   * Optional: Initialize backend.
-   * Called once at startup for backends that need setup.
+   * Optional initialization hook for backends that need startup work.
    */
   start?(): Promise<void>;
 }
 
 /**
+ * Structured log entry emitted during plugin execution.
+ * Used by `onLog` callback in `ExecuteOptions` to stream logs to the host.
+ */
+export interface LogEntry {
+  /** Log level */
+  level: string;
+  /** Log message text */
+  message: string;
+  /** Output stream: stdout for info/debug, stderr for warn/error */
+  stream: 'stdout' | 'stderr';
+  /** Monotonic line number within this execution */
+  lineNo: number;
+  /** ISO 8601 timestamp */
+  timestamp: string;
+  /** Optional structured metadata */
+  meta?: Record<string, unknown>;
+}
+
+/**
+ * Callback for receiving log entries during execution.
+ * Called by the backend as logs are produced — host-agnostic.
+ */
+export type OnLogCallback = (entry: LogEntry) => void;
+
+/**
  * Execute options.
  */
 export interface ExecuteOptions {
-  /** Abort signal for cancellation */
   signal?: AbortSignal;
-  /**
-   * Optional per-execution plugin invoker.
-   * Currently used by InProcess backend.
-   */
   pluginInvoker?: PluginInvokerFn;
+  /**
+   * Callback for receiving real-time log entries during execution.
+   * Each backend implements this differently:
+   * - InProcess: eventEmitter → onLog directly
+   * - Subprocess/WorkerPool: IPC LogMessage → parent → onLog
+   * - Remote: streaming transport → onLog
+   */
+  onLog?: OnLogCallback;
+  [key: string]: unknown;
 }
 
 /**
  * Health status.
  */
-export interface HealthStatus {
-  /** Overall health */
-  healthy: boolean;
-
-  /** Backend type */
-  backend: 'in-process' | 'subprocess' | 'worker-pool' | 'remote';
-
-  /** Backend-specific details */
-  details?: {
-    workers?: {
-      total: number;
-      idle: number;
-      busy: number;
-    };
-    activeSubprocesses?: number;
-    uptimeMs?: number;
-    lastError?: string;
-  };
-}
+export type HealthStatus = CoreHealthStatus;
 
 /**
  * Execution statistics.
  */
-export interface ExecutionStats {
-  /** Total executions since start */
-  totalExecutions: number;
-
-  /** Successful executions */
-  successCount: number;
-
-  /** Failed executions */
-  errorCount: number;
-
-  /** Average execution time in ms */
-  avgExecutionTimeMs: number;
-
-  /** 95th percentile execution time */
-  p95ExecutionTimeMs?: number;
-
-  /** 99th percentile execution time */
-  p99ExecutionTimeMs?: number;
-}
+export type ExecutionStats = CoreExecutionStats;
 
 // ============================================================================
 // Backend Options
@@ -585,15 +370,17 @@ export interface WarmupPolicy {
  * Remote executor options.
  */
 export interface RemoteOptions {
-  /** Executor service endpoint (gRPC) */
-  endpoint: string;
+  /**
+   * Transport implementation for remote execution.
+   * Injected externally — backend does not know what's behind it.
+   * Example: GatewayDispatchTransport from @kb-labs/gateway-core.
+   */
+  transport: import('@kb-labs/core-contracts').IExecutionTransport;
 
-  /** Timeout for executor calls in ms (default: 60000) */
-  timeoutMs?: number;
-
-  /** Retry policy */
-  retry?: {
-    maxAttempts: number;
-    backoffMs: number;
-  };
+  /**
+   * Absolute path on host that maps to /workspace inside container.
+   * Used for handlerRef remapping before the request is sent.
+   * E.g. '/home/user/projects/kb-labs'
+   */
+  workspaceRootOnHost?: string;
 }

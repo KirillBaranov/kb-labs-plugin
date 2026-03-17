@@ -125,6 +125,7 @@ export type WorkerMessageType =
   | 'execute'     // Pool -> Worker: execute request
   | 'result'      // Worker -> Pool: execution result
   | 'error'       // Worker -> Pool: execution error
+  | 'log'         // Worker -> Pool: log entry (real-time streaming)
   | 'health'      // Pool -> Worker: health check request
   | 'healthOk'    // Worker -> Pool: health check response
   | 'shutdown'    // Pool -> Worker: graceful shutdown
@@ -207,12 +208,29 @@ export interface ReadyMessage extends BaseWorkerMessage {
 }
 
 /**
+ * Log entry message (Worker -> Pool) for real-time log streaming.
+ */
+export interface LogWorkerMessage extends BaseWorkerMessage {
+  type: 'log';
+  requestId: string;
+  entry: {
+    level: string;
+    message: string;
+    stream: 'stdout' | 'stderr';
+    lineNo: number;
+    timestamp: string;
+    meta?: Record<string, unknown>;
+  };
+}
+
+/**
  * All message types union.
  */
 export type WorkerMessage =
   | ExecuteMessage
   | ResultMessage
   | ErrorMessage
+  | LogWorkerMessage
   | HealthMessage
   | HealthOkMessage
   | ShutdownMessage

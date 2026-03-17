@@ -26,13 +26,16 @@ import { createMockUI, createMockPlatform } from './test-mocks.js';
 const mockUI = createMockUI();
 const mockPlatform = createMockPlatform();
 
+// Unique suffix per worker process to avoid races when tests run in parallel
+const WORKER_ID = `${process.pid}-${Date.now()}`;
+
 describe('Wildcard Permissions - fs.read', () => {
   let tempDir: string;
 
   beforeEach(async () => {
     // Use project directory for tests (avoids /var/, /tmp/ DENIED_PATTERNS)
     const projectRoot = path.resolve(process.cwd(), '..');
-    tempDir = path.join(projectRoot, '.kb-test-wildcards');
+    tempDir = path.join(projectRoot, `.kb-test-wildcards-${WORKER_ID}`);
 
     // Clean up if exists from previous run
     await fs.rm(tempDir, { recursive: true, force: true });
@@ -90,7 +93,7 @@ describe('Wildcard Permissions - fs.read', () => {
 
     // Should allow reading from any path with ** wildcard
     // Create a separate temp directory (sibling to cwd)
-    const siblingDir = path.join(path.dirname(tempDir), 'kb-test-sibling');
+    const siblingDir = path.join(path.dirname(tempDir), `kb-test-sibling-${WORKER_ID}`);
     await fs.mkdir(siblingDir);
     await fs.writeFile(path.join(siblingDir, 'test.txt'), 'sibling test');
 
@@ -184,7 +187,7 @@ describe('Wildcard Permissions - fs.write', () => {
   beforeEach(async () => {
     // Use project directory for tests (avoids /var/, /tmp/ DENIED_PATTERNS)
     const projectRoot = path.resolve(process.cwd(), '..');
-    tempDir = path.join(projectRoot, '.kb-test-write');
+    tempDir = path.join(projectRoot, `.kb-test-write-${WORKER_ID}`);
 
     // Clean up if exists from previous run
     await fs.rm(tempDir, { recursive: true, force: true });
@@ -240,7 +243,7 @@ describe('Wildcard Permissions - fs.write', () => {
     expect(content3).toBe('result');
 
     // Should allow writing to sibling directory (outside cwd)
-    const siblingDir = path.join(path.dirname(tempDir), 'kb-test-write-sibling');
+    const siblingDir = path.join(path.dirname(tempDir), `kb-test-write-sibling-${WORKER_ID}`);
     await fs.mkdir(siblingDir);
     await context.runtime.fs.writeFile(path.join(siblingDir, 'test.txt'), 'sibling write');
     const content4 = await fs.readFile(path.join(siblingDir, 'test.txt'), 'utf-8');
@@ -463,7 +466,7 @@ describe('SYSTEM_UNRESTRICTED_PERMISSIONS', () => {
   beforeEach(async () => {
     // Use project directory for tests (avoids /var/, /tmp/ DENIED_PATTERNS)
     const projectRoot = path.resolve(process.cwd(), '..');
-    tempTestDir = path.join(projectRoot, '.kb-test-system');
+    tempTestDir = path.join(projectRoot, `.kb-test-system-${WORKER_ID}`);
 
     // Clean up if exists from previous run
     await fs.rm(tempTestDir, { recursive: true, force: true });
@@ -517,7 +520,7 @@ describe('SYSTEM_UNRESTRICTED_PERMISSIONS', () => {
 
     // 1. FS read - any path with ** wildcard (except DENIED_PATTERNS)
     //    Create sibling directory to test cross-directory access
-    const readDir = path.join(path.dirname(tempTestDir), 'kb-test-system-read');
+    const readDir = path.join(path.dirname(tempTestDir), `kb-test-system-read-${WORKER_ID}`);
     await fs.mkdir(readDir, { recursive: true });
     await fs.writeFile(path.join(readDir, 'test.txt'), 'system test');
     const readContent = await context.runtime.fs.readFile(path.join(readDir, 'test.txt'), 'utf-8');
@@ -525,7 +528,7 @@ describe('SYSTEM_UNRESTRICTED_PERMISSIONS', () => {
     await fs.rm(readDir, { recursive: true, force: true });
 
     // 2. FS write - any path with ** wildcard (except DENIED_PATTERNS)
-    const writeDir = path.join(path.dirname(tempTestDir), 'kb-test-system-write');
+    const writeDir = path.join(path.dirname(tempTestDir), `kb-test-system-write-${WORKER_ID}`);
     await fs.mkdir(writeDir, { recursive: true });
     await context.runtime.fs.writeFile(path.join(writeDir, 'test.txt'), 'data');
     expect(await fs.readFile(path.join(writeDir, 'test.txt'), 'utf-8')).toBe('data');

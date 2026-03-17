@@ -10,6 +10,7 @@ import type {
   ExecuteMessage,
   ResultMessage,
   ErrorMessage,
+  LogWorkerMessage,
   HealthOkMessage,
   ReadyMessage,
   ShutdownMessage,
@@ -26,6 +27,7 @@ let isShuttingDown = false;
  */
 async function handleExecute(message: ExecuteMessage): Promise<void> {
   const { requestId, request, timeoutMs: _timeoutMs } = message;
+  const startMs = Date.now();
 
   try {
     // Dynamic import to avoid loading at startup
@@ -34,8 +36,9 @@ async function handleExecute(message: ExecuteMessage): Promise<void> {
     const path = await import('node:path');
     const fs = await import('node:fs');
 
-    // Resolve handler path
-    const handlerPath = path.resolve(request.pluginRoot, request.handlerRef);
+    // Resolve handler path — strip export name (#default, #namedExport) before fs check
+    const [handlerRef = request.handlerRef] = request.handlerRef.split('#');
+    const handlerPath = path.resolve(request.pluginRoot, handlerRef);
 
     if (!fs.existsSync(handlerPath)) {
       sendError(requestId, {
@@ -49,24 +52,52 @@ async function handleExecute(message: ExecuteMessage): Promise<void> {
     // In production, this would be injected via config
     const platform = createNoOpPlatform() as unknown as PlatformServices;
 
+    // Resolve cwd from workspace config or inherit from parent process.
+    // IMPORTANT: request.pluginRoot is the plugin package directory (e.g. qa-cli/dist),
+    // NOT the workspace root. Handlers expect ctx.cwd = monorepo root.
+    const cwd = request.workspace?.cwd ?? process.cwd();
+
+    // Create eventEmitter that sends log messages to pool via IPC
+    const eventEmitter = async (name: string, payload?: unknown) => {
+      if ((name === 'log.line' || name.endsWith(':log.line')) && payload && typeof payload === 'object') {
+        const p = payload as Record<string, unknown>;
+        const logMsg: LogWorkerMessage = {
+          type: 'log',
+          requestId,
+          entry: {
+            level: (p.level as string) ?? 'info',
+            message: (p.line as string) ?? '',
+            stream: (p.stream as 'stdout' | 'stderr') ?? 'stdout',
+            lineNo: (p.lineNo as number) ?? 0,
+            timestamp: new Date().toISOString(),
+            meta: p.meta as Record<string, unknown> | undefined,
+          },
+        };
+        process.send!(logMsg);
+      }
+    };
+
     // Execute handler
     const result = await runInProcess({
       descriptor: request.descriptor,
       platform,
       ui: noopUI,
+      eventEmitter,
       handlerPath,
-      cwd: request.pluginRoot,
+      cwd,
       input: request.input,
     });
+
+    const elapsedMs = Date.now() - startMs;
 
     // Send result
     const resultMessage: ResultMessage = {
       type: 'result',
       requestId,
       result: {
-        ok: true, // runInProcess doesn't throw, so if we get here it's success
+        ok: true,
         data: result.data,
-        executionTimeMs: 0, // TODO: track execution time in worker
+        executionTimeMs: elapsedMs,
         metadata: {
           backend: 'worker-pool',
           workerId,
