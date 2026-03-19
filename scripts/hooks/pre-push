@@ -4,6 +4,13 @@
 
 set -e
 
+# Skip in worktrees — devlink is not used there
+GIT_COMMON="$(git rev-parse --git-common-dir 2>/dev/null || echo ".git")"
+GIT_DIR="$(git rev-parse --git-dir 2>/dev/null || echo ".git")"
+if [ "$GIT_COMMON" != "$GIT_DIR" ]; then
+  exit 0
+fi
+
 ROOT_DIR="$(git rev-parse --show-toplevel)"
 
 # Check if devlink is available
