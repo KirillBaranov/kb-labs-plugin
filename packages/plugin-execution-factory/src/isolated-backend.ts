@@ -18,7 +18,7 @@
  *   loader.ts       ← wires transport + provisionEnvironment into StrictIsolationOptions
  */
 
-import type { IExecutionTransport } from '@kb-labs/core-contracts';
+import type { IExecutionTransport, IHostResolver, ExecutionResult } from '@kb-labs/core-contracts';
 import type { BackendOptions, ExecutionBackend, ExecutionRequest, ExecuteOptions } from './types.js';
 import { RemoteBackend } from './backends/remote.js';
 import { createExecutionBackend } from './factory.js';
@@ -67,6 +67,27 @@ export interface StrictIsolationOptions {
     namespace: string;
     cleanup: () => Promise<void>;
   }>;
+
+  // ── Workspace Agent routing ────────────────────────────────────
+
+  /**
+   * Resolve a Workspace Agent host for target.type === 'workspace-agent'.
+   * Execution layer calls this abstraction — never Gateway/HTTP directly.
+   */
+  hostResolver?: IHostResolver;
+
+  /**
+   * Build a transport to a specific host (by hostId).
+   * Used after hostResolver returns a hostId.
+   */
+  buildTransportForHost?: (hostId: string, namespaceId: string) => IExecutionTransport;
+
+  /**
+   * What to do when hostResolver returns null (no host found).
+   * - 'local': fall through to local backend (default)
+   * - 'error': return ExecutionError immediately
+   */
+  fallbackPolicy?: 'local' | 'error';
 }
 
 export interface IsolatedBackendOptions {
@@ -96,7 +117,10 @@ export function createIsolatedExecutionBackend(options: IsolatedBackendOptions):
     return localBackend;
   }
 
-  const { buildTransport, workspaceRootOnHost, provisionEnvironment } = options.strictIsolation;
+  const {
+    buildTransport, workspaceRootOnHost, provisionEnvironment,
+    hostResolver, buildTransportForHost, fallbackPolicy,
+  } = options.strictIsolation;
 
   return buildRoutingBackend(
     localBackend,
@@ -105,47 +129,77 @@ export function createIsolatedExecutionBackend(options: IsolatedBackendOptions):
       workspaceRootOnHost,
     }),
     provisionEnvironment,
+    hostResolver,
+    buildTransportForHost
+      ? (hostId, ns) => new RemoteBackend({ transport: buildTransportForHost(hostId, ns) })
+      : undefined,
+    fallbackPolicy,
   );
 }
 
 /**
- * Wrap a local backend with per-job routing + optional auto-provisioning:
+ * Wrap a local backend with per-job routing:
  *
- *   target.environmentId present  → remote directly (explicit override / pre-provisioned)
- *   target.environmentId absent   → provisionEnvironment() if available (auto-provision)
- *   provisionEnvironment absent   → localBackend (in-process / worker-pool)
- *
- * The remote backend is created fresh per-job (each job = its own container).
+ *   1. target.environmentId present  → remote (container mode)
+ *   2. target.type === 'workspace-agent' + hostResolver → resolve host → remote
+ *   3. provisionEnvironment available → auto-provision container → remote
+ *   4. default → localBackend (in-process / worker-pool)
  */
 function buildRoutingBackend(
   localBackend: ExecutionBackend,
   remoteFactory: (ctx: RemoteJobContext) => ExecutionBackend,
   provisionEnvironment?: StrictIsolationOptions['provisionEnvironment'],
+  hostResolver?: IHostResolver,
+  hostBackendFactory?: (hostId: string, namespaceId: string) => ExecutionBackend,
+  fallbackPolicy?: 'local' | 'error',
 ): ExecutionBackend {
   return {
     async execute(request: ExecutionRequest, execOptions?: ExecuteOptions) {
-      let runtimeHostId = request.target?.environmentId;
-      let namespaceId = request.target?.namespace ?? 'default';
-      let cleanup: (() => Promise<void>) | undefined;
+      const target = request.target;
+      const namespaceId = target?.namespace ?? 'default';
 
-      // Auto-provision when no environmentId pre-set (REST API, CLI, etc.)
-      // Skip when environmentId already present (explicit override, pre-warmed pool)
-      if (!runtimeHostId && provisionEnvironment) {
-        const provisioned = await provisionEnvironment(request);
-        runtimeHostId = provisioned.environmentId;
-        namespaceId = provisioned.namespace;
-        cleanup = provisioned.cleanup;
+      // 1. Explicit environment (container mode) — highest priority
+      if (target?.environmentId) {
+        const ctx: RemoteJobContext = { runtimeHostId: target.environmentId, namespaceId };
+        return remoteFactory(ctx).execute(request, execOptions);
       }
 
-      if (runtimeHostId) {
-        const ctx: RemoteJobContext = { runtimeHostId, namespaceId };
+      // 2. Workspace Agent routing
+      if (target?.type === 'workspace-agent' && hostResolver && hostBackendFactory) {
+        const resolution = await hostResolver.resolve(target);
+        if (resolution) {
+          return hostBackendFactory(resolution.hostId, resolution.namespaceId).execute(request, execOptions);
+        }
+        // No host found — apply fallback policy
+        if (fallbackPolicy === 'error') {
+          const result: ExecutionResult = {
+            ok: false,
+            error: {
+              message: `No workspace agent available for target (strategy: ${target.hostSelection ?? 'any-matching'})`,
+              code: 'NO_HOST_AVAILABLE',
+            },
+            executionTimeMs: 0,
+          };
+          return result;
+        }
+        // fallbackPolicy === 'local' (default): fall through to local backend
+      }
+
+      // 3. Auto-provision container
+      if (provisionEnvironment) {
+        let cleanup: (() => Promise<void>) | undefined;
         try {
-          return await remoteFactory(ctx).execute(request, execOptions);
+          const provisioned = await provisionEnvironment(request);
+          cleanup = provisioned.cleanup;
+          const ctx: RemoteJobContext = { runtimeHostId: provisioned.environmentId, namespaceId: provisioned.namespace };
+          const result = await remoteFactory(ctx).execute(request, execOptions);
+          return result;
         } finally {
           await cleanup?.();
         }
       }
 
+      // 4. Local backend (in-process, worker-pool)
       return localBackend.execute(request, execOptions);
     },
     health: () => localBackend.health(),
