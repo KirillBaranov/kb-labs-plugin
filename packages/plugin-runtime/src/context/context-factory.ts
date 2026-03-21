@@ -191,6 +191,7 @@ export function createPluginContextV3<TConfig = unknown>(
     // Jobs/Cron use HTTP client to Workflow Service (microservices architecture)
     workflowServiceUrl: process.env.KB_WORKFLOW_SERVICE_URL,
     // Environment lifecycle goes through runtime EnvironmentManager when available.
+    // Returns undefined on proxy/minimal platforms where these services are absent.
     environmentManager: (platform as any).environmentManager,
     workspaceManager: (platform as any).workspaceManager,
     snapshotManager: (platform as any).snapshotManager,
