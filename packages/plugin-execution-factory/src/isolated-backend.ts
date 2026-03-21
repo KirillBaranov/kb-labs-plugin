@@ -18,8 +18,8 @@
  *   loader.ts       ← wires transport + provisionEnvironment into StrictIsolationOptions
  */
 
-import type { IExecutionTransport, IHostResolver, ExecutionResult } from '@kb-labs/core-contracts';
-import type { BackendOptions, ExecutionBackend, ExecutionRequest, ExecuteOptions } from './types.js';
+import type { IExecutionTransport, IHostResolver } from '@kb-labs/core-contracts';
+import type { BackendOptions, ExecutionBackend, ExecutionRequest, ExecuteOptions, ExecutionResult } from './types.js';
 import { RemoteBackend } from './backends/remote.js';
 import { createExecutionBackend } from './factory.js';
 
@@ -192,8 +192,7 @@ function buildRoutingBackend(
           const provisioned = await provisionEnvironment(request);
           cleanup = provisioned.cleanup;
           const ctx: RemoteJobContext = { runtimeHostId: provisioned.environmentId, namespaceId: provisioned.namespace };
-          const result = await remoteFactory(ctx).execute(request, execOptions);
-          return result;
+          return await remoteFactory(ctx).execute(request, execOptions);
         } finally {
           await cleanup?.();
         }

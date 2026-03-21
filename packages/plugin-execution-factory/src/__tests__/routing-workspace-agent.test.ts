@@ -13,7 +13,6 @@ function makeLocalBackend() {
 function makeRequest(overrides: Partial<ExecutionRequest> = {}): ExecutionRequest {
   return {
     executionId: 'exec-1',
-    pluginId: '@test/plugin',
     handlerRef: '/path/to/handler.js',
     pluginRoot: '/path/to',
     input: {},
