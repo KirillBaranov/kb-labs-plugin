@@ -29,15 +29,15 @@
     "lint:fix": "eslint . --fix"
   },
   "dependencies": {
-    "@kb-labs/core-contracts": "workspace:*",
-    "@kb-labs/core-ipc": "workspace:*",
-    "@kb-labs/core-platform": "workspace:*",
+    "@kb-labs/core-contracts": "link:../../../../platform/kb-labs-core/packages/core-contracts",
+    "@kb-labs/core-ipc": "link:../../../../platform/kb-labs-core/packages/core-ipc",
+    "@kb-labs/core-platform": "link:../../../../platform/kb-labs-core/packages/core-platform",
     "@kb-labs/plugin-contracts": "workspace:*",
     "@kb-labs/plugin-runtime": "workspace:*"
   },
   "devDependencies": {
-    "@kb-labs/devkit": "workspace:*",
-    "@kb-labs/gateway-core": "workspace:*",
+    "@kb-labs/devkit": "link:../../../kb-labs-devkit",
+    "@kb-labs/gateway-core": "link:../../../kb-labs-gateway/packages/gateway-core",
     "@types/node": "^24.3.3",
     "fastify": "^5.4.0",
     "rimraf": "^6.0.1",

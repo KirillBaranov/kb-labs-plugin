@@ -4,22 +4,22 @@
     "baseUrl": ".",
     "paths": {
       "@kb-labs/core-contracts": [
-        "../kb-labs-core/packages/core-contracts/src/index.ts"
+        "../../platform/kb-labs-core/packages/core-contracts/src/index.ts"
       ],
       "@kb-labs/core-contracts/*": [
-        "../kb-labs-core/packages/core-contracts/src/*"
+        "../../platform/kb-labs-core/packages/core-contracts/src/*"
       ],
       "@kb-labs/core-ipc": [
-        "../kb-labs-core/packages/core-ipc/src/index.ts"
+        "../../platform/kb-labs-core/packages/core-ipc/src/index.ts"
       ],
       "@kb-labs/core-ipc/*": [
-        "../kb-labs-core/packages/core-ipc/src/*"
+        "../../platform/kb-labs-core/packages/core-ipc/src/*"
       ],
       "@kb-labs/core-platform": [
-        "../kb-labs-core/packages/core-platform/src/index.ts"
+        "../../platform/kb-labs-core/packages/core-platform/src/index.ts"
       ],
       "@kb-labs/core-platform/*": [
-        "../kb-labs-core/packages/core-platform/src/*"
+        "../../platform/kb-labs-core/packages/core-platform/src/*"
       ],
       "@kb-labs/gateway-core": [
         "../kb-labs-gateway/packages/gateway-core/src/index.ts"
@@ -46,16 +46,16 @@
         "packages/plugin-runtime/src/*"
       ],
       "@kb-labs/shared-cli-ui": [
-        "../kb-labs-shared/packages/shared-cli-ui/src/index.ts"
+        "../../platform/kb-labs-shared/packages/shared-cli-ui/src/index.ts"
       ],
       "@kb-labs/shared-cli-ui/*": [
-        "../kb-labs-shared/packages/shared-cli-ui/src/*"
+        "../../platform/kb-labs-shared/packages/shared-cli-ui/src/*"
       ],
       "@kb-labs/studio-contracts": [
-        "../kb-labs-studio/packages/studio-contracts/src/index.ts"
+        "../../platform/kb-labs-studio/packages/studio-contracts/src/index.ts"
       ],
       "@kb-labs/studio-contracts/*": [
-        "../kb-labs-studio/packages/studio-contracts/src/*"
+        "../../platform/kb-labs-studio/packages/studio-contracts/src/*"
       ]
     }
   }

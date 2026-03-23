@@ -60,7 +60,7 @@
     ]
   },
   "devDependencies": {
-    "@kb-labs/devkit": "workspace:*",
+    "@kb-labs/devkit": "link:../kb-labs-devkit",
     "@types/node": "^24.3.3",
     "@types/picomatch": "^4",
     "@vitest/coverage-v8": "^3.2.4",
