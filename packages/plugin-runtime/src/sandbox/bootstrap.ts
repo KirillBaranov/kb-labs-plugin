@@ -7,8 +7,8 @@
 
 import type { ParentMessage, ChildMessage, ExecuteMessage, LogMessage } from './ipc-protocol.js';
 import type { UIFacade, MessageOptions } from '@kb-labs/plugin-contracts';
-import { PluginError, wrapError } from '@kb-labs/plugin-contracts';
-import { sideBorderBox, safeColors, safeSymbols } from '@kb-labs/shared-cli-ui';
+import { PluginError, wrapError, noopUI } from '@kb-labs/plugin-contracts';
+import { sideBorderBox, safeColors, safeSymbols, setJsonMode } from '@kb-labs/shared-cli-ui';
 import { createPluginContextV3 } from '../context/index.js';
 import { executeCleanup, type EventEmitterFn } from '../api/index.js';
 import { applySandboxPatches, type SandboxMode } from './harden.js';
@@ -150,8 +150,22 @@ process.on('message', async (msg: ParentMessage) => {
   // Connect to platform services via RPC (Unix socket to parent process)
   const platform = await connectToPlatform(socketPath);
 
+  // Detect --json mode from flags so UI output stays clean for machine parsing.
+  // Flags can live in input.flags (V3 style) or merged at root.
+  const inputFlags = (input as any)?.flags ?? {};
+  const jsonMode = Boolean(inputFlags.json ?? (input as any)?.json);
+  if (jsonMode) setJsonMode(true);
+
   // Create stdout UI (plain text output)
-  const ui = createStdoutUI();
+  let ui: UIFacade = createStdoutUI();
+  if (jsonMode) {
+    ui = {
+      ...noopUI,
+      colors: ui.colors,
+      symbols: ui.symbols,
+      json: ui.json,
+    };
+  }
 
   // Create eventEmitter that sends log messages to parent via IPC
   const eventEmitter: EventEmitterFn = async (name, payload) => {
