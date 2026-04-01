@@ -7,7 +7,66 @@
 
 import type { PermissionSpec } from './permissions.js';
 import type { HostType } from './host-context.js';
-import type { StudioConfig } from '@kb-labs/studio-contracts';
+// ─── Studio V2 (Module Federation Pages) ───────────────────────────
+
+/**
+ * Studio configuration for plugin UI pages.
+ * Each page is a Module Federation remote React component.
+ * Plugin owns the entire page — full React, UIKit, hooks.
+ */
+export interface StudioConfig {
+  /** Schema version (always 2) */
+  version: 2;
+  /** Module Federation remote name (e.g. 'commitPlugin') */
+  remoteName: string;
+  /** Page declarations */
+  pages: StudioPageEntry[];
+  /** Navigation menu entries */
+  menus?: StudioMenuEntry[];
+}
+
+/**
+ * A plugin page — one MF exposed React component.
+ * Plugin is full owner inside the page.
+ */
+export interface StudioPageEntry {
+  /** Unique page ID, dot-namespaced: 'commit.overview' */
+  id: string;
+  /** Human-readable title */
+  title: string;
+  /** Icon name (AntD icon names) */
+  icon?: string;
+  /** Route path: '/commit' */
+  route: string;
+  /** MF exposed module path: './CommitOverview' */
+  entry: string;
+  /** Required permissions to access this page */
+  permissions?: string[];
+  /** Render order in navigation */
+  order?: number;
+}
+
+/**
+ * Navigation menu entry for the Studio sidebar.
+ */
+export interface StudioMenuEntry {
+  /** Unique menu item ID */
+  id: string;
+  /** Display label */
+  label: string;
+  /** Icon name (AntD icon names) */
+  icon?: string;
+  /** Target page ID or external URL */
+  target: string;
+  /** Render order */
+  order?: number;
+  /** Parent menu ID for nesting */
+  parentId?: string;
+  /** Required permissions */
+  permissions?: string[];
+  /** Badge text */
+  badge?: string;
+}
 
 /**
  * Schema reference for input/output validation
@@ -92,8 +151,10 @@ export interface CliFlagDecl {
 export interface CliCommandDecl {
   /** Unique command identifier (e.g., 'hello', 'ai-review:review') */
   id: string;
-  /** Command group (e.g., 'ai-review') */
+  /** Command group (e.g., 'marketplace') */
   group?: string;
+  /** Subgroup within the group (e.g., 'plugins' → `kb marketplace plugins <id>`) */
+  subgroup?: string;
   /** Short description */
   describe: string;
   /** Long description (for --help) */
@@ -108,6 +169,16 @@ export interface CliCommandDecl {
   handlerPath?: string;
   /** Command-specific permissions (overrides plugin defaults) */
   permissions?: PermissionSpec;
+}
+
+/**
+ * Metadata for CLI groups/subgroups — used for help display.
+ */
+export interface CliGroupMeta {
+  /** Group path (e.g., "marketplace" or "marketplace/plugins") */
+  name: string;
+  /** Human-readable description */
+  describe: string;
 }
 
 /**
@@ -476,6 +547,8 @@ export interface ManifestV3 {
   /** CLI commands */
   cli?: {
     commands: CliCommandDecl[];
+    /** Descriptions for groups/subgroups (for help display) */
+    groupMeta?: CliGroupMeta[];
   };
 
   /** REST API routes */
@@ -503,7 +576,7 @@ export interface ManifestV3 {
     schedules: CronDecl[];
   };
 
-  /** Studio widgets, menus, and layouts */
+  /** Studio pages (Module Federation remotes) */
   studio?: StudioConfig;
 }
 

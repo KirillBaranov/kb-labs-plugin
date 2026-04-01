@@ -28,8 +28,7 @@
     "lint:fix": "eslint . --fix"
   },
   "dependencies": {
-    "@kb-labs/core-platform": "link:../../../../platform/kb-labs-core/packages/core-platform",
-    "@kb-labs/studio-contracts": "link:../../../../platform/kb-labs-studio/packages/studio-contracts"
+    "@kb-labs/core-platform": "link:../../../../platform/kb-labs-core/packages/core-platform"
   },
   "devDependencies": {
     "@kb-labs/devkit": "link:../../../kb-labs-devkit",

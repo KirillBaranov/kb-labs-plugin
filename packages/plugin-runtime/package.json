@@ -40,8 +40,7 @@
     "@kb-labs/core-contracts": "link:../../../../platform/kb-labs-core/packages/core-contracts",
     "@kb-labs/core-platform": "link:../../../../platform/kb-labs-core/packages/core-platform",
     "@kb-labs/plugin-contracts": "workspace:*",
-    "@kb-labs/shared-cli-ui": "link:../../../../platform/kb-labs-shared/packages/shared-cli-ui",
-    "@kb-labs/studio-contracts": "link:../../../../platform/kb-labs-studio/packages/studio-contracts"
+    "@kb-labs/shared-cli-ui": "link:../../../../platform/kb-labs-shared/packages/shared-cli-ui"
   },
   "devDependencies": {
     "@kb-labs/devkit": "link:../../../kb-labs-devkit",

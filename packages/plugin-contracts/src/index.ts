@@ -230,6 +230,7 @@ export type {
   PlatformRequirements,
   CliFlagDecl,
   CliCommandDecl,
+  CliGroupMeta,
   RestRouteDecl,
   RestConfig,
   WebSocketChannelDecl,
@@ -246,23 +247,9 @@ export type {
 export { isManifestV3, getHandlerPath, getHandlerPermissions } from './manifest.js';
 export { parseManifest, validateManifest, resolveHeaderPolicy } from './manifest-loader.js';
 
-// Studio (re-exports from @kb-labs/studio-contracts)
+// Studio V2 (Module Federation pages)
 export type {
   StudioConfig,
-  StudioWidgetDecl,
-  StudioMenuDecl,
-  StudioLayoutDecl,
-  DataSource,
-  WidgetAction,
-  ActionHandler,
-  StudioWidgetKind,
-  CompositeWidgetKind,
-  WidgetOptionsMap,
-  WidgetDataMap,
-} from './studio.js';
-export {
-  WIDGET_CATEGORIES,
-  COMPOSITE_WIDGET_KINDS,
-  isCompositeKind,
-  STANDARD_EVENTS,
+  StudioPageEntry,
+  StudioMenuEntry,
 } from './studio.js';
