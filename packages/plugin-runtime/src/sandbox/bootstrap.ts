@@ -150,11 +150,10 @@ process.on('message', async (msg: ParentMessage) => {
   // Connect to platform services via RPC (Unix socket to parent process)
   const platform = await connectToPlatform(socketPath);
 
-  // Detect --json mode from flags so UI output stays clean for machine parsing.
-  // Flags can live in input.flags (V3 style) or merged at root.
+  // Detect --json mode from flags (V3: always { flags, argv })
   const inputFlags = (input as any)?.flags ?? {};
-  const jsonMode = Boolean(inputFlags.json ?? (input as any)?.json);
-  if (jsonMode) setJsonMode(true);
+  const jsonMode = Boolean(inputFlags.json);
+  if (jsonMode) {setJsonMode(true);}
 
   // Create stdout UI (plain text output)
   let ui: UIFacade = createStdoutUI();
@@ -239,15 +238,7 @@ process.on('message', async (msg: ParentMessage) => {
       );
     }
 
-    // V3: Merge input.flags into input root (backward compatibility)
-    // Flags override root values if both exist
-    let finalInput: unknown = input;
-    if ((input as any).flags && typeof (input as any).flags === 'object') {
-      finalInput = { ...(input as Record<string, unknown>), ...(input as any).flags };
-    }
-
-    // Execute handler with merged input
-    const handlerResult = await handler.execute(context, finalInput);
+    const handlerResult = await handler.execute(context, input);
 
     // Send raw handler result to parent — no host-specific wrapping.
     // Host layer (CLI, REST, Workflow) is responsible for interpreting the data.

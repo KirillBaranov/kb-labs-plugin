@@ -50,12 +50,6 @@
       ],
       "@kb-labs/shared-cli-ui/*": [
         "../../platform/kb-labs-shared/packages/shared-cli-ui/src/*"
-      ],
-      "@kb-labs/studio-contracts": [
-        "../../platform/kb-labs-studio/packages/studio-contracts/src/index.ts"
-      ],
-      "@kb-labs/studio-contracts/*": [
-        "../../platform/kb-labs-studio/packages/studio-contracts/src/*"
       ]
     }
   }

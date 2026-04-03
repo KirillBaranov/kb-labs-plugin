@@ -143,28 +143,24 @@ function patchRequire(
     originals.set('require', originalRequire);
   }
 
+  function getBlockedModuleAlternative(id: string): string {
+    if (id.includes('dns')) {
+      return 'Network DNS is blocked for security. Use fetch() with hostname instead.';
+    }
+    if (id.includes('vm') || id.includes('worker_threads')) {
+      return 'Code execution/isolation is not allowed in plugins.';
+    }
+    if (id.includes('net') || id.includes('tls')) {
+      return 'Low-level network access is blocked. Use ctx.runtime.fetch() instead.';
+    }
+    return 'If you need this functionality, request it via ctx.platform APIs.';
+  }
+
   Module.prototype.require = function (id: string) {
     // Check blocked modules (always strict - no proxying possible)
     if (BLOCKED_MODULES.includes(id)) {
-      // Provide specific alternatives for common modules
-      let alternative = 'If you need this functionality, request it via ctx.platform APIs.';
-      if (id.includes('dns')) {
-        alternative = 'Network DNS is blocked for security. Use fetch() with hostname instead.';
-      } else if (id.includes('vm') || id.includes('worker_threads')) {
-        alternative = 'Code execution/isolation is not allowed in plugins.';
-      } else if (id.includes('net') || id.includes('tls')) {
-        alternative = 'Low-level network access is blocked. Use ctx.runtime.fetch() instead.';
-      }
-
-      const message = `Module "${id}" is blocked for security.\n${alternative}`;
-
-      emitViolation({
-        kind: 'module',
-        target: id,
-        decision: 'block',
-        message,
-      });
-
+      const message = `Module "${id}" is blocked for security.\n${getBlockedModuleAlternative(id)}`;
+      emitViolation({ kind: 'module', target: id, decision: 'block', message });
       if (mode === 'enforce' || mode === 'compat') {
         throw new Error(`[SANDBOX] ${message}`);
       }
@@ -173,85 +169,50 @@ function patchRequire(
     // Check direct fs access
     if (FS_MODULES.includes(id)) {
       if (mode === 'compat' || mode === 'warn') {
-        // Compat/Warn mode - allow native fs with deprecation warning
-        // This ensures 100% compatibility with third-party libraries
         console.warn('⚠️  [COMPAT] Direct fs access detected. Using native fs.');
         console.warn('   Migrate to: await ctx.runtime.fs.readFile(path)');
         console.warn('   Set KB_SANDBOX_MODE=enforce to block this in future');
-        // eslint-disable-next-line prefer-rest-params
-        return originalRequire.apply(this, arguments as any);
-      } else {
-        // Enforce mode - block
-        const message =
-          `Direct fs access is blocked. Use ctx.runtime.fs instead.\n` +
-          `Example: await ctx.runtime.fs.readFile(path)\n` +
-          `Docs: https://docs.kb-labs.dev/plugins/filesystem`;
-
-        emitViolation({
-          kind: 'fs',
-          target: id,
-          decision: 'block',
-          message,
-        });
-
-        throw new Error(`[SANDBOX] ${message}`);
+        return originalRequire.call(this, id);
       }
+      const message =
+        `Direct fs access is blocked. Use ctx.runtime.fs instead.\n` +
+        `Example: await ctx.runtime.fs.readFile(path)\n` +
+        `Docs: https://docs.kb-labs.dev/plugins/filesystem`;
+      emitViolation({ kind: 'fs', target: id, decision: 'block', message });
+      throw new Error(`[SANDBOX] ${message}`);
     }
 
     // Check direct http/https access
     if (HTTP_MODULES.includes(id)) {
       const protocol = id.includes('https') ? 'https' : 'http';
-
       if (mode === 'compat' || mode === 'warn') {
-        // Compat/Warn mode - allow native http/https with deprecation warning
         console.warn(`⚠️  [COMPAT] Direct ${protocol} access detected. Using native ${protocol}.`);
         console.warn('   Migrate to: await ctx.runtime.fetch(url)');
         console.warn('   Set KB_SANDBOX_MODE=enforce to block this in future');
-        // eslint-disable-next-line prefer-rest-params
-        return originalRequire.apply(this, arguments as any);
-      } else {
-        // Enforce mode - block
-        const message = `Direct ${protocol} access is blocked. Use ctx.runtime.fetch() instead.`;
-        emitViolation({
-          kind: 'module',
-          target: id,
-          decision: 'block',
-          message,
-        });
-        throw new Error(`[SANDBOX] ${message}`);
+        return originalRequire.call(this, id);
       }
+      const message = `Direct ${protocol} access is blocked. Use ctx.runtime.fetch() instead.`;
+      emitViolation({ kind: 'module', target: id, decision: 'block', message });
+      throw new Error(`[SANDBOX] ${message}`);
     }
 
     // Check direct child_process access
     if (CHILD_PROCESS_MODULES.includes(id)) {
       if (mode === 'compat' || mode === 'warn') {
-        // Compat/Warn mode - allow native child_process with deprecation warning
         console.warn('⚠️  [COMPAT] Direct child_process access detected. Using native child_process.');
         console.warn('   Migrate to: await ctx.api.shell.exec(command, args)');
         console.warn('   Set KB_SANDBOX_MODE=enforce to block this in future');
-        // eslint-disable-next-line prefer-rest-params
-        return originalRequire.apply(this, arguments as any);
-      } else {
-        // Enforce mode - block
-        const message =
-          `Direct child_process access is blocked. Use ctx.api.shell instead.\n` +
-          `Example: await ctx.api.shell.exec('git', ['status'])\n` +
-          `Docs: https://docs.kb-labs.dev/plugins/shell`;
-
-        emitViolation({
-          kind: 'module',
-          target: id,
-          decision: 'block',
-          message,
-        });
-
-        throw new Error(`[SANDBOX] ${message}`);
+        return originalRequire.call(this, id);
       }
+      const message =
+        `Direct child_process access is blocked. Use ctx.api.shell instead.\n` +
+        `Example: await ctx.api.shell.exec('git', ['status'])\n` +
+        `Docs: https://docs.kb-labs.dev/plugins/shell`;
+      emitViolation({ kind: 'module', target: id, decision: 'block', message });
+      throw new Error(`[SANDBOX] ${message}`);
     }
 
-    // Path module is safe, allow it (no proxying needed)
-    // eslint-disable-next-line prefer-rest-params
-    return originalRequire.apply(this, arguments as any);
+    return originalRequire.call(this, id);
   };
 
   // Return restore function

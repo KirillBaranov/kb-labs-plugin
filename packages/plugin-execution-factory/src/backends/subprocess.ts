@@ -51,6 +51,7 @@ import * as path from 'node:path';
 import * as fs from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import type { IPlatformAdapters } from '@kb-labs/core-platform';
+import { logDiagnosticEvent } from '@kb-labs/core-platform';
 import type {
   ExecutionBackend,
   ExecutionRequest,
@@ -282,6 +283,22 @@ export class SubprocessBackend implements ExecutionBackend {
       const handlerPath = path.resolve(lease.pluginRoot, relPath);
 
       if (!fs.existsSync(handlerPath)) {
+        logDiagnosticEvent(this.platform.logger, {
+          event: 'plugin.handler.resolve',
+          level: 'error',
+          reasonCode: 'handler_not_found',
+          message: 'Plugin handler file not found',
+          outcome: 'failed',
+          pluginId: requestToExecute.descriptor.pluginId,
+          pluginVersion: requestToExecute.descriptor.pluginVersion,
+          handlerRef: requestToExecute.handlerRef,
+          handlerPath,
+          evidence: {
+            executionId: requestToExecute.executionId,
+            pluginRoot: lease.pluginRoot,
+            hostType: requestToExecute.descriptor.hostType,
+          },
+        });
         throw new HandlerNotFoundError(handlerPath);
       }
 

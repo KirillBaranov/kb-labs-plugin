@@ -8,5 +8,5 @@ export default defineConfig({
   entry: {
     index: 'src/index.ts',
   },
-  external: ['@kb-labs/studio-contracts', '@kb-labs/core-contracts'],
+  external: ['@kb-labs/core-contracts'],
 })
