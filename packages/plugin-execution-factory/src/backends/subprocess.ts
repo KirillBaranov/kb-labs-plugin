@@ -280,7 +280,15 @@ export class SubprocessBackend implements ExecutionBackend {
       // 3. Resolve handler path and verify existence
       const hashIndex = requestToExecute.handlerRef.indexOf('#');
       const relPath = hashIndex > 0 ? requestToExecute.handlerRef.slice(0, hashIndex) : requestToExecute.handlerRef;
-      const handlerPath = path.resolve(lease.pluginRoot, relPath);
+      let handlerPath = path.resolve(lease.pluginRoot, relPath);
+      // Manifest handler paths are relative to the manifest file (typically in dist/).
+      // If not found at pluginRoot, try resolving from dist/ subdirectory.
+      if (!fs.existsSync(handlerPath)) {
+        const distPath = path.resolve(lease.pluginRoot, 'dist', relPath.replace(/^\.\//, ''));
+        if (fs.existsSync(distPath)) {
+          handlerPath = distPath;
+        }
+      }
 
       if (!fs.existsSync(handlerPath)) {
         logDiagnosticEvent(this.platform.logger, {
