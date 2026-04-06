@@ -1,6 +1,6 @@
 {
   "name": "@kb-labs/plugin-runtime",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Plugin System Runtime - Context factory, sandboxed shims, and APIs",
   "type": "module",
   "main": "./dist/index.js",
