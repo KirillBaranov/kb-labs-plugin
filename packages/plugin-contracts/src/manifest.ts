@@ -659,3 +659,98 @@ export function getHandlerPermissions(
     ...handlerPerms,
   };
 }
+
+// ── Service Manifest ────────────────────────────────────────────────────────
+
+/**
+ * ServiceManifest describes a standalone HTTP/WebSocket service
+ * that can be managed by kb-dev (start/stop/restart/health).
+ *
+ * Schema: `kb.service/1`
+ *
+ * Each service declares how to start itself, what port it listens on,
+ * and what health check endpoint to probe. kb-create uses this to
+ * generate `dev.config.json` automatically after installation.
+ *
+ * @example
+ * ```ts
+ * export const manifest: ServiceManifest = {
+ *   schema: 'kb.service/1',
+ *   id: 'rest',
+ *   name: 'REST API',
+ *   version: '1.2.0',
+ *   description: 'Platform REST API daemon',
+ *   runtime: {
+ *     entry: 'dist/index.js',
+ *     port: 5050,
+ *     healthCheck: '/api/v1/health',
+ *   },
+ *   dependsOn: ['qdrant'],
+ * };
+ * ```
+ */
+export interface ServiceManifest {
+  /** Schema version identifier */
+  schema: 'kb.service/1';
+
+  /** Unique service identifier (used as key in dev.config.json) */
+  id: string;
+
+  /** Human-readable service name */
+  name: string;
+
+  /** Service version (semver) */
+  version: string;
+
+  /** Optional description */
+  description?: string;
+
+  /** Display metadata (reuses plugin DisplayMetadata) */
+  display?: DisplayMetadata;
+
+  /** How to run this service */
+  runtime: ServiceRuntime;
+
+  /** Service IDs this service depends on (for startup ordering) */
+  dependsOn?: string[];
+
+  /** Environment variables required/supported */
+  env?: Record<string, ServiceEnvVar>;
+}
+
+/** Describes how kb-dev should start and monitor the service. */
+export interface ServiceRuntime {
+  /** Entrypoint relative to package root (e.g. "dist/index.js") */
+  entry: string;
+
+  /** TCP port the service listens on */
+  port: number;
+
+  /** Health check path (appended to http://localhost:<port>) */
+  healthCheck: string;
+
+  /** Protocol: "http" (default) or "ws" */
+  protocol?: 'http' | 'ws';
+}
+
+/** Describes an environment variable the service uses. */
+export interface ServiceEnvVar {
+  /** Description of what this env var controls */
+  description?: string;
+  /** Default value (if any) */
+  default?: string;
+  /** Whether the service requires this env var to start */
+  required?: boolean;
+}
+
+/**
+ * Type guard to check if manifest is a ServiceManifest.
+ */
+export function isServiceManifest(manifest: unknown): manifest is ServiceManifest {
+  return (
+    typeof manifest === 'object' &&
+    manifest !== null &&
+    'schema' in manifest &&
+    manifest.schema === 'kb.service/1'
+  );
+}

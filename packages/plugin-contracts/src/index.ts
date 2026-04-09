@@ -224,6 +224,9 @@ export { createExecutionMeta } from './runner.js';
 // Manifest
 export type {
   ManifestV3,
+  ServiceManifest,
+  ServiceRuntime,
+  ServiceEnvVar,
   SchemaRef,
   DisplayMetadata,
   PluginDependency,
@@ -244,7 +247,7 @@ export type {
   SetupSpec,
   ErrorSpec,
 } from './manifest.js';
-export { isManifestV3, getHandlerPath, getHandlerPermissions } from './manifest.js';
+export { isManifestV3, isServiceManifest, getHandlerPath, getHandlerPermissions } from './manifest.js';
 export { parseManifest, validateManifest, resolveHeaderPolicy } from './manifest-loader.js';
 
 // Studio V2 (Module Federation pages)
